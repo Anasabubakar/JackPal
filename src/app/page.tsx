@@ -1,404 +1,483 @@
 export default function Home() {
   return (
-    <div className="flex h-screen w-full font-display antialiased overflow-hidden">
-      {/* Side Navigation Bar */}
-      <aside className="w-64 flex-shrink-0 flex flex-col bg-white dark:bg-[#111722] border-r border-slate-200 dark:border-slate-800 transition-colors duration-300">
-        <div className="p-6">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-primary text-2xl font-bold tracking-tight flex items-center gap-2">
-              <span className="material-symbols-outlined text-3xl">graphic_eq</span>
-              AudioLearn
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-medium pl-1">
-              Student Dashboard
-            </p>
+    <div className="flex h-screen w-full antialiased overflow-hidden bg-slate-50 dark:bg-[#0a0e1a]">
+      {/* Collapsed Sidebar */}
+      <aside className="w-20 flex-shrink-0 flex flex-col items-center bg-white dark:bg-[#0f1419] border-r border-slate-200/50 dark:border-slate-800/50 py-6 gap-8 transition-all duration-300">
+        <div className="flex flex-col items-center gap-2 px-2">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span className="material-symbols-outlined text-white text-2xl font-bold">graphic_eq</span>
           </div>
         </div>
-        <nav className="flex-1 flex flex-col px-4 gap-2 overflow-y-auto">
-          <a
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:text-white dark:bg-[#232f48] group transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">home</span>
-            <span className="text-sm font-medium">Home</span>
-          </a>
-          <a
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1f2a3e] hover:text-primary dark:hover:text-white transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">
-              library_books
-            </span>
-            <span className="text-sm font-medium">My Library</span>
-          </a>
-          <a
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1f2a3e] hover:text-primary dark:hover:text-white transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">school</span>
-            <span className="text-sm font-medium">Courses</span>
-          </a>
-          <a
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1f2a3e] hover:text-primary dark:hover:text-white transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">
-              queue_music
-            </span>
-            <span className="text-sm font-medium">Playlists</span>
-          </a>
-          <div className="my-2 border-t border-slate-200 dark:border-slate-800"></div>
-          <a
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1f2a3e] hover:text-primary dark:hover:text-white transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">
-              settings
-            </span>
-            <span className="text-sm font-medium">Settings</span>
-          </a>
+
+        <nav className="flex-1 flex flex-col items-center gap-2 w-full px-3">
+          <button className="group relative w-full aspect-square rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary transition-all hover:scale-105">
+            <span className="material-symbols-outlined text-2xl">home</span>
+            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Home
+            </div>
+          </button>
+
+          <button className="group relative w-full aspect-square rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all hover:scale-105">
+            <span className="material-symbols-outlined text-2xl">library_books</span>
+            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              My Library
+            </div>
+          </button>
+
+          <button className="group relative w-full aspect-square rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all hover:scale-105">
+            <span className="material-symbols-outlined text-2xl">school</span>
+            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Courses
+            </div>
+          </button>
+
+          <button className="group relative w-full aspect-square rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all hover:scale-105">
+            <span className="material-symbols-outlined text-2xl">queue_music</span>
+            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Playlists
+            </div>
+          </button>
+
+          <div className="w-8 border-t border-slate-200 dark:border-slate-800 my-2"></div>
+
+          <button className="group relative w-full aspect-square rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all hover:scale-105">
+            <span className="material-symbols-outlined text-2xl">settings</span>
+            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Settings
+            </div>
+          </button>
         </nav>
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <a
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
-            href="#"
-          >
-            <span className="material-symbols-outlined text-[24px]">logout</span>
-            <span className="text-sm font-medium">Log Out</span>
-          </a>
-        </div>
+
+        <button className="group relative w-12 h-12 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all hover:scale-105">
+          <span className="material-symbols-outlined text-2xl">logout</span>
+          <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-xs font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            Log Out
+          </div>
+        </button>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
-        {/* Top Header & Usage Widget */}
-        <header className="flex-shrink-0 px-8 py-6 pb-2">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Welcome back, Alex
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
-                Let's continue where you left off. You have 3 documents pending.
-              </p>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Gradient Header Background */}
+        <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-br from-blue-50 via-slate-50 to-white dark:from-[#0f1827] dark:via-[#0a0e1a] dark:to-[#0a0e1a] -z-0"></div>
+
+        {/* Top Bar */}
+        <header className="relative z-10 px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <input
+                type="search"
+                placeholder="Search materials, courses..."
+                className="w-80 pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-[#1a1f2e] border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
             </div>
-            {/* Usage Stats Widget */}
-            <div className="flex items-center gap-4 bg-white dark:bg-[#1f2a3e] p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-w-[280px]">
-              <div className="relative w-12 h-12 flex items-center justify-center">
-                {/* Circular Progress Placeholder */}
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-slate-200 dark:text-slate-600"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></path>
-                  <path
-                    className="text-primary"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeDasharray="75, 100"
-                    strokeWidth="4"
-                  ></path>
-                </svg>
-                <span className="absolute text-[10px] font-bold text-primary">
-                  75%
-                </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button className="relative p-2.5 rounded-xl hover:bg-white dark:hover:bg-[#1a1f2e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+              <span className="material-symbols-outlined text-2xl">notifications</span>
+              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></div>
+            </button>
+
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col items-end">
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">Alex Morgan</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Free Plan</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Free Tier Usage
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-slate-900 dark:text-white">
-                    45
-                  </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    / 60 Mins
-                  </span>
-                </div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-primary flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                AM
               </div>
-              <button className="ml-auto p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-primary transition-colors">
-                <span className="material-symbols-outlined text-sm font-bold">
-                  bolt
-                </span>
-              </button>
             </div>
           </div>
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 pb-32">
-          {" "}
-          {/* Added pb-32 for sticky player space */}
-          {/* Upload Zone */}
-          <section className="mt-6 mb-10">
-            <div className="group relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-300 dark:border-[#324467] rounded-2xl bg-slate-50 dark:bg-[#1a2436]/50 hover:bg-blue-50 dark:hover:bg-[#1a2436] hover:border-primary transition-all cursor-pointer">
-              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity pointer-events-none"></div>
-              <div className="flex flex-col items-center gap-4 z-10 p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-primary/20 flex items-center justify-center text-primary mb-2">
-                  <span className="material-symbols-outlined text-3xl">
-                    cloud_upload
-                  </span>
+        <div className="relative z-10 flex-1 overflow-y-auto px-8 pb-36">
+          {/* Hero Section */}
+          <section className="mb-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+                  Welcome back, Alex
+                </h1>
+                <p className="text-slate-600 dark:text-slate-400 text-lg">
+                  Ready to continue your learning journey?
+                </p>
+              </div>
+
+              <div className="flex items-center gap-6 bg-white dark:bg-[#1a1f2e] px-6 py-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-slate-200 dark:text-slate-700"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      />
+                      <path
+                        className="text-primary"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeDasharray="75, 100"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                      <span className="text-xs font-bold text-primary">75%</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5">
+                      Usage Today
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-bold text-slate-900 dark:text-white">45</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">/ 60 min</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Upload Document
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
-                    Drag and drop your PDF, DOCX, or TXT files here to instantly
-                    convert them into audio notes.
-                  </p>
+                <button className="p-3 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 transition-all hover:scale-105">
+                  <span className="material-symbols-outlined text-xl">workspace_premium</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">+12%</span>
                 </div>
-                <button className="mt-2 px-6 py-2.5 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">
-                    folder_open
-                  </span>
-                  Browse Files
+                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">24</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">Completed</div>
+              </div>
+
+              <div className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-2xl">pending</span>
+                  </div>
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Active</span>
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">3</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">In Progress</div>
+              </div>
+
+              <div className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-2xl">schedule</span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">This week</span>
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">18h</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">Study Time</div>
+              </div>
+
+              <div className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-2xl">trending_up</span>
+                  </div>
+                  <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">+8%</span>
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">92%</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">Completion</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Upload Section */}
+          <section className="mb-8">
+            <div className="group relative overflow-hidden bg-gradient-to-br from-primary/5 via-blue-50/50 to-transparent dark:from-primary/10 dark:via-blue-900/10 dark:to-transparent rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-all cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10 flex items-center justify-between p-8">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-white text-4xl">cloud_upload</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                      Transform Your Documents
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-base max-w-xl">
+                      Drop PDF, DOCX, or TXT files here to instantly convert them into engaging audio lessons powered by AI
+                    </p>
+                  </div>
+                </div>
+                <button className="px-8 py-4 bg-white dark:bg-[#1a1f2e] hover:bg-primary hover:text-white border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl shadow-sm hover:shadow-lg hover:scale-105 transition-all flex items-center gap-3">
+                  <span className="material-symbols-outlined text-2xl">add</span>
+                  <span>Choose Files</span>
                 </button>
               </div>
             </div>
           </section>
+
           {/* Recent Materials */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">
-                  schedule
-                </span>
-                Recent Materials
-              </h3>
-              <a
-                className="text-sm font-medium text-primary hover:text-blue-400 transition-colors"
-                href="#"
-              >
-                View All
-              </a>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Recent Materials</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Pick up where you left off</p>
+              </div>
+              <button className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-all flex items-center gap-2">
+                <span>View All</span>
+                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              </button>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {/* Card 1: Ready to Play */}
-              <div className="bg-white dark:bg-[#1f2a3e] rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-primary/50 transition-all group shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
-                    <span className="material-symbols-outlined">
-                      picture_as_pdf
+              {/* Card 1 - Ready */}
+              <div className="group bg-white dark:bg-[#1a1f2e] rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 dark:hover:border-primary/50 overflow-hidden transition-all hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                      Ready
+                    </div>
+                  </div>
+
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    Intro to Microeconomics
+                  </h4>
+
+                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mb-5">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">folder</span>
+                      Economics
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">timer</span>
+                      45m
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">description</span>
+                      15 MB
                     </span>
                   </div>
-                  <div className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                    Ready
+
+                  <div className="flex items-center gap-3">
+                    <button className="flex-1 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-primary text-white py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30">
+                      <span className="material-symbols-outlined text-xl">play_arrow</span>
+                      Play Now
+                    </button>
+                    <button className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
+                      <span className="material-symbols-outlined text-xl">more_horiz</span>
+                    </button>
                   </div>
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
-                  Intro to Microeconomics
-                </h4>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
-                  Economics • 15 MB • 45m audio
-                </p>
-                <div className="flex items-center gap-3">
-                  <button className="flex-1 bg-primary hover:bg-blue-600 text-white py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]">
-                      play_arrow
+              </div>
+
+              {/* Card 2 - Processing */}
+              <div className="group bg-white dark:bg-[#1a1f2e] rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1">
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">description</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                      Processing
+                    </div>
+                  </div>
+
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-2">
+                    History Notes Ch4
+                  </h4>
+
+                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mb-5">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">folder</span>
+                      History
                     </span>
-                    Play Now
-                  </button>
-                  <button className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[20px]">
-                      more_vert
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">description</span>
+                      2.4 MB
                     </span>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Converting to audio...</span>
+                      <span className="text-xs font-bold text-primary">65%</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-primary to-blue-600 rounded-full transition-all duration-300" style={{width: '65%'}}></div>
+                    </div>
+                  </div>
+
+                  <button className="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                    <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
+                    Converting
                   </button>
                 </div>
               </div>
-              {/* Card 2: Converting */}
-              <div className="bg-white dark:bg-[#1f2a3e] rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-primary/50 transition-all group shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <span className="material-symbols-outlined">
-                      description
+
+              {/* Card 3 - Queued */}
+              <div className="group bg-white dark:bg-[#1a1f2e] rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1">
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">slideshow</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      Queued
+                    </div>
+                  </div>
+
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-2">
+                    Biology Lecture Slides
+                  </h4>
+
+                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mb-5">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">folder</span>
+                      Biology
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">description</span>
+                      12 MB
                     </span>
                   </div>
-                  <div className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                    <span className="animate-spin material-symbols-outlined text-[10px]">
-                      progress_activity
-                    </span>
-                    Processing
+
+                  <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                      <span className="material-symbols-outlined text-sm">info</span>
+                      <span>2 items ahead in queue</span>
+                    </div>
                   </div>
-                </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
-                  History_Notes_Ch4.docx
-                </h4>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
-                  History • 2.4 MB • Estimating...
-                </p>
-                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2 overflow-hidden">
-                  <div className="bg-primary h-2 rounded-full w-2/3 animate-pulse"></div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
-                  Converting... 65%
-                </p>
-              </div>
-              {/* Card 3: Queued */}
-              <div className="bg-white dark:bg-[#1f2a3e] rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-primary/50 transition-all group shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
-                    <span className="material-symbols-outlined">slideshow</span>
-                  </div>
-                  <div className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                    Queued
-                  </div>
-                </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
-                  Biology_Lecture_Slides.pptx
-                </h4>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
-                  Biology • 12 MB
-                </p>
-                <div className="flex items-center gap-3 opacity-60 pointer-events-none">
-                  <button className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]">
-                      hourglass_empty
-                    </span>
+
+                  <button className="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                    <span className="material-symbols-outlined text-xl">hourglass_empty</span>
                     Waiting
                   </button>
-                  <button className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400">
-                    <span className="material-symbols-outlined text-[20px]">
-                      more_vert
-                    </span>
-                  </button>
                 </div>
               </div>
-              {/* Card 4: Recent History */}
-              <div className="bg-white dark:bg-[#1f2a3e] rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-primary/50 transition-all group shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                    <span className="material-symbols-outlined">article</span>
+
+              {/* Card 4 - Completed */}
+              <div className="group bg-white dark:bg-[#1a1f2e] rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1">
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center text-white shadow-lg shadow-slate-500/20 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-2xl">article</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                      Done
+                    </div>
                   </div>
-                  <div className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                    Completed
+
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    Research Methods 101
+                  </h4>
+
+                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mb-5">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">folder</span>
+                      Sociology
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">timer</span>
+                      1h 20m
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">description</span>
+                      8 MB
+                    </span>
                   </div>
-                </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
-                  Research Methods 101
-                </h4>
-                <p className="text-slate-500 dark:text-slate-400 text-xs mb-4">
-                  Sociology • 8 MB • 1h 20m audio
-                </p>
-                <div className="flex items-center gap-3">
-                  <button className="flex-1 bg-white dark:bg-transparent border border-primary text-primary dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]">
-                      play_circle
-                    </span>
-                    Play Again
-                  </button>
-                  <button className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[20px]">
-                      more_vert
-                    </span>
-                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <button className="flex-1 bg-white dark:bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-xl">replay</span>
+                      Play Again
+                    </button>
+                    <button className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all">
+                      <span className="material-symbols-outlined text-xl">more_horiz</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
         </div>
 
-        {/* Sticky Player Bar */}
-        <div className="absolute bottom-0 w-full bg-white dark:bg-[#1a2436] border-t border-slate-200 dark:border-slate-700 p-3 px-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
-          <div className="flex items-center justify-between gap-6 max-w-[1400px] mx-auto">
-            {/* Track Info */}
-            <div className="flex items-center gap-4 w-1/4">
-              <div
-                className="w-12 h-12 rounded bg-slate-200 dark:bg-slate-700 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC2XmbAvOjOrOW2zhVqPs_iVcqD94PLMaeLs_zDfeaePLVmz-f_e_5j2zNMLVZcIPnXfnov41A0221MMfvfuDbMIN6wjX-6rKbne3bWc5xNf4Ll5ZHT3Q-AUK1HdueoCB59Y5eeQ4rEu1VROim3P43WFqonYT3GoxwCYxjZ_AC_S9pOjgFyquhFae1LkJhI-_ggqx25XERSFfM7CORs2VpJwzgfxM6h1eK-UuAwyH2JyFUoYc-VwZzhiRiooLg25Q1PQN2oS3g6ikI')",
-                }}
-              ></div>
-              <div className="flex flex-col overflow-hidden">
-                <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                  Chapter 3: Cognitive Psychology
-                </h5>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  Psychology 201 • Prof. Jensen
-                </p>
-              </div>
-              <button className="text-slate-400 hover:text-primary transition-colors">
-                <span className="material-symbols-outlined text-[20px]">
-                  favorite
-                </span>
-              </button>
-            </div>
-            {/* Player Controls & Progress */}
-            <div className="flex flex-col items-center flex-1 max-w-2xl gap-1">
-              <div className="flex items-center gap-6">
-                <button
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
-                  title="Shuffle"
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    shuffle
-                  </span>
-                </button>
-                <button
-                  className="text-slate-900 dark:text-white hover:text-primary transition-colors"
-                  title="Previous"
-                >
-                  <span className="material-symbols-outlined text-[28px] fill-current">
-                    skip_previous
-                  </span>
-                </button>
-                <button
-                  className="w-10 h-10 rounded-full bg-primary hover:bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all scale-105"
-                  title="Play/Pause"
-                >
-                  <span className="material-symbols-outlined text-[28px] fill-current">
-                    pause
-                  </span>
-                </button>
-                <button
-                  className="text-slate-900 dark:text-white hover:text-primary transition-colors"
-                  title="Next"
-                >
-                  <span className="material-symbols-outlined text-[28px] fill-current">
-                    skip_next
-                  </span>
-                </button>
-                <button
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
-                  title="Repeat"
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    repeat
-                  </span>
-                </button>
-              </div>
-              <div className="w-full flex items-center gap-3 text-xs font-medium text-slate-500 dark:text-slate-400">
-                <span>12:45</span>
-                <div className="relative flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full cursor-pointer group">
-                  <div className="absolute h-full bg-primary rounded-full w-[35%] group-hover:bg-blue-400 transition-colors"></div>
-                  <div className="absolute h-3 w-3 bg-white border-2 border-primary rounded-full top-1/2 -translate-y-1/2 left-[35%] opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"></div>
+        {/* Enhanced Player Bar */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0f1419]/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 shadow-2xl z-50">
+          <div className="px-8 py-4">
+            <div className="flex items-center gap-8 max-w-[1600px] mx-auto">
+              {/* Track Info */}
+              <div className="flex items-center gap-4 w-80">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-primary shadow-lg flex-shrink-0 bg-cover bg-center" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC2XmbAvOjOrOW2zhVqPs_iVcqD94PLMaeLs_zDfeaePLVmz-f_e_5j2zNMLVZcIPnXfnov41A0221MMfvfuDbMIN6wjX-6rKbne3bWc5xNf4Ll5ZHT3Q-AUK1HdueoCB59Y5eeQ4rEu1VROim3P43WFqonYT3GoxwCYxjZ_AC_S9pOjgFyquhFae1LkJhI-_ggqx25XERSFfM7CORs2VpJwzgfxM6h1eK-UuAwyH2JyFUoYc-VwZzhiRiooLg25Q1PQN2oS3g6ikI')"}}></div>
+                <div className="flex flex-col overflow-hidden flex-1">
+                  <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    Cognitive Psychology - Chapter 3
+                  </h5>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    Psychology 201 • Prof. Jensen
+                  </p>
                 </div>
-                <span>45:20</span>
+                <button className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                  <span className="material-symbols-outlined text-2xl">favorite</span>
+                </button>
               </div>
-            </div>
-            {/* Volume & Extra Controls */}
-            <div className="flex items-center justify-end gap-3 w-1/4">
-              <button className="text-slate-500 hover:text-primary transition-colors flex items-center gap-1 border border-slate-300 dark:border-slate-600 rounded px-2 py-0.5 text-xs font-bold">
-                <span>1.5x</span>
-              </button>
-              <div className="flex items-center gap-2 group">
-                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-[20px]">
-                  volume_up
-                </span>
-                <div className="w-20 h-1 bg-slate-200 dark:bg-slate-700 rounded-full cursor-pointer overflow-hidden">
-                  <div className="h-full bg-slate-500 dark:bg-slate-400 w-[80%] rounded-full group-hover:bg-primary transition-colors"></div>
+
+              {/* Player Controls */}
+              <div className="flex-1 flex flex-col items-center gap-3 max-w-3xl mx-auto">
+                <div className="flex items-center gap-8">
+                  <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:scale-110">
+                    <span className="material-symbols-outlined text-2xl">shuffle</span>
+                  </button>
+                  <button className="text-slate-900 dark:text-white hover:text-primary transition-all hover:scale-110">
+                    <span className="material-symbols-outlined text-3xl">skip_previous</span>
+                  </button>
+                  <button className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-blue-600 hover:from-blue-600 hover:to-primary text-white flex items-center justify-center shadow-xl shadow-primary/30 transition-all hover:scale-110">
+                    <span className="material-symbols-outlined text-3xl fill-current">pause</span>
+                  </button>
+                  <button className="text-slate-900 dark:text-white hover:text-primary transition-all hover:scale-110">
+                    <span className="material-symbols-outlined text-3xl">skip_next</span>
+                  </button>
+                  <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:scale-110">
+                    <span className="material-symbols-outlined text-2xl">repeat</span>
+                  </button>
+                </div>
+
+                <div className="w-full flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+                  <span className="w-12 text-right">12:45</span>
+                  <div className="relative flex-1 h-2 bg-slate-200 dark:bg-slate-800 rounded-full cursor-pointer group">
+                    <div className="absolute h-full bg-gradient-to-r from-primary to-blue-600 rounded-full w-[35%] transition-all"></div>
+                    <div className="absolute h-4 w-4 bg-white border-3 border-primary rounded-full top-1/2 -translate-y-1/2 left-[35%] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </div>
+                  <span className="w-12">45:20</span>
                 </div>
               </div>
-              <button className="text-slate-500 hover:text-white transition-colors ml-2">
-                <span className="material-symbols-outlined text-[20px]">
-                  queue_music
-                </span>
-              </button>
+
+              {/* Volume & Controls */}
+              <div className="flex items-center gap-4 w-80 justify-end">
+                <button className="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-primary hover:text-primary transition-all">
+                  1.5x
+                </button>
+                <div className="flex items-center gap-3 group">
+                  <button className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-2xl">volume_up</span>
+                  </button>
+                  <div className="w-24 h-2 bg-slate-200 dark:bg-slate-800 rounded-full cursor-pointer overflow-hidden">
+                    <div className="h-full bg-slate-500 dark:bg-slate-400 group-hover:bg-primary w-[80%] rounded-full transition-colors"></div>
+                  </div>
+                </div>
+                <button className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <span className="material-symbols-outlined text-2xl">queue_music</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
