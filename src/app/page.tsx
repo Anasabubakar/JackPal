@@ -193,7 +193,7 @@ export default function Home() {
                     <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">JP</div>
                     <div className="text-[10px] font-bold leading-none">
                       JackPal Beta<br />
-                      <span className="text-[#B1121B]">System ready for launch</span>
+                      <span className="text-[#B1121B]">On the way</span>
                     </div>
                   </div>
 
