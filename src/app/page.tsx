@@ -12,7 +12,10 @@ import {
   Clock,
   Smartphone,
   Menu,
-  X
+  X,
+  Twitter,
+  Instagram,
+  Linkedin
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -557,15 +560,15 @@ export default function Home() {
               <div className="flex gap-4">
                 <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
                   <span className="sr-only">Twitter</span>
-                  <Smartphone className="h-4 w-4 text-white/50 group-hover:text-white" />
+                  <Twitter className="h-4 w-4 text-white/50 group-hover:text-white" />
                 </a>
                 <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
                   <span className="sr-only">Instagram</span>
-                  <CheckCircle2 className="h-4 w-4 text-white/50 group-hover:text-white" />
+                  <Instagram className="h-4 w-4 text-white/50 group-hover:text-white" />
                 </a>
                 <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
                   <span className="sr-only">LinkedIn</span>
-                  <ArrowRight className="h-4 w-4 text-white/50 group-hover:text-white" />
+                  <Linkedin className="h-4 w-4 text-white/50 group-hover:text-white" />
                 </a>
               </div>
             </div>
