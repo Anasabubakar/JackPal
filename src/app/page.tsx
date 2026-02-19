@@ -1,3 +1,5 @@
+'use client';
+
 import { 
   Play, 
   Download, 
@@ -8,8 +10,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Clock,
-  Smartphone
+  Smartphone,
+  Menu,
+  X
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const features = [
   {
@@ -36,34 +41,78 @@ const stats = [
 ];
 
 export default function Home() {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-[#111111]">
       {/* Header */}
-      <nav className="border-b border-[#EFEFEF] bg-[#F7F7F7]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="section-container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-[#B1121B] p-1.5 rounded-lg">
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-b ${
+          scrolled 
+            ? "bg-[#F7F7F7]/90 backdrop-blur-xl py-3 border-[#EFEFEF] shadow-lg" 
+            : "bg-transparent py-6 border-transparent"
+        }`}
+      >
+        <div className="section-container flex items-center justify-between">
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="bg-[#B1121B] p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-[#B1121B]/20">
               <Headphones className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">JackPal</span>
+            <span className="text-xl font-black tracking-tighter uppercase italic">JackPal</span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#111111]/70">
-            <a href="#features" className="hover:text-[#B1121B] transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-[#B1121B] transition-colors">Pricing</a>
-            <a href="#faq" className="hover:text-[#B1121B] transition-colors">FAQ</a>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-10">
+            <div className="flex items-center gap-8 text-xs font-black uppercase tracking-widest text-[#111111]/60">
+              <a href="#features" className="hover:text-[#B1121B] transition-colors">Features</a>
+              <a href="#pricing" className="hover:text-[#B1121B] transition-colors">Pricing</a>
+              <a href="#faq" className="hover:text-[#B1121B] transition-colors">FAQ</a>
+            </div>
+            <div className="h-4 w-[1px] bg-[#111111]/10" />
+            <div className="flex items-center gap-6">
+              <button className="text-xs font-black uppercase tracking-widest hover:text-[#B1121B] transition-colors">Log in</button>
+              <button className="bg-[#111111] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#B1121B] transition-all shadow-xl shadow-black/10 active:scale-95">
+                Join Waitlist
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="text-sm font-bold hover:text-[#B1121B]">Log in</button>
-            <button className="bg-[#B1121B] text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#E10600] transition-colors shadow-lg shadow-[#B1121B]/10">
-              Get Early Access
-            </button>
+
+          {/* Mobile Toggle */}
+          <button 
+            className="md:hidden p-2 text-[#111111] hover:bg-[#EFEFEF] rounded-lg transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`md:hidden absolute top-full left-0 right-0 bg-[#F7F7F7] border-b border-[#EFEFEF] transition-all duration-300 ease-in-out overflow-hidden ${
+          mobileMenuOpen ? "max-h-[400px] py-8 shadow-2xl opacity-100" : "max-h-0 opacity-0"
+        }`}>
+          <div className="section-container flex flex-col gap-6 text-center">
+            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Features</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Pricing</a>
+            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">FAQ</a>
+            <div className="h-[1px] bg-[#111111]/5 w-full" />
+            <button className="text-sm font-black uppercase tracking-widest text-[#B1121B] py-2">Log in</button>
+            <button className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20">Join Waitlist</button>
           </div>
         </div>
       </nav>
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="pt-20 pb-32 overflow-hidden">
+        <section className="pt-40 pb-32 overflow-hidden">
           <div className="section-container">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
               <div className="space-y-8 relative z-10">
@@ -85,7 +134,7 @@ export default function Home() {
                   <button className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#B1121B]/20 hover:bg-[#E10600] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                     Join the Waitlist Now <ArrowRight className="h-5 w-5" />
                   </button>
-                  <a href="#features" className="bg-white border-2 border-[#111111] text-[#111111] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2">
+                  <a href="#features" className="bg-white border-2 border-[#111111] text-[#111111] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2 text-center">
                     How it Works
                   </a>
                 </div>
@@ -340,7 +389,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Pricing */}
+        {/* Pricing Section */}
         <section id="pricing" className="py-32 bg-white relative overflow-hidden">
           <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50">
             <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
@@ -350,7 +399,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8 text-left">
               {[
                 { 
                   name: "Free", 
