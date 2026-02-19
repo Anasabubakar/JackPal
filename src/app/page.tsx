@@ -591,9 +591,9 @@ export default function Home() {
               </ul>
             </div>
 
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 space-y-4 text-left">
+            <div className="bg-white/10 p-8 rounded-3xl border border-white/20 space-y-4 text-left shadow-2xl">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Newsletter</h4>
-              <p className="text-xs font-bold text-white/40 leading-relaxed">
+              <p className="text-xs font-bold text-white/70 leading-relaxed">
                 Get study hacks and launch updates. No spam, just value.
               </p>
               <div className="flex flex-col gap-2">
