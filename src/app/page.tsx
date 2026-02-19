@@ -1,0 +1,441 @@
+import { 
+  Play, 
+  Download, 
+  Upload, 
+  Headphones, 
+  Zap, 
+  CheckCircle2, 
+  ArrowRight,
+  ShieldCheck,
+  Clock,
+  Smartphone
+} from "lucide-react";
+import Lanyard from "@/components/Lanyard";
+
+const features = [
+  {
+    icon: Upload,
+    title: "Ghost your textbooks.",
+    desc: "Import PDFs or paste text and never look at a screen again. We extract the value, you just press play."
+  },
+  {
+    icon: Zap,
+    title: "Study at 2x speed.",
+    desc: "Our AI narration is so clean you can double the speed and still catch every detail. Cut study time in half."
+  },
+  {
+    icon: Download,
+    title: "Zero-data library.",
+    desc: "Download once, listen forever. Even on a bus with no bars, your grades never stop climbing."
+  }
+];
+
+const stats = [
+  { label: "Waitlist Spots", value: "Available" },
+  { label: "Launch Window", value: "Q2 2026" },
+  { label: "Beta Testing", value: "Incoming" },
+];
+
+export default function Home() {
+  return (
+    <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-[#111111]">
+      {/* Header */}
+      <nav className="border-b border-[#EFEFEF] bg-[#F7F7F7]/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="section-container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-[#B1121B] p-1.5 rounded-lg">
+              <Headphones className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold tracking-tight">JackPal</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#111111]/70">
+            <a href="#features" className="hover:text-[#B1121B] transition-colors">Features</a>
+            <a href="#pricing" className="hover:text-[#B1121B] transition-colors">Pricing</a>
+            <a href="#faq" className="hover:text-[#B1121B] transition-colors">FAQ</a>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="text-sm font-bold hover:text-[#B1121B]">Log in</button>
+            <button className="bg-[#B1121B] text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#E10600] transition-colors shadow-lg shadow-[#B1121B]/10">
+              Get Early Access
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="pt-20 pb-32 overflow-hidden">
+          <div className="section-container">
+            <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
+              <div className="space-y-8 relative z-10">
+                <div className="inline-flex items-center gap-2 bg-[#B1121B]/10 text-[#B1121B] px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#B1121B] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#B1121B]"></span>
+                  </span>
+                  Coming Soon to Elite Students
+                </div>
+                <h1 className="text-5xl md:text-6xl font-bold leading-[1.1] tracking-tight">
+                  Study while you live.<br />
+                  <span className="text-[#B1121B] italic underline decoration-4 underline-offset-8">Win while they sleep.</span>
+                </h1>
+                <p className="text-xl text-[#111111]/70 max-w-xl leading-relaxed font-medium">
+                  Stop grinding through textbooks like it's 1999. Join the first wave of students who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <button className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#B1121B]/20 hover:bg-[#E10600] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    Join the Waitlist Now <ArrowRight className="h-5 w-5" />
+                  </button>
+                  <a href="#features" className="bg-white border-2 border-[#111111] text-[#111111] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2">
+                    How it Works
+                  </a>
+                </div>
+                <div className="flex flex-col gap-6 pt-8 border-t border-[#EFEFEF]">
+                  <div className="flex items-center gap-4 text-sm font-bold">
+                    <span className="text-[#B1121B] font-black italic">Claim your spot.</span> Be among the first to get the unfair advantage.
+                  </div>
+                  <div className="flex items-center gap-10">
+                    {stats.map((stat) => (
+                      <div key={stat.label}>
+                        <div className="text-3xl font-black text-[#111111]">{stat.value}</div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-[#111111]/50">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                {/* Visual Representation of Player */}
+                <div className="relative bg-white rounded-[2rem] border-4 border-[#111111] p-8 audio-card-shadow max-w-md mx-auto transform lg:rotate-2 z-10">
+                  {/* Floating Trust Toast */}
+                  <div className="absolute -top-12 -left-12 bg-[#111111] text-white p-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce border border-[#B1121B]">
+                    <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">JP</div>
+                    <div className="text-[10px] font-bold leading-none">
+                      JackPal Beta<br />
+                      <span className="text-[#B1121B]">System ready for launch</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="bg-[#EFEFEF] h-10 w-10 rounded-full flex items-center justify-center">
+                      <Headphones className="h-5 w-5 text-[#B1121B]" />
+                    </div>
+                    <div className="bg-[#B1121B]/10 text-[#B1121B] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-[#B1121B]/20 shadow-sm flex items-center gap-1.5">
+                      <div className="h-1 w-1 bg-[#B1121B] rounded-full animate-ping" />
+                      Unfair Advantage Active
+                    </div>
+                  </div>
+                  
+                  <div className="mb-6 p-4 rounded-2xl bg-[#EFEFEF] border border-[#111111]/10 text-[10px] font-black flex items-center justify-between">
+                     <span className="uppercase text-[#111111]/50 tracking-widest">Top 1% Achievement</span>
+                     <span className="text-[#B1121B] bg-[#B1121B]/10 px-2 py-0.5 rounded-full border border-[#B1121B]/20">+450 XP Earned</span>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden">
+                        <div className="h-full bg-[#B1121B] w-[65%] rounded-full" />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-black text-[#111111]/50 uppercase tracking-widest">
+                        <span>12:45</span>
+                        <span>18:30</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-black tracking-tight text-[#111111]">Biology 101: Cell Theory</h3>
+                      <p className="text-[#111111]/60 font-bold uppercase text-[10px] tracking-widest">Chapter 4 — The Nucleus</p>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-8 py-4">
+                      <div className="h-10 w-10 flex items-center justify-center text-[#111111] hover:text-[#B1121B] transition-colors cursor-pointer">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                      <div className="h-16 w-16 bg-[#B1121B] rounded-full flex items-center justify-center text-white shadow-2xl hover:bg-[#E10600] hover:scale-110 transition-all cursor-pointer border-4 border-[#111111]">
+                        <Play className="h-8 w-8 fill-current ml-1" />
+                      </div>
+                      <div className="h-10 w-10 flex items-center justify-center text-[#111111] hover:text-[#B1121B] transition-colors cursor-pointer">
+                        <Download className="h-6 w-6" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-1 h-12">
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                        <div 
+                          key={i} 
+                          className={`w-1.5 rounded-full bg-[#B1121B]/40 animate-wave wave-delay-${i % 4 + 1}`} 
+                          style={{ height: `${Math.random() * 60 + 40}%` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Background Blobs */}
+                <div className="absolute -top-20 -right-20 h-64 w-64 bg-[#B1121B]/5 rounded-full blur-3xl z-0 animate-pulse" />
+                <div className="absolute -bottom-20 -left-20 h-64 w-64 bg-[#B1121B]/5 rounded-full blur-3xl z-0" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Comparison Section */}
+        <section className="py-32 bg-[#EFEFEF]">
+          <div className="section-container">
+            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+              <h2 className="text-4xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#B1121B]">"Winning".</span></h2>
+              <p className="text-lg text-[#111111]/70 font-medium">
+                Don't be the student stuck in the library at 2 AM. Join the elite who study on their own terms.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* Them */}
+              <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E5E5] opacity-60 grayscale hover:grayscale-0 transition-all">
+                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#111111]/50 uppercase tracking-widest">
+                  <div className="h-2 w-2 rounded-full bg-[#111111]/50" /> Average Students
+                </h3>
+                <ul className="space-y-6">
+                  {[
+                    "Stuck at a desk for 6+ hours",
+                    "Chronic eye strain from blue light",
+                    "Zero progress during commutes",
+                    "Forgetting 70% of what they read",
+                    "Constant burnout and fatigue"
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-sm font-bold text-[#111111]/40 line-through">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* You */}
+              <div className="bg-[#111111] text-white p-10 rounded-[2.5rem] border-4 border-[#B1121B] shadow-2xl shadow-[#B1121B]/20 relative overflow-hidden group">
+                <div className="absolute top-4 right-4 bg-[#B1121B] text-white text-[10px] font-black uppercase px-2 py-1 rounded-md animate-pulse">
+                  Unfair Advantage
+                </div>
+                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#B1121B] uppercase tracking-widest">
+                  <div className="h-2 w-2 rounded-full bg-[#B1121B]" /> JackPal Users
+                </h3>
+                <ul className="space-y-6">
+                  {[
+                    "Study at 2x speed while walking",
+                    "Zero screen time required",
+                    "Convert dead time into Dean's List",
+                    "Listen anywhere, fully offline",
+                    "Reclaim 20+ hours every week"
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-sm font-black">
+                      <CheckCircle2 className="h-5 w-5 text-[#B1121B]" /> {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs font-bold text-white/50 group-hover:bg-[#B1121B]/10 transition-colors italic">
+                   "It feels like I'm cheating, but my grades are the highest they've ever been." — Sarah J.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-32 bg-white">
+          <div className="section-container">
+            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+              <h2 className="text-4xl font-black tracking-tight text-balance italic underline decoration-[#B1121B]/30 decoration-4">The study system that feels like a cheat code.</h2>
+              <p className="text-lg text-[#111111]/60 font-medium">
+                We didn't build just another reading app. We built a dedicated audio ecosystem for your academic success.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {features.map((feature) => (
+                <div key={feature.title} className="p-8 rounded-[2rem] border-2 border-[#EFEFEF] bg-[#F7F7F7] hover:border-[#B1121B]/50 transition-all group">
+                  <div className="bg-white p-4 rounded-2xl w-fit mb-6 group-hover:bg-[#B1121B]/10 shadow-sm transition-colors border border-[#EFEFEF]">
+                    <feature.icon className="h-8 w-8 text-[#111111] group-hover:text-[#B1121B] transition-colors" />
+                  </div>
+                  <h3 className="text-xl font-black mb-3 uppercase tracking-tight">{feature.title}</h3>
+                  <p className="text-[#111111]/60 leading-relaxed font-bold text-sm">{feature.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Offline Detail */}
+        <section className="py-32 overflow-hidden bg-[#F7F7F7]">
+          <div className="section-container">
+            <div className="bg-[#111111] rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden border-b-8 border-[#B1121B]">
+              <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10">
+                <div className="space-y-8">
+                  <h2 className="text-4xl md:text-5xl font-black leading-tight underline decoration-[#B1121B] decoration-8 underline-offset-8">The only app that stays with you, even where the signal dies.</h2>
+                  <p className="text-lg text-white/60 leading-relaxed font-bold">
+                    Most apps require a constant connection. JackPal downloads your library locally with built-in encryption, giving you access to your studies in the most remote locations.
+                  </p>
+                  <ul className="space-y-4">
+                    {[
+                      "Military-grade local encryption",
+                      "Zero-data background downloads",
+                      "Optimized for budget Android devices",
+                      "Battery-efficient playback"
+                    ].map((item) => (
+                      <li key={item} className="flex items-center gap-3 font-black text-sm uppercase tracking-wide">
+                        <CheckCircle2 className="h-5 w-5 text-[#B1121B]" /> {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <button className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-black hover:bg-[#E10600] transition-all shadow-xl shadow-[#B1121B]/20">
+                    Join the Waitlist
+                  </button>
+                </div>
+                <div className="relative flex justify-center lg:justify-end">
+                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2rem] w-full max-w-xs shadow-2xl">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="h-6 w-6 text-[#B1121B]" />
+                        <span className="font-black uppercase tracking-widest text-xs">Device Authorized</span>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-tighter text-[#B1121B]">Downloaded</span>
+                            <ShieldCheck className="h-4 w-4 text-[#B1121B]" />
+                          </div>
+                          <div className="text-xs font-bold truncate">Physics_Final_Review.mp3</div>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/10 opacity-50">
+                          <div className="flex justify-between items-center mb-2 text-[10px] font-black uppercase tracking-tighter">
+                            <span>In Progress</span>
+                            <span>45%</span>
+                          </div>
+                          <div className="h-1.5 bg-white/10 rounded-full">
+                            <div className="h-full bg-[#B1121B] w-[45%] rounded-full shadow-[0_0_8px_#B1121B]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Decorative Circle */}
+              <div className="absolute -top-40 -right-40 h-80 w-80 border-[40px] border-white/5 rounded-full" />
+            </div>
+          </div>
+        </section>
+
+import Lanyard from "@/components/Lanyard";
+
+const features = [
+  // ... existing features
+];
+
+// ... existing code
+
+        {/* Coming Soon Interactive Section */}
+        <section id="pricing" className="py-32 bg-white relative overflow-hidden">
+          <div className="section-container relative z-10">
+            <div className="text-center max-w-2xl mx-auto mb-10 space-y-4">
+              <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">
+                The future of study is <span className="text-[#B1121B]">almost here.</span>
+              </h2>
+              <p className="text-lg text-[#111111]/60 font-bold">
+                Interact with our beta access card below. We're fine-tuning the ultimate study experience.
+              </p>
+            </div>
+            
+            <div className="flex justify-center items-center py-10">
+              <Lanyard />
+            </div>
+
+            <div className="mt-10 bg-[#111111] text-white px-8 py-6 rounded-[2rem] border-4 border-[#B1121B] shadow-2xl flex flex-col items-center gap-2 max-w-md mx-auto">
+              <span className="text-2xl font-black uppercase tracking-tighter">Coming Soon</span>
+              <span className="text-xs font-bold text-[#B1121B] uppercase tracking-[0.2em]">Regional pricing & Beta access</span>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq" className="py-32 bg-[#F7F7F7]">
+          <div className="section-container">
+            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+              <h2 className="text-4xl font-black tracking-tight uppercase leading-[0.9]">The FAQ for students who <span className="text-[#B1121B]">want to win.</span></h2>
+              <p className="text-lg text-[#111111]/60 font-bold">
+                Still on the fence? Here's why you can't afford to wait.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {[
+                { 
+                  q: "Will my grades actually improve?", 
+                  a: "JackPal is designed to leverage multi-modal learning. By listening while you're active, you can increase retention and master your materials faster than traditional reading alone."
+                },
+                { 
+                  q: "What if my signal drops mid-study?", 
+                  a: "That's exactly why we built JackPal. Your library is locally encrypted. You could be in a nuclear bunker and still listen to your notes."
+                },
+                { 
+                  q: "Is it affordable for my budget?", 
+                  a: "JackPal is designed to be affordable for any student budget. The value of reclaiming dozens of study hours every month far outweighs the modest cost of the subscription."
+                },
+                { 
+                  q: "Can I cancel anytime?", 
+                  a: "Of course. No locked contracts. We're building this for students, by students, so your flexibility is our priority."
+                }
+              ].map((item) => (
+                <div key={item.q} className="p-8 rounded-[2rem] border-2 border-[#EFEFEF] bg-white hover:border-[#B1121B]/30 transition-all group">
+                  <h3 className="text-lg font-black mb-3 uppercase tracking-tight group-hover:text-[#B1121B] transition-colors">{item.q}</h3>
+                  <p className="text-[#111111]/60 leading-relaxed text-sm font-bold">{item.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-32 bg-white">
+          <div className="section-container text-center space-y-12">
+            <h2 className="text-5xl md:text-6xl font-black tracking-tighter max-w-4xl mx-auto leading-[0.9] uppercase">
+              The secret weapon of <br />
+              <span className="text-[#B1121B] italic underline decoration-8 decoration-[#B1121B]/20">the Top 1%.</span>
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button className="bg-[#B1121B] text-white px-10 py-5 rounded-full text-xl font-black uppercase tracking-widest shadow-2xl shadow-[#B1121B]/30 hover:bg-[#E10600] hover:scale-105 transition-all">
+                Get Early Access
+              </button>
+              <button className="text-lg font-black uppercase tracking-widest px-10 py-5 hover:text-[#B1121B] transition-colors flex items-center gap-2 group">
+                Join the exclusive beta <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-[#EFEFEF] bg-[#F7F7F7] py-12">
+        <div className="section-container">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#B1121B] p-1 rounded-lg shadow-sm">
+                <Headphones className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-lg font-black tracking-tight uppercase">JackPal</span>
+            </div>
+            <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-[#111111]/40">
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Twitter</a>
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Instagram</a>
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Privacy</a>
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Terms</a>
+            </div>
+            <p className="text-[10px] font-bold text-[#111111]/30 uppercase tracking-[0.2em]">
+              &copy; 2026 JackPal Audio. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

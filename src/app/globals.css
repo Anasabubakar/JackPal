@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f7f7;
+  --foreground: #111111;
+  --primary: #b1121b;
+  --primary-foreground: #ffffff;
+  --secondary: #efefef;
+  --accent: #e10600;
+  --muted: #e5e5e5;
+  --muted-foreground: #444444;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+@keyframes wave {
+  0% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+  100% { transform: scaleY(0.4); }
+}
+
+.animate-wave {
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+.wave-delay-1 { animation-delay: 0.1s; }
+.wave-delay-2 { animation-delay: 0.2s; }
+.wave-delay-3 { animation-delay: 0.3s; }
+.wave-delay-4 { animation-delay: 0.4s; }
+
+.audio-card-shadow {
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Custom button styles for better visibility */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent);
+}
