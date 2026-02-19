@@ -296,9 +296,9 @@ export default function Home() {
                 <div className="relative bg-white rounded-[2rem] border-4 border-[#111111] p-8 audio-card-shadow max-w-md mx-auto transform lg:rotate-2 z-10">
                   {/* Floating Trust Toast */}
                   <div className="absolute -top-12 -left-12 bg-[#111111] text-white p-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#B1121B]">
-                    <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">CO</div>
+                    <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">JP</div>
                     <div className="text-[10px] font-bold leading-none">
-                      Chidi O.<br />
+                      JackPal Beta<br />
                       <span className="text-[#B1121B]">On the way</span>
                     </div>
                   </div>
