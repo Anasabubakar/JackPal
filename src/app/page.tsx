@@ -118,11 +118,11 @@ export default function Home() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2 text-left">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">Full Name</label>
-                      <input required type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="Anas Abubakar" />
+                      <input required type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="Aminu Adamu" />
                     </div>
                     <div className="space-y-2 text-left">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">Student Email</label>
-                      <input required type="email" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="anas@uni.edu" />
+                      <input required type="email" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="aminu@uni.edu.ng" />
                     </div>
                   </div>
 
@@ -296,9 +296,9 @@ export default function Home() {
                 <div className="relative bg-white rounded-[2rem] border-4 border-[#111111] p-8 audio-card-shadow max-w-md mx-auto transform lg:rotate-2 z-10">
                   {/* Floating Trust Toast */}
                   <div className="absolute -top-12 -left-12 bg-[#111111] text-white p-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#B1121B]">
-                    <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">JP</div>
+                    <div className="bg-[#B1121B] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">CO</div>
                     <div className="text-[10px] font-bold leading-none">
-                      JackPal Beta<br />
+                      Chidi O.<br />
                       <span className="text-[#B1121B]">On the way</span>
                     </div>
                   </div>
@@ -420,8 +420,8 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs font-bold text-white/50 group-hover:bg-[#B1121B]/10 transition-colors italic">
-                   "It feels like I'm cheating, but my grades are the highest they've ever been." — Sarah J.
+                <div className="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs font-bold text-white/50 group-hover:bg-[#B1121B]/10 transition-colors italic text-left">
+                   "It feels like I'm cheating, but my grades are the highest they've ever been." — Yetunde F.
                 </div>
               </div>
             </div>
@@ -438,7 +438,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8 text-left">
               {features.map((feature) => (
                 <div key={feature.title} className="p-8 rounded-[2rem] border-2 border-[#EFEFEF] bg-[#F7F7F7] hover:border-[#B1121B]/50 transition-all group">
                   <div className="bg-white p-4 rounded-2xl w-fit mb-6 group-hover:bg-[#B1121B]/10 shadow-sm transition-colors border border-[#EFEFEF]">
@@ -488,7 +488,7 @@ export default function Home() {
                         <Smartphone className="h-6 w-6 text-[#B1121B]" />
                         <span className="font-black uppercase tracking-widest text-xs">Device Authorized</span>
                       </div>
-                      <div className="space-y-4">
+                      <div className="space-y-4 text-left">
                         <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-black uppercase tracking-tighter text-[#B1121B]">Downloaded</span>
@@ -604,7 +604,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
               {[
                 { 
                   q: "Will my grades actually improve?", 
@@ -633,8 +633,8 @@ export default function Home() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-32 bg-white">
-          <div className="section-container text-center space-y-12">
+        <section className="py-32 bg-white text-center">
+          <div className="section-container space-y-12">
             <h2 className="text-5xl md:text-6xl font-black tracking-tighter max-w-4xl mx-auto leading-[0.9] uppercase text-[#111111]">
               The secret weapon of <br />
               <span className="text-[#B1121B] italic underline decoration-8 decoration-[#B1121B]/20">the Top 1%.</span>
@@ -662,7 +662,7 @@ export default function Home() {
         <div className="section-container">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             {/* Brand Column */}
-            <div className="col-span-1 md:col-span-1 space-y-6">
+            <div className="col-span-1 md:col-span-1 space-y-6 text-left">
               <div className="flex items-center gap-2">
                 <div className="bg-[#B1121B] p-1.5 rounded-lg shadow-lg shadow-[#B1121B]/20">
                   <Headphones className="h-6 w-6 text-white" />
@@ -689,17 +689,17 @@ export default function Home() {
             </div>
 
             {/* Links Columns */}
-            <div>
+            <div className="text-left">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B] mb-6">Product</h4>
               <ul className="space-y-4 text-sm font-bold text-white/60">
                 <li><a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-white transition-colors">AI Engine</a></li>
                 <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-white transition-colors">Offline Mode</a></li>
-                <li><button onClick={() => setWaitlistOpen(true)} className="hover:text-white transition-colors">Waitlist Beta</button></li>
+                <li><button onClick={() => setWaitlistOpen(true)} className="hover:text-white transition-colors uppercase">Waitlist Beta</button></li>
                 <li><a href="#" className="hover:text-white transition-colors">DRM Security</a></li>
               </ul>
             </div>
 
-            <div>
+            <div className="text-left">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B] mb-6">Company</h4>
               <ul className="space-y-4 text-sm font-bold text-white/60">
                 <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
@@ -727,7 +727,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="pt-10 border-t border-white/5 flex flex-col md:row justify-between items-center gap-6">
+          <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
               &copy; 2026 JackPal Audio. Built for Winners.
             </p>
