@@ -52,6 +52,18 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-[#111111]">
       {/* Header */}
@@ -63,7 +75,7 @@ export default function Home() {
         }`}
       >
         <div className="section-container flex items-center justify-between">
-          <div className="flex items-center gap-2 group cursor-pointer">
+          <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="bg-[#B1121B] p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-[#B1121B]/20">
               <Headphones className="h-5 w-5 text-white" />
             </div>
@@ -73,9 +85,9 @@ export default function Home() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-10">
             <div className="flex items-center gap-8 text-xs font-black uppercase tracking-widest text-[#111111]/60">
-              <a href="#features" className="hover:text-[#B1121B] transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-[#B1121B] transition-colors">Pricing</a>
-              <a href="#faq" className="hover:text-[#B1121B] transition-colors">FAQ</a>
+              <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-[#B1121B] transition-colors">Features</a>
+              <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#B1121B] transition-colors">Pricing</a>
+              <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-[#B1121B] transition-colors">FAQ</a>
             </div>
             <div className="h-4 w-[1px] bg-[#111111]/10" />
             <div className="flex items-center gap-6">
@@ -100,9 +112,9 @@ export default function Home() {
           mobileMenuOpen ? "max-h-[400px] py-8 shadow-2xl opacity-100" : "max-h-0 opacity-0"
         }`}>
           <div className="section-container flex flex-col gap-6 text-center">
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Features</a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Pricing</a>
-            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">FAQ</a>
+            <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Features</a>
+            <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">Pricing</a>
+            <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">FAQ</a>
             <div className="h-[1px] bg-[#111111]/5 w-full" />
             <button className="text-sm font-black uppercase tracking-widest text-[#B1121B] py-2">Log in</button>
             <button className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20 hover:bg-[#111111] transition-colors">Join Waitlist</button>
