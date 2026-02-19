@@ -10,7 +10,6 @@ import {
   Clock,
   Smartphone
 } from "lucide-react";
-import Lanyard from "@/components/Lanyard";
 
 const features = [
   {
@@ -326,33 +325,79 @@ export default function Home() {
           </div>
         </section>
 
-import Lanyard from "@/components/Lanyard";
-
-const features = [
-  // ... existing features
-];
-
-// ... existing code
-
-        {/* Coming Soon Interactive Section */}
+        {/* Pricing */}
         <section id="pricing" className="py-32 bg-white relative overflow-hidden">
-          <div className="section-container relative z-10">
-            <div className="text-center max-w-2xl mx-auto mb-10 space-y-4">
-              <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">
-                The future of study is <span className="text-[#B1121B]">almost here.</span>
-              </h2>
+          <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50">
+            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+              <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">Invest in your grades for <span className="text-[#B1121B]">an affordable price.</span></h2>
               <p className="text-lg text-[#111111]/60 font-bold">
-                Interact with our beta access card below. We're fine-tuning the ultimate study experience.
+                Affordable plans designed for real student budgets. Start free, upgrade when you need to.
               </p>
             </div>
-            
-            <div className="flex justify-center items-center py-10">
-              <Lanyard />
-            </div>
 
-            <div className="mt-10 bg-[#111111] text-white px-8 py-6 rounded-[2rem] border-4 border-[#B1121B] shadow-2xl flex flex-col items-center gap-2 max-w-md mx-auto">
-              <span className="text-2xl font-black uppercase tracking-tighter">Coming Soon</span>
-              <span className="text-xs font-bold text-[#B1121B] uppercase tracking-[0.2em]">Regional pricing & Beta access</span>
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                { 
+                  name: "Free", 
+                  price: "FREE", 
+                  unit: "",
+                  desc: "Perfect for light study",
+                  perks: ["30 mins/month", "Standard voices", "In-app player", "Basic extraction"],
+                  cta: "Current Plan",
+                  highlight: false
+                },
+                { 
+                  name: "Student Monthly", 
+                  price: "TBA", 
+                  unit: "/mo",
+                  desc: "Most popular for exams",
+                  perks: ["Unlimited minutes", "Premium voices", "Offline downloads", "DRM protection", "Priority support"],
+                  cta: "Get Started",
+                  highlight: true
+                },
+                { 
+                  name: "Student Annual", 
+                  price: "TBA", 
+                  unit: "/yr",
+                  desc: "Save on yearly billing",
+                  perks: ["Everything in Monthly", "2 months free", "Beta feature access", "Study analytics"],
+                  cta: "Go Yearly",
+                  highlight: false
+                }
+              ].map((plan) => (
+                <div 
+                  key={plan.name} 
+                  className={`p-10 rounded-[2.5rem] border-2 ${plan.highlight ? 'border-[#B1121B] bg-[#B1121B]/5 shadow-2xl shadow-[#B1121B]/10 scale-105 z-10' : 'border-[#EFEFEF] bg-[#F7F7F7]'} flex flex-col transition-all hover:scale-105`}
+                >
+                  <div className="mb-8">
+                    <h3 className="text-sm font-black mb-2 uppercase tracking-[0.2em] text-[#111111]/40">{plan.name}</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-5xl font-black tracking-tighter text-[#111111]">{plan.price}</span>
+                      <span className="text-[#111111]/40 font-bold text-sm">{plan.unit}</span>
+                    </div>
+                    <p className="mt-4 text-[#111111]/70 text-sm font-bold">{plan.desc}</p>
+                  </div>
+                  <div className="flex-1 space-y-4 mb-10 border-t border-[#111111]/10 pt-8">
+                    {plan.perks.map((perk) => (
+                      <div key={perk} className="flex items-center gap-3 text-xs font-black uppercase tracking-tight">
+                        <CheckCircle2 className={`h-4 w-4 ${plan.highlight ? 'text-[#B1121B]' : 'text-[#111111]/30'}`} />
+                        {perk}
+                      </div>
+                    ))}
+                  </div>
+                  <button className={`w-full py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all ${plan.highlight ? 'bg-[#B1121B] text-white shadow-xl shadow-[#B1121B]/30 hover:bg-[#E10600]' : 'bg-[#111111] text-white hover:bg-[#B1121B]'}`}>
+                    {plan.cta}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Overlay Badge */}
+          <div className="absolute inset-0 z-20 flex items-center justify-center">
+            <div className="bg-[#111111] text-white px-12 py-6 rounded-[2rem] border-4 border-[#B1121B] shadow-2xl rotate-3 flex flex-col items-center gap-2">
+              <span className="text-3xl font-black uppercase tracking-tighter">Coming Soon</span>
+              <span className="text-xs font-bold text-[#B1121B] uppercase tracking-[0.2em]">Regional pricing incoming</span>
             </div>
           </div>
         </section>
