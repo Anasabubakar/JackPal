@@ -80,7 +80,7 @@ export default function Home() {
             <div className="h-4 w-[1px] bg-[#111111]/10" />
             <div className="flex items-center gap-6">
               <button className="text-xs font-black uppercase tracking-widest hover:text-[#B1121B] transition-colors">Log in</button>
-              <button className="bg-[#111111] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#B1121B] transition-all shadow-xl shadow-black/10 active:scale-95">
+              <button className="bg-[#B1121B] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#111111] transition-all shadow-xl shadow-[#B1121B]/20 active:scale-95">
                 Join Waitlist
               </button>
             </div>
@@ -105,7 +105,7 @@ export default function Home() {
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">FAQ</a>
             <div className="h-[1px] bg-[#111111]/5 w-full" />
             <button className="text-sm font-black uppercase tracking-widest text-[#B1121B] py-2">Log in</button>
-            <button className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20">Join Waitlist</button>
+            <button className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20 hover:bg-[#111111] transition-colors">Join Waitlist</button>
           </div>
         </div>
       </nav>
