@@ -46,6 +46,8 @@ const stats = [
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,8 +73,101 @@ export default function Home() {
     setMobileMenuOpen(false);
   };
 
+  const handleWaitlistSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => {
+      setWaitlistOpen(false);
+      setSubmitted(false);
+    }, 3000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F7F7] text-[#111111]">
+      {/* Waitlist Modal */}
+      {waitlistOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6">
+          <div className="absolute inset-0 bg-[#111111]/80 backdrop-blur-sm" onClick={() => setWaitlistOpen(false)} />
+          <div className="bg-white w-full max-w-xl rounded-[2.5rem] border-4 border-[#B1121B] shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
+            {submitted ? (
+              <div className="p-12 text-center space-y-6 text-[#111111]">
+                <div className="bg-[#B1121B]/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="h-10 w-10 text-[#B1121B]" />
+                </div>
+                <h3 className="text-3xl font-black uppercase tracking-tighter italic">You're on the list!</h3>
+                <p className="font-bold text-[#111111]/60">We've received your feedback. You'll be the first to know when we go live.</p>
+              </div>
+            ) : (
+              <div className="max-h-[90vh] overflow-y-auto p-8 md:p-10 text-[#111111]">
+                <button 
+                  onClick={() => setWaitlistOpen(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-[#F7F7F7] rounded-full transition-colors text-[#111111]"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                
+                <div className="mb-8">
+                  <div className="inline-block bg-[#B1121B]/10 text-[#B1121B] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                    Exclusive Beta Access
+                  </div>
+                  <h3 className="text-3xl font-black uppercase tracking-tighter italic leading-none">Join the Top 1%</h3>
+                  <p className="mt-2 font-bold text-[#111111]/50 text-sm italic">Help us build the ultimate unfair advantage.</p>
+                </div>
+
+                <form onSubmit={handleWaitlistSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2 text-left">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">Full Name</label>
+                      <input required type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="Anas Abubakar" />
+                    </div>
+                    <div className="space-y-2 text-left">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">Student Email</label>
+                      <input required type="email" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="anas@uni.edu" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">Level of Study</label>
+                    <select className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors appearance-none text-[#111111]">
+                      <option>Undergraduate</option>
+                      <option>Postgraduate (Masters/PhD)</option>
+                      <option>Professional Exams (Law/Med/Tech)</option>
+                      <option>Secondary School</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">What features do you want to see on JackPal?</label>
+                    <textarea required className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors min-h-[100px] text-[#111111]" placeholder="Tell us your dream study tool..." />
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">What's your biggest study pain point right now?</label>
+                    <input type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-[#111111]" placeholder="Reading fatigue, lack of time, etc." />
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[#111111]/40 px-1">How do you currently study?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["Physical Books", "PDFs/Screens", "Audio/Podcasts", "Flashcards"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 bg-[#F7F7F7] p-3 rounded-xl border border-[#EFEFEF] cursor-pointer hover:border-[#B1121B] transition-colors">
+                          <input type="checkbox" className="accent-[#B1121B]" />
+                          <span className="text-[10px] font-bold uppercase">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button className="w-full bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-[#B1121B]/20 hover:bg-[#111111] transition-all transform active:scale-95">
+                    Claim My Unfair Advantage
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <nav 
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-b ${
@@ -99,7 +194,10 @@ export default function Home() {
             <div className="h-4 w-[1px] bg-[#111111]/10" />
             <div className="flex items-center gap-6">
               <button className="text-xs font-black uppercase tracking-widest hover:text-[#B1121B] transition-colors">Log in</button>
-              <button className="bg-[#B1121B] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#111111] transition-all shadow-xl shadow-[#B1121B]/20 active:scale-95">
+              <button 
+                onClick={() => setWaitlistOpen(true)}
+                className="bg-[#B1121B] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#111111] transition-all shadow-xl shadow-[#B1121B]/20 active:scale-95"
+              >
                 Join Waitlist
               </button>
             </div>
@@ -124,7 +222,12 @@ export default function Home() {
             <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="text-sm font-black uppercase tracking-widest hover:text-[#B1121B]">FAQ</a>
             <div className="h-[1px] bg-[#111111]/5 w-full" />
             <button className="text-sm font-black uppercase tracking-widest text-[#B1121B] py-2">Log in</button>
-            <button className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20 hover:bg-[#111111] transition-colors">Join Waitlist</button>
+            <button 
+              onClick={() => setWaitlistOpen(true)}
+              className="bg-[#B1121B] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#B1121B]/20 hover:bg-[#111111] transition-colors"
+            >
+              Join Waitlist
+            </button>
           </div>
         </div>
       </nav>
@@ -150,10 +253,13 @@ export default function Home() {
                   Stop grinding through textbooks like it's 1999. Join the first wave of students who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  <button className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#B1121B]/20 hover:bg-[#E10600] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => setWaitlistOpen(true)}
+                    className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#B1121B]/20 hover:bg-[#E10600] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
                     Join the Waitlist Now <ArrowRight className="h-5 w-5" />
                   </button>
-                  <a href="#features" className="bg-white border-2 border-[#111111] text-[#111111] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2 text-center">
+                  <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="bg-white border-2 border-[#111111] text-[#111111] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2 text-center">
                     How it Works
                   </a>
                 </div>
@@ -368,7 +474,10 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <button className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-black hover:bg-[#E10600] transition-all shadow-xl shadow-[#B1121B]/20">
+                  <button 
+                    onClick={() => setWaitlistOpen(true)}
+                    className="bg-[#B1121B] text-white px-8 py-4 rounded-full text-lg font-black hover:bg-[#E10600] transition-all shadow-xl shadow-[#B1121B]/20"
+                  >
                     Join the Waitlist
                   </button>
                 </div>
@@ -410,7 +519,7 @@ export default function Home() {
 
         {/* Pricing Section */}
         <section id="pricing" className="py-32 bg-white relative overflow-hidden">
-          <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50">
+          <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50 text-[#111111]">
             <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
               <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">Invest in your grades for <span className="text-[#B1121B]">an affordable price.</span></h2>
               <p className="text-lg text-[#111111]/60 font-bold">
@@ -526,15 +635,21 @@ export default function Home() {
         {/* CTA Section */}
         <section className="py-32 bg-white">
           <div className="section-container text-center space-y-12">
-            <h2 className="text-5xl md:text-6xl font-black tracking-tighter max-w-4xl mx-auto leading-[0.9] uppercase">
+            <h2 className="text-5xl md:text-6xl font-black tracking-tighter max-w-4xl mx-auto leading-[0.9] uppercase text-[#111111]">
               The secret weapon of <br />
               <span className="text-[#B1121B] italic underline decoration-8 decoration-[#B1121B]/20">the Top 1%.</span>
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button className="bg-[#B1121B] text-white px-10 py-5 rounded-full text-xl font-black uppercase tracking-widest shadow-2xl shadow-[#B1121B]/30 hover:bg-[#E10600] hover:scale-105 transition-all">
+              <button 
+                onClick={() => setWaitlistOpen(true)}
+                className="bg-[#B1121B] text-white px-10 py-5 rounded-full text-xl font-black uppercase tracking-widest shadow-2xl shadow-[#B1121B]/30 hover:bg-[#E10600] hover:scale-105 transition-all"
+              >
                 Get Early Access
               </button>
-              <button className="text-lg font-black uppercase tracking-widest px-10 py-5 hover:text-[#B1121B] transition-colors flex items-center gap-2 group">
+              <button 
+                onClick={() => setWaitlistOpen(true)}
+                className="text-lg font-black uppercase tracking-widest px-10 py-5 hover:text-[#B1121B] transition-colors flex items-center gap-2 group text-[#111111]"
+              >
                 Join the exclusive beta <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" />
               </button>
             </div>
@@ -577,9 +692,9 @@ export default function Home() {
             <div>
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B] mb-6">Product</h4>
               <ul className="space-y-4 text-sm font-bold text-white/60">
-                <li><a href="#features" className="hover:text-white transition-colors">AI Engine</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Offline Mode</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Waitlist Beta</a></li>
+                <li><a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-white transition-colors">AI Engine</a></li>
+                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-white transition-colors">Offline Mode</a></li>
+                <li><button onClick={() => setWaitlistOpen(true)} className="hover:text-white transition-colors">Waitlist Beta</button></li>
                 <li><a href="#" className="hover:text-white transition-colors">DRM Security</a></li>
               </ul>
             </div>
@@ -603,7 +718,7 @@ export default function Home() {
                 <input 
                   type="email" 
                   placeholder="Your student email" 
-                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#B1121B] transition-colors"
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#B1121B] transition-colors text-white"
                 />
                 <button className="bg-[#B1121B] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#E10600] transition-colors">
                   Subscribe
