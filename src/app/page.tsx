@@ -31,7 +31,7 @@ const features = [
 
 const stats = [
   { label: "Waitlist Spots", value: "Available" },
-  { label: "Launch Window", value: "Q2 2026" },
+  { label: "Launch Window", value: "End of Q1 2026" },
   { label: "Beta Testing", value: "Incoming" },
 ];
 
