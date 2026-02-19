@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unknown-property */
 'use client';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { useTexture, Environment, Lightformer } from '@react-three/drei';
 import {
@@ -26,9 +26,6 @@ declare global {
     }
   }
 }
-
-// Fallback lanyard texture or placeholder
-const LANYARD_TEXTURE = 'https://raw.githubusercontent.com/pmndrs/drei-assets/master/lanyard.png';
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
@@ -56,26 +53,28 @@ export default function Lanyard({
 
   return (
     <div className="relative z-0 w-full h-[500px] flex justify-center items-center">
-      <Canvas
-        camera={{ position, fov }}
-        dpr={[1, isMobile ? 1.5 : 2]}
-        gl={{ alpha: transparent, antialias: true }}
-      >
-        <ambientLight intensity={Math.PI / 2} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
-          <Band isMobile={isMobile} />
-        </Physics>
-        <Environment preset="city">
-          <Lightformer
-            intensity={2}
-            color="white"
-            position={[0, -1, 5]}
-            rotation={[0, 0, Math.PI / 3]}
-            scale={[100, 0.1, 1]}
-          />
-        </Environment>
-      </Canvas>
+      <Suspense fallback={<div className="text-[#B1121B] font-bold animate-pulse uppercase tracking-widest">Loading Experience...</div>}>
+        <Canvas
+          camera={{ position, fov }}
+          dpr={[1, isMobile ? 1.5 : 2]}
+          gl={{ alpha: transparent, antialias: true }}
+        >
+          <ambientLight intensity={Math.PI / 2} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
+            <Band isMobile={isMobile} />
+          </Physics>
+          <Environment preset="city">
+            <Lightformer
+              intensity={2}
+              color="white"
+              position={[0, -1, 5]}
+              rotation={[0, 0, Math.PI / 3]}
+              scale={[100, 0.1, 1]}
+            />
+          </Environment>
+        </Canvas>
+      </Suspense>
     </div>
   );
 }
@@ -107,7 +106,6 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
     linearDamping: 4
   };
 
-  const texture = useTexture(LANYARD_TEXTURE);
   const [curve] = useState(
     () =>
       new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
@@ -165,7 +163,6 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
   });
 
   curve.curveType = 'chordal';
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
   return (
     <>
@@ -221,13 +218,11 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
       <mesh ref={band}>
         <meshLineGeometry />
         <meshLineMaterial
+          // @ts-ignore
+          args={[{}]}
           color="#B1121B"
           depthTest={false}
           resolution={isMobile ? [1000, 2000] : [1000, 1000]}
-          // @ts-ignore
-          useMap
-          map={texture}
-          repeat={[-4, 1]}
           lineWidth={1}
         />
       </mesh>
