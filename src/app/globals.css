@@ -12,14 +12,11 @@
 }
 
 html {
-  scroll-behavior: smooth;
-}
-
-* {
-  box-sizing: border-box;
+  scroll-behavior: smooth !important;
 }
 
 body {
+  scroll-behavior: smooth;
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-body), system-ui, sans-serif;
