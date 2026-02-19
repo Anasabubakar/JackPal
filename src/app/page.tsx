@@ -90,10 +90,23 @@ export default function Home() {
                   </a>
                 </div>
                 <div className="flex flex-col gap-6 pt-8 border-t border-[#EFEFEF]">
-                  <div className="flex items-center gap-4 text-sm font-bold">
-                    <span className="text-[#B1121B] font-black italic">Claim your spot.</span> Be among the first to get the unfair advantage.
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm font-bold uppercase tracking-widest">
+                      <span className="text-[#B1121B]">Launch Readiness</span>
+                      <span className="text-[#111111]">80%</span>
+                    </div>
+                    <div className="h-3 bg-[#EFEFEF] rounded-full w-full overflow-hidden relative border border-[#111111]/5">
+                      <div className="h-full bg-[#B1121B] animate-loading-bar rounded-full relative overflow-hidden shadow-[0_0_15px_rgba(177,18,27,0.3)]">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ width: '200%' }} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-bold text-[#111111]/50 uppercase tracking-tighter">
+                      <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-[#B1121B]" /> Core Engine</span>
+                      <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-[#B1121B]" /> Security DRM</span>
+                      <span className="flex items-center gap-1 animate-pulse"><Clock className="h-3 w-3" /> UI Polish</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-10">
+                  <div className="flex items-center gap-10 pt-2">
                     {stats.map((stat) => (
                       <div key={stat.label}>
                         <div className="text-3xl font-black text-[#111111]">{stat.value}</div>
@@ -133,8 +146,10 @@ export default function Home() {
 
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden">
-                        <div className="h-full bg-[#B1121B] w-[65%] rounded-full" />
+                      <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden relative">
+                        <div className="h-full bg-[#B1121B] animate-loading-bar rounded-full relative overflow-hidden">
+                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" style={{ width: '200%' }} />
+                        </div>
                       </div>
                       <div className="flex justify-between text-[10px] font-black text-[#111111]/50 uppercase tracking-widest">
                         <span>12:45</span>
