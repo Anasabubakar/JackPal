@@ -27,7 +27,6 @@ h1, h2, h3, h4 {
   font-family: var(--font-display), Georgia, serif;
   letter-spacing: -0.01em;
   font-weight: 700;
-  color: var(--foreground);
 }
 
 @keyframes wave {
