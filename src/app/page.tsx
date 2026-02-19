@@ -380,9 +380,9 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {/* Them */}
-              <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E5E5] opacity-60 grayscale hover:grayscale-0 transition-all">
-                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#111111]/50 uppercase tracking-widest">
-                  <div className="h-2 w-2 rounded-full bg-[#111111]/50" /> Average Students
+              <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E5E5] opacity-80 transition-all">
+                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#111111]/70 uppercase tracking-widest">
+                  <div className="h-2 w-2 rounded-full bg-[#111111]/70" /> Average Students
                 </h3>
                 <ul className="space-y-6">
                   {[
@@ -392,7 +392,7 @@ export default function Home() {
                     "Forgetting 70% of what they read",
                     "Constant burnout and fatigue"
                   ].map((item) => (
-                    <li key={item} className="flex items-center gap-3 text-sm font-bold text-[#111111]/40 line-through">
+                    <li key={item} className="flex items-center gap-3 text-sm font-bold text-[#111111]/60 line-through">
                       {item}
                     </li>
                   ))}
