@@ -591,8 +591,8 @@ export default function Home() {
               </ul>
             </div>
 
-            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B]">Newsletter</h4>
+            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 space-y-4 text-left">
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Newsletter</h4>
               <p className="text-xs font-bold text-white/40 leading-relaxed">
                 Get study hacks and launch updates. No spam, just value.
               </p>
