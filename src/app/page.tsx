@@ -540,24 +540,84 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#EFEFEF] bg-[#F7F7F7] py-12">
+      <footer className="bg-[#111111] text-white pt-20 pb-10 border-t border-[#B1121B]/20">
         <div className="section-container">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-2">
-              <div className="bg-[#B1121B] p-1 rounded-lg shadow-sm">
-                <Headphones className="h-4 w-4 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            {/* Brand Column */}
+            <div className="col-span-1 md:col-span-1 space-y-6">
+              <div className="flex items-center gap-2">
+                <div className="bg-[#B1121B] p-1.5 rounded-lg shadow-lg shadow-[#B1121B]/20">
+                  <Headphones className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-2xl font-black tracking-tighter uppercase italic">JackPal</span>
               </div>
-              <span className="text-lg font-black tracking-tight uppercase">JackPal</span>
+              <p className="text-white/50 text-sm font-bold leading-relaxed">
+                The unfair study advantage for the top 1% of students. Turn your dead time into Dean's List results.
+              </p>
+              <div className="flex gap-4">
+                <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
+                  <span className="sr-only">Twitter</span>
+                  <Smartphone className="h-4 w-4 text-white/50 group-hover:text-white" />
+                </a>
+                <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
+                  <span className="sr-only">Instagram</span>
+                  <CheckCircle2 className="h-4 w-4 text-white/50 group-hover:text-white" />
+                </a>
+                <a href="#" className="h-10 w-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-[#B1121B] hover:border-[#B1121B] transition-all group">
+                  <span className="sr-only">LinkedIn</span>
+                  <ArrowRight className="h-4 w-4 text-white/50 group-hover:text-white" />
+                </a>
+              </div>
             </div>
-            <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-[#111111]/40">
-              <a href="#" className="hover:text-[#B1121B] transition-colors">Twitter</a>
-              <a href="#" className="hover:text-[#B1121B] transition-colors">Instagram</a>
-              <a href="#" className="hover:text-[#B1121B] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[#B1121B] transition-colors">Terms</a>
+
+            {/* Links Columns */}
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B] mb-6">Product</h4>
+              <ul className="space-y-4 text-sm font-bold text-white/60">
+                <li><a href="#features" className="hover:text-white transition-colors">AI Engine</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Offline Mode</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Waitlist Beta</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">DRM Security</a></li>
+              </ul>
             </div>
-            <p className="text-[10px] font-bold text-[#111111]/30 uppercase tracking-[0.2em]">
-              &copy; 2026 JackPal Audio. All rights reserved.
+
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B] mb-6">Company</h4>
+              <ul className="space-y-4 text-sm font-bold text-white/60">
+                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Student Stories</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              </ul>
+            </div>
+
+            <div className="bg-white/5 p-8 rounded-3xl border border-white/10 space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#B1121B]">Newsletter</h4>
+              <p className="text-xs font-bold text-white/40 leading-relaxed">
+                Get study hacks and launch updates. No spam, just value.
+              </p>
+              <div className="flex flex-col gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Your student email" 
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#B1121B] transition-colors"
+                />
+                <button className="bg-[#B1121B] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#E10600] transition-colors">
+                  Subscribe
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-10 border-t border-white/5 flex flex-col md:row justify-between items-center gap-6">
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
+              &copy; 2026 JackPal Audio. Built for Winners.
             </p>
+            <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-white/40">
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-[#B1121B] transition-colors">Cookie Policy</a>
+            </div>
           </div>
         </div>
       </footer>
