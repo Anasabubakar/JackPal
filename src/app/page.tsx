@@ -453,12 +453,12 @@ export default function Home() {
         </section>
 
         {/* Offline Detail */}
-        <section className="py-32 overflow-hidden bg-[#F7F7F7]">
+        <section className="py-32 overflow-hidden bg-white">
           <div className="section-container">
-            <div className="bg-[#111111] rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden border-b-8 border-[#B1121B]">
-              <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10">
+            <div className="bg-[#111111] rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden border-b-8 border-[#B1121B] shadow-2xl">
+              <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10 text-left">
                 <div className="space-y-8">
-                  <h2 className="text-4xl md:text-5xl font-black leading-tight underline decoration-[#B1121B] decoration-8 underline-offset-8">The only app that stays with you, even where the signal dies.</h2>
+                  <h2 className="text-4xl md:text-5xl font-black leading-tight underline decoration-[#B1121B] decoration-8 underline-offset-8">The app that stays with you, even where the signal dies.</h2>
                   <p className="text-lg text-white/60 leading-relaxed font-bold">
                     Most apps require a constant connection. JackPal downloads your library locally with built-in encryption, giving you access to your studies in the most remote locations.
                   </p>
