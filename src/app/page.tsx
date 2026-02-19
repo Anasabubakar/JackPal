@@ -56,9 +56,13 @@ export default function Home() {
     e.preventDefault();
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+      const offset = 100; // Account for fixed header
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
       });
     }
     setMobileMenuOpen(false);
@@ -256,7 +260,7 @@ export default function Home() {
         </section>
 
         {/* Comparison Section */}
-        <section className="py-32 bg-[#EFEFEF]">
+        <section id="pricing" className="py-32 bg-[#EFEFEF]">
           <div className="section-container">
             <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
               <h2 className="text-4xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#B1121B]">"Winning".</span></h2>
