@@ -247,21 +247,21 @@ export default function Home() {
                   </span>
                   Coming Soon to Elite Students
                 </div>
-                <h1 className="text-5xl md:text-6xl font-bold leading-[1.1] tracking-tight">
+                <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight">
                   Study while you live.<br />
                   <span className="text-[#2585C7] italic underline decoration-4 underline-offset-8">Win while they sleep.</span>
                 </h1>
-                <p className="text-xl text-[#02013D]/70 max-w-xl leading-relaxed font-medium">
+                <p className="text-lg md:text-xl text-[#02013D]/70 max-w-xl leading-relaxed font-medium">
                   Stop grinding through textbooks like it's 1999. Join the first wave of students who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button 
                     onClick={() => setWaitlistOpen(true)}
-                    className="bg-[#2585C7] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#2585C7]/20 hover:bg-[#61E3F0] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto bg-[#2585C7] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#2585C7]/20 hover:bg-[#61E3F0] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
                     Join the Waitlist Now <ArrowRight className="h-5 w-5" />
                   </button>
-                  <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="bg-white border-2 border-[#02013D] text-[#02013D] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2 text-center">
+                  <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="w-full sm:w-auto bg-white border-2 border-[#02013D] text-[#02013D] px-8 py-4 rounded-full text-lg font-bold hover:bg-[#EFEFEF] transition-colors flex items-center justify-center gap-2 text-center">
                     How it Works
                   </a>
                 </div>
@@ -276,17 +276,17 @@ export default function Home() {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ width: '200%' }} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-bold text-[#02013D]/50 uppercase tracking-tighter">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] md:text-xs font-bold text-[#02013D]/50 uppercase tracking-tighter">
                       <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-[#2585C7]" /> Core Engine</span>
                       <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-[#2585C7]" /> Security DRM</span>
                       <span className="flex items-center gap-1 animate-pulse"><Clock className="h-3 w-3" /> UI Polish</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-10 pt-2">
+                  <div className="flex flex-wrap items-center gap-6 md:gap-10 pt-2">
                     {stats.map((stat) => (
                       <div key={stat.label}>
-                        <div className="text-3xl font-black text-[#02013D]">{stat.value}</div>
-                        <div className="text-xs font-bold uppercase tracking-widest text-[#02013D]/50">{stat.label}</div>
+                        <div className="text-2xl md:text-3xl font-black text-[#02013D]">{stat.value}</div>
+                        <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#02013D]/50">{stat.label}</div>
                       </div>
                     ))}
                   </div>
