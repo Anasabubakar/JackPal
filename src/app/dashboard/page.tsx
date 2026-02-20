@@ -24,7 +24,9 @@ import {
   Image as ImageIcon,
   X,
   Cloud,
-  Globe
+  Globe,
+  LayoutGrid,
+  Grid
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -34,18 +36,25 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [mounted, setMounted] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [isOthersModalOpen, setIsOthersModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const uploadOptions = [
+  const mainUploadOptions = [
     { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7" },
-    { label: "Google Drive", icon: Cloud, color: "#61E3F0" },
-    { label: "Web/External", icon: Globe, color: "#0F1774" },
-    { label: "Link/URL", icon: Link2, color: "#2261B9" },
-    { label: "Image/Note", icon: ImageIcon, color: "#02013D" },
-    { label: "Video", icon: Video, color: "#2585C7" },
+    { label: "Link/URL", icon: Link2, color: "#61E3F0" },
+    { label: "Google Drive", icon: Cloud, color: "#0F1774" },
+  ];
+
+  const allUploadOptions = [
+    { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7", desc: "Upload PDFs, Word, or TXT" },
+    { label: "Link/URL", icon: Link2, color: "#61E3F0", desc: "Import from any website" },
+    { label: "Google Drive", icon: Cloud, color: "#0F1774", desc: "Connect your cloud library" },
+    { label: "Web/External", icon: Globe, color: "#2261B9", desc: "External cloud platforms" },
+    { label: "Image/Note", icon: ImageIcon, color: "#02013D", desc: "OCR for images and notes" },
+    { label: "Video", icon: Video, color: "#2585C7", desc: "Extract audio from videos" },
   ];
 
   const recentAudios = [
@@ -332,7 +341,7 @@ export default function Dashboard() {
           <div className="relative">
             {/* Animated Menu */}
             <div className={`absolute bottom-20 right-0 space-y-4 transition-all duration-300 origin-bottom ${isAddMenuOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}`}>
-              {uploadOptions.map((option, index) => (
+              {mainUploadOptions.map((option, index) => (
                 <button
                   key={option.label}
                   className="flex items-center gap-4 group"
@@ -349,6 +358,23 @@ export default function Dashboard() {
                   </div>
                 </button>
               ))}
+              
+              {/* Others Button */}
+              <button
+                onClick={() => {
+                  setIsOthersModalOpen(true);
+                  setIsAddMenuOpen(false);
+                }}
+                className="flex items-center gap-4 group"
+                style={{ transitionDelay: `150ms` }}
+              >
+                <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">
+                  More Options
+                </span>
+                <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-white text-[#02013D] shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-[#02013D]">
+                  <LayoutGrid className="h-6 w-6" />
+                </div>
+              </button>
             </div>
 
             {/* Main FAB Button */}
@@ -360,6 +386,62 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* ========================================== */}
+        {/* OTHERS UPLOAD MODAL (Bouncy)              */}
+        {/* ========================================== */}
+        {isOthersModalOpen && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
+            <div 
+              className="absolute inset-0 bg-[#02013D]/80 backdrop-blur-md animate-in fade-in duration-300"
+              onClick={() => setIsOthersModalOpen(false)}
+            />
+            <div className="bg-[#F7F7F7] w-full max-w-2xl rounded-[3rem] border-8 border-[#02013D] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in spin-in-1 duration-500 hover:scale-[1.01] transition-transform">
+              <div className="p-10 md:p-12 space-y-10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-3xl font-black tracking-tighter uppercase italic">Import Library</h3>
+                    <p className="text-xs font-bold text-[#02013D]/40 uppercase tracking-widest">Select your source to begin learning</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsOthersModalOpen(false)}
+                    className="bg-[#02013D] text-white p-3 rounded-2xl hover:bg-[#2585C7] transition-colors active:scale-90"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {allUploadOptions.map((option) => (
+                    <button
+                      key={option.label}
+                      className="bg-white p-6 rounded-[2rem] border-2 border-[#EFEFEF] hover:border-[#2585C7] hover:shadow-2xl hover:shadow-[#2585C7]/10 transition-all group text-left space-y-4"
+                    >
+                      <div 
+                        className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform"
+                        style={{ backgroundColor: option.color }}
+                      >
+                        <option.icon className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-black uppercase tracking-tighter group-hover:text-[#2585C7] transition-colors">{option.label}</div>
+                        <p className="text-[9px] font-bold text-[#02013D]/40 uppercase leading-none">{option.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-6 border-t border-[#EFEFEF] flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/20">
+                   <span>JackPal Secure Import</span>
+                   <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>Military-grade Encryption</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
 
