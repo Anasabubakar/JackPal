@@ -12,8 +12,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,8 +26,8 @@ export default function LoginPage() {
     // Simulate login delay
     setTimeout(() => {
       setLoading(false);
-      alert("Login functionality coming soon! You're currently on the beta waitlist.");
-    }, 2000);
+      router.push("/dashboard");
+    }, 1500);
   };
 
   return (
