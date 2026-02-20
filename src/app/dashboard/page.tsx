@@ -16,7 +16,13 @@ import {
   LogOut,
   TrendingUp,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  FileText,
+  Video,
+  Link2,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,10 +31,18 @@ import { useState, useEffect } from "react";
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [mounted, setMounted] = useState(false);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const uploadOptions = [
+    { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7" },
+    { label: "Link/URL", icon: Link2, color: "#61E3F0" },
+    { label: "Image/Note", icon: ImageIcon, color: "#0F1774" },
+    { label: "Video", icon: Video, color: "#02013D" },
+  ];
 
   const recentAudios = [
     { id: 1, title: "Biology 101: Cell Theory", chapter: "Chapter 4", progress: 75, duration: "18:30", color: "#2585C7" },
@@ -307,9 +321,45 @@ export default function Dashboard() {
           ))}
         </nav>
 
+        {/* ========================================== */}
+        {/* DESKTOP FLOATING ACTION BUTTON (FAB)      */}
+        {/* ========================================== */}
+        <div className="hidden md:block fixed bottom-10 right-10 z-[300]">
+          <div className="relative">
+            {/* Animated Menu */}
+            <div className={`absolute bottom-20 right-0 space-y-4 transition-all duration-300 origin-bottom ${isAddMenuOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}`}>
+              {uploadOptions.map((option, index) => (
+                <button
+                  key={option.label}
+                  className="flex items-center gap-4 group"
+                  style={{ transitionDelay: `${index * 50}ms` }}
+                >
+                  <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">
+                    {option.label}
+                  </span>
+                  <div 
+                    className="h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-white"
+                    style={{ backgroundColor: option.color }}
+                  >
+                    <option.icon className="h-6 w-6" />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Main FAB Button */}
+            <button 
+              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+              className={`h-20 w-20 rounded-3xl flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-white transition-all duration-500 transform ${isAddMenuOpen ? 'bg-[#02013D] rotate-[135deg]' : 'bg-[#2585C7] hover:scale-105 active:scale-95'}`}
+            >
+              {isAddMenuOpen ? <Plus className="h-10 w-10 text-[#61E3F0]" /> : <Plus className="h-10 w-10 text-white" />}
+            </button>
+          </div>
+        </div>
+
       </main>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }
@@ -323,7 +373,7 @@ export default function Dashboard() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #2585C7;
         }
-      `}</style>
+      ` }} />
     </div>
   );
 }
