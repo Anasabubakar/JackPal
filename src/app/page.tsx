@@ -309,14 +309,14 @@ export default function Home() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2585C7] opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2585C7]"></span>
                   </span>
-                  Coming Soon to Nigerian Students
+                  Coming Soon to Nigerian Winners
                 </div>
                 <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight">
                   Study while you live.<br />
                   <span className="text-[#2585C7] italic underline decoration-4 underline-offset-8">Win while they sleep.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-[#02013D]/70 max-w-xl leading-relaxed font-medium">
-                  Stop grinding through textbooks like it's 1999. Join the first wave of students who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
+                  Stop grinding through textbooks like it's 1999. Join the first wave of Winners who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button 
@@ -468,9 +468,9 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {/* Them */}
-              <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E5E5] opacity-80 transition-all">
+              <div className="bg-white p-10 rounded-[2rem] border border-[#E5E5E5] opacity-80 transition-all">
                 <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#02013D]/70 uppercase tracking-widest">
-                  <div className="h-2 w-2 rounded-full bg-[#02013D]/70" /> Average Students
+                  <div className="h-2 w-2 rounded-full bg-[#02013D]/70" /> Average Users
                 </h3>
                 <ul className="space-y-6">
                   {[
@@ -579,7 +579,7 @@ export default function Home() {
                     "Authentic Nigerian pronunciations",
                     "Cultural context and relatable flow",
                     "Higher retention than foreign accents",
-                    "The elite student's unfair advantage"
+                    "The elite Winner's unfair advantage"
                   ].map((item) => (
                     <div key={item} className="flex items-center gap-3 text-sm font-black uppercase tracking-tight">
                       <CheckCircle2 className="h-5 w-5 text-[#2585C7]" /> {item}
@@ -605,7 +605,7 @@ export default function Home() {
                     {[
                       "Military-grade local encryption",
                       "Zero-data background downloads",
-                      "Optimized for budget Android devices",
+                      "Optimized for budget mobile devices",
                       "Battery-efficient playback"
                     ].map((item) => (
                       <li key={item} className="flex items-center gap-3 font-black text-sm uppercase tracking-wide">
@@ -662,7 +662,7 @@ export default function Home() {
             <div className="text-center max-w-2xl mx-auto mb-10 md:mb-20 space-y-4">
               <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">Invest in your grades for <span className="text-[#2585C7]">an affordable price.</span></h2>
               <p className="text-lg text-[#02013D]/60 font-bold">
-                Affordable plans designed for real student budgets. Start free, upgrade when you need to.
+                Affordable plans designed for ambitious Winner budgets. Start free, upgrade when you need to.
               </p>
             </div>
 
@@ -678,7 +678,7 @@ export default function Home() {
                   highlight: false
                 },
                 { 
-                  name: "Student Monthly", 
+                  name: "Pro Monthly", 
                   price: "TBA", 
                   unit: "/mo",
                   desc: "Most popular for exams",
@@ -687,7 +687,7 @@ export default function Home() {
                   highlight: true
                 },
                 { 
-                  name: "Student Annual", 
+                  name: "Pro Annual", 
                   price: "TBA", 
                   unit: "/yr",
                   desc: "Save on yearly billing",

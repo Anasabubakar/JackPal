@@ -133,7 +133,7 @@ export default function Dashboard() {
              <div className="flex items-center gap-3">
                 <div className="text-right">
                   <div className="text-xs font-black uppercase tracking-tighter">Winner Adamu</div>
-                  <div className="text-[10px] font-bold text-[#2585C7] uppercase">Elite Student</div>
+                  <div className="text-[10px] font-bold text-[#2585C7] uppercase">Elite Member</div>
                 </div>
                 <div className="h-10 w-10 bg-[#2585C7] rounded-xl flex items-center justify-center text-white font-black italic">WA</div>
              </div>
@@ -168,7 +168,7 @@ export default function Dashboard() {
                   <span className="text-[#2585C7] underline decoration-[#2585C7]/20 decoration-8 underline-offset-8">Top 1% Winner.</span>
                 </h1>
                 <p className="text-sm md:text-lg text-white/50 font-bold max-w-lg leading-relaxed">
-                  Your study consistency is higher than 95% of students in Nigeria this week. Keep winning.
+                  Your study consistency is higher than 95% of users in Nigeria this week. Keep winning.
                 </p>
               </div>
               <div className="flex gap-4 relative z-10">
