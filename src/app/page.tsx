@@ -198,9 +198,7 @@ export default function Home() {
       >
         <div className="section-container flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="bg-[#2585C7] p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-[#2585C7]/20 flex items-center justify-center">
-              <Image src="/images/logo.svg" alt="JackPal Logo" width={20} height={20} className="brightness-0 invert" />
-            </div>
+            <Image src="/images/logo.svg" alt="JackPal Logo" width={32} height={32} className="group-hover:rotate-12 transition-transform" />
             <span className="text-xl font-black tracking-tighter uppercase italic">JackPal</span>
           </div>
 
