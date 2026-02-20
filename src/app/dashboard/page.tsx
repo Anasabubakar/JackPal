@@ -323,7 +323,7 @@ export default function Dashboard() {
             className="flex flex-col items-center -mt-12 group relative"
           >
             <div className="absolute inset-0 bg-[#2585C7] rounded-full blur-xl opacity-20 group-active:opacity-40 animate-pulse" />
-            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-[#F7F7F7] transform transition-all group-active:scale-90 z-[10] relative hover:rotate-90">
+            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-[#F7F7F7] transform transition-all group-active:scale-90 z-[10] relative hover:scale-105">
               <CloudUpload className="h-7 w-7 text-white" />
             </div>
             <span className="text-[9px] font-black uppercase tracking-tighter text-[#2585C7] mt-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Upload</span>
