@@ -1,10 +1,9 @@
 'use client';
 
 import { 
-  Play, 
-  Download, 
-  Upload, 
-  Zap, 
+  Twitter, 
+  Instagram, 
+  Linkedin, 
   CheckCircle2, 
   ArrowRight,
   ShieldCheck,
@@ -12,12 +11,15 @@ import {
   Smartphone,
   Menu,
   X,
-  Twitter,
-  Instagram,
-  Linkedin
+  Play, 
+  Download, 
+  Upload, 
+  Zap,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { subscribeToNewsletter } from "./actions";
 
 const features = [
   {
@@ -49,6 +51,9 @@ export default function Home() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState(false);
+  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +63,19 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setNewsletterSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await subscribeToNewsletter(formData);
+    setNewsletterSubmitting(false);
+    if (result.success) {
+      setNewsletterSuccess(true);
+      setTimeout(() => setNewsletterSuccess(false), 3000);
+      (e.target as HTMLFormElement).reset();
+    }
+  };
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
@@ -711,21 +729,46 @@ export default function Home() {
               </ul>
             </div>
 
-            <div className="bg-white/10 p-8 rounded-3xl border border-white/20 space-y-4 text-left shadow-2xl">
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Newsletter</h4>
-              <p className="text-xs font-bold text-white/70 leading-relaxed">
-                Get study hacks and launch updates. No spam, just value.
-              </p>
-              <div className="flex flex-col gap-2">
-                <input 
-                  type="email" 
-                  placeholder="Your student email" 
-                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-white"
-                />
-                <button className="bg-[#2585C7] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#61E3F0] transition-colors">
-                  Subscribe
-                </button>
-              </div>
+            <div className="bg-white/10 p-8 rounded-3xl border border-white/20 space-y-4 text-left shadow-2xl relative overflow-hidden">
+              {newsletterSuccess ? (
+                <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+                  <div className="bg-[#2585C7]/20 w-12 h-12 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-[#2585C7]" />
+                  </div>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">You're Subscribed!</h4>
+                  <p className="text-[10px] font-bold text-white/70 leading-relaxed">
+                    Welcome to the 1%. Get ready for study hacks and launch updates.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Newsletter</h4>
+                  <p className="text-xs font-bold text-white/70 leading-relaxed">
+                    Get study hacks and launch updates. No spam, just value.
+                  </p>
+                  <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-2">
+                    <input 
+                      required
+                      name="email"
+                      type="email" 
+                      placeholder="Your student email" 
+                      className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-white"
+                    />
+                    <button 
+                      disabled={newsletterSubmitting}
+                      className="bg-[#2585C7] text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#61E3F0] transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                    >
+                      {newsletterSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Subscribing...
+                        </>
+                      ) : (
+                        "Subscribe"
+                      )}
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
           </div>
 
