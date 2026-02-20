@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "JackPal — Your Audio Study Companion",
   description:
     "Convert your readings, PDFs, and notes into high-quality audio you can listen to anywhere. Offline-first, student-focused.",
+  icons: {
+    icon: "/images/logo.svg",
+  },
 };
 
 export default function RootLayout({

@@ -4,7 +4,6 @@ import {
   Play, 
   Download, 
   Upload, 
-  Headphones, 
   Zap, 
   CheckCircle2, 
   ArrowRight,
@@ -17,6 +16,7 @@ import {
   Instagram,
   Linkedin
 } from "lucide-react";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 
 const features = [
@@ -178,8 +178,8 @@ export default function Home() {
       >
         <div className="section-container flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="bg-[#B1121B] p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-[#B1121B]/20">
-              <Headphones className="h-5 w-5 text-white" />
+            <div className="bg-[#B1121B] p-1.5 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-[#B1121B]/20 flex items-center justify-center">
+              <Image src="/images/logo.svg" alt="JackPal Logo" width={20} height={20} className="brightness-0 invert" />
             </div>
             <span className="text-xl font-black tracking-tighter uppercase italic">JackPal</span>
           </div>
@@ -305,7 +305,7 @@ export default function Home() {
 
                   <div className="flex items-center justify-between mb-8">
                     <div className="bg-[#EFEFEF] h-10 w-10 rounded-full flex items-center justify-center">
-                      <Headphones className="h-5 w-5 text-[#B1121B]" />
+                      <Image src="/images/logo.svg" alt="JackPal Logo" width={20} height={20} />
                     </div>
                     <div className="bg-[#B1121B]/10 text-[#B1121B] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-[#B1121B]/20 shadow-sm flex items-center gap-1.5">
                       <div className="h-1 w-1 bg-[#B1121B] rounded-full animate-ping" />
@@ -664,8 +664,8 @@ export default function Home() {
             {/* Brand Column */}
             <div className="col-span-1 md:col-span-1 space-y-6 text-left">
               <div className="flex items-center gap-2">
-                <div className="bg-[#B1121B] p-1.5 rounded-lg shadow-lg shadow-[#B1121B]/20">
-                  <Headphones className="h-6 w-6 text-white" />
+                <div className="bg-[#B1121B] p-1.5 rounded-lg shadow-lg shadow-[#B1121B]/20 flex items-center justify-center">
+                  <Image src="/images/logo.svg" alt="JackPal Logo" width={24} height={24} className="brightness-0 invert" />
                 </div>
                 <span className="text-2xl font-black tracking-tighter uppercase italic">JackPal</span>
               </div>
