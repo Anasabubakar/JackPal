@@ -22,7 +22,9 @@ import {
   Video,
   Link2,
   Image as ImageIcon,
-  X
+  X,
+  Cloud,
+  Globe
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,9 +41,11 @@ export default function Dashboard() {
 
   const uploadOptions = [
     { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7" },
-    { label: "Link/URL", icon: Link2, color: "#61E3F0" },
-    { label: "Image/Note", icon: ImageIcon, color: "#0F1774" },
-    { label: "Video", icon: Video, color: "#02013D" },
+    { label: "Google Drive", icon: Cloud, color: "#61E3F0" },
+    { label: "Web/External", icon: Globe, color: "#0F1774" },
+    { label: "Link/URL", icon: Link2, color: "#2261B9" },
+    { label: "Image/Note", icon: ImageIcon, color: "#02013D" },
+    { label: "Video", icon: Video, color: "#2585C7" },
   ];
 
   const recentAudios = [
