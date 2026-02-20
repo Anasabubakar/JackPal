@@ -29,8 +29,8 @@ const features = [
   },
   {
     icon: Zap,
-    title: "Study at 2x speed.",
-    desc: "Our AI narration is so clean you can double the speed and still catch every detail. Cut study time in half."
+    title: "Voices that sound like home.",
+    desc: "Forget robotic foreign accents. Our AI uses local Nigerian voice models so you can relate, understand, and retain 10x better."
   },
   {
     icon: Download,
@@ -263,7 +263,7 @@ export default function Home() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2585C7] opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2585C7]"></span>
                   </span>
-                  Coming Soon to Elite Students
+                  Coming Soon to Nigerian Students
                 </div>
                 <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight">
                   Study while you live.<br />
@@ -468,6 +468,57 @@ export default function Home() {
                   <p className="text-[#02013D]/60 leading-relaxed font-bold text-sm">{feature.desc}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Local Voice Focus Section */}
+        <section className="py-32 bg-[#F7F7F7] overflow-hidden">
+          <div className="section-container">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="order-2 lg:order-1 relative">
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#2585C7]/10 rounded-full blur-3xl" />
+                <div className="relative bg-white p-8 rounded-[2rem] border-4 border-[#02013D] shadow-2xl rotate-2">
+                   <div className="flex items-center gap-4 mb-6">
+                      <div className="h-12 w-12 bg-[#2585C7] rounded-full flex items-center justify-center text-white font-black italic">NG</div>
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-widest text-[#2585C7]">Regional Voice Pack</div>
+                        <div className="text-lg font-black text-[#02013D]">Lagos — Standard</div>
+                      </div>
+                   </div>
+                   <div className="space-y-4">
+                      <div className="h-4 w-full bg-[#EFEFEF] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#2585C7] w-[75%] animate-pulse" />
+                      </div>
+                      <p className="text-sm font-bold text-[#02013D]/70 italic leading-relaxed">
+                        "E go help you understand Biology fast-fast. No be only foreign grammar we dey use here."
+                      </p>
+                   </div>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2 space-y-8 text-left">
+                <div className="inline-block bg-[#2585C7]/10 text-[#2585C7] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+                  Breaking Boundaries
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-[0.9] uppercase">
+                  The <span className="text-[#2585C7]">Accent</span> of <br />Success.
+                </h2>
+                <p className="text-xl text-[#02013D]/70 font-medium leading-relaxed">
+                  Why listen to a robot that doesn't sound like you? JackPal uses <span className="text-[#02013D] font-black underline decoration-[#2585C7] decoration-4">actual Nigerian voice models</span> so you can relate, understand, and master your textbooks in a way foreign apps simply can't match.
+                </p>
+                <div className="space-y-4">
+                  {[
+                    "Authentic Nigerian pronunciations",
+                    "Cultural context and relatable flow",
+                    "Higher retention than foreign accents",
+                    "The elite student's unfair advantage"
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3 text-sm font-black uppercase tracking-tight">
+                      <CheckCircle2 className="h-5 w-5 text-[#2585C7]" /> {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
