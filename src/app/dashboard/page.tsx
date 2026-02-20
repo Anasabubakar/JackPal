@@ -296,7 +296,7 @@ export default function Dashboard() {
         {/* ========================================== */}
         {/* MOBILE FLOATING DOCK (md:hidden)          */}
         {/* ========================================== */}
-        <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-[#02013D] text-white rounded-[2rem] p-3 shadow-2xl z-[200] flex items-end justify-between border-t border-white/10 shadow-[#2585C7]/20 transition-transform active:translate-y-1">
+        <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-[#02013D]/95 backdrop-blur-2xl text-white rounded-[2rem] p-2 shadow-2xl z-[200] flex items-center justify-between border border-white/10 shadow-[#2585C7]/30 transition-all">
           {[
             { id: 'home', icon: Home, label: 'Home' },
             { id: 'library', icon: Library, label: 'Library' },
@@ -304,19 +304,29 @@ export default function Dashboard() {
             <button 
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 group w-14 transition-all ${activeTab === item.id ? 'text-[#2585C7]' : 'text-white/40'}`}
+              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}
             >
-              <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'fill-current' : ''}`} />
-              <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
+              <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'stroke-[2.5px]' : ''}`} />
+              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
+              {activeTab === item.id && (
+                <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />
+              )}
             </button>
           ))}
 
           {/* Center Action Button (Upload) */}
-          <button className="flex flex-col items-center -mt-10 group relative">
-            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-xl shadow-[#2585C7]/40 border-8 border-[#F7F7F7] transform transition-transform group-active:scale-90 z-[10]">
+          <button 
+            onClick={() => {
+              setIsOthersModalOpen(true);
+              setIsAddMenuOpen(false);
+            }}
+            className="flex flex-col items-center -mt-12 group relative"
+          >
+            <div className="absolute inset-0 bg-[#2585C7] rounded-full blur-xl opacity-20 group-active:opacity-40 animate-pulse" />
+            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-[#F7F7F7] transform transition-all group-active:scale-90 z-[10] relative hover:rotate-90">
               <CloudUpload className="h-7 w-7 text-white" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-tighter text-[#2585C7] mt-1">Upload</span>
+            <span className="text-[9px] font-black uppercase tracking-tighter text-[#2585C7] mt-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Upload</span>
           </button>
 
           {[
@@ -326,10 +336,13 @@ export default function Dashboard() {
             <button 
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 group w-14 transition-all ${activeTab === item.id ? 'text-[#2585C7]' : 'text-white/40'}`}
+              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}
             >
-              <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'fill-current' : ''}`} />
-              <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
+              <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'stroke-[2.5px]' : ''}`} />
+              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
+              {activeTab === item.id && (
+                <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />
+              )}
             </button>
           ))}
         </nav>
