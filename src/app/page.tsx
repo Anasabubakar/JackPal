@@ -587,9 +587,9 @@ export default function Home() {
         </section>
 
         {/* Pricing Section */}
-        <section id="pricing" className="py-32 bg-white relative overflow-hidden">
-          <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50 text-[#02013D]">
-            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+        <section id="pricing" className="py-20 md:py-32 bg-white relative overflow-hidden">
+          <div className="section-container relative z-10 blur-lg select-none pointer-events-none opacity-50 text-[#02013D] max-h-[500px] md:max-h-none overflow-hidden">
+            <div className="text-center max-w-2xl mx-auto mb-10 md:mb-20 space-y-4">
               <h2 className="text-4xl font-black tracking-tight text-balance uppercase leading-[0.9]">Invest in your grades for <span className="text-[#2585C7]">an affordable price.</span></h2>
               <p className="text-lg text-[#02013D]/60 font-bold">
                 Affordable plans designed for real student budgets. Start free, upgrade when you need to.
