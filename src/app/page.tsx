@@ -14,7 +14,7 @@ import {
   Play, 
   Download, 
   Upload, 
-  Zap,
+  Mic2,
   Loader2
 } from "lucide-react";
 import Image from "next/image";
@@ -28,7 +28,7 @@ const features = [
     desc: "Import PDFs or paste text and never look at a screen again. We extract the value, you just press play."
   },
   {
-    icon: Zap,
+    icon: Mic2,
     title: "Voices that sound like home.",
     desc: "Forget robotic foreign accents. Our AI uses local Nigerian voice models so you can relate, understand, and retain 10x better."
   },
