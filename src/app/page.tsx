@@ -824,7 +824,7 @@ export default function Home() {
           </div>
 
           <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">
               &copy; 2026 JackPal Audio. Built for Winners.
             </p>
             <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-white/40">
