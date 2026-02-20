@@ -253,8 +253,8 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="pt-40 pb-32 overflow-hidden">
-          <div className="section-container">
+        <section className="min-h-screen flex items-center pt-20 md:pt-0 overflow-hidden">
+          <div className="section-container w-full">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
               <div className="space-y-8 relative z-10">
                 <div className="inline-flex items-center gap-2 bg-[#2585C7]/10 text-[#2585C7] px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
