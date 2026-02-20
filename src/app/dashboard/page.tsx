@@ -43,13 +43,13 @@ export default function Dashboard() {
   }, []);
 
   const mainUploadOptions = [
-    { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7" },
+    { label: "File", icon: FileText, color: "#2585C7" },
     { label: "Link/URL", icon: Link2, color: "#61E3F0" },
     { label: "Google Drive", icon: Cloud, color: "#0F1774" },
   ];
 
   const allUploadOptions = [
-    { label: "File (PDF, Docx)", icon: FileText, color: "#2585C7", desc: "Upload PDFs, Word, or TXT" },
+    { label: "File", icon: FileText, color: "#2585C7", desc: "Upload PDFs, Word, or TXT" },
     { label: "Link/URL", icon: Link2, color: "#61E3F0", desc: "Import from any website" },
     { label: "Google Drive", icon: Cloud, color: "#0F1774", desc: "Connect your cloud library" },
     { label: "Web/External", icon: Globe, color: "#2261B9", desc: "External cloud platforms" },
