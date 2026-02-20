@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { subscribeToNewsletter } from "./actions";
 
 const features = [
@@ -56,6 +56,13 @@ export default function Home() {
   const [newsletterEmail, setNewsletterEmail] = useState(false);
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
 
+  // Audio Player State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [currentTimeText, setCurrentTimeText] = useState("00:00");
+  const [durationText, setDurationText] = useState("00:00");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     setMounted(true);
     const handleScroll = () => {
@@ -64,6 +71,46 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const togglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(err => console.log("Audio play failed:", err));
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const onTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime;
+      const total = audioRef.current.duration;
+      if (!isNaN(total) && total > 0) {
+        setAudioProgress((current / total) * 100);
+        setCurrentTimeText(formatTime(current));
+      }
+    }
+  };
+
+  const onLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDurationText(formatTime(audioRef.current.duration));
+    }
+  };
+
+  const onEnded = () => {
+    setIsPlaying(false);
+    setAudioProgress(0);
+    setCurrentTimeText("00:00");
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -340,13 +387,16 @@ export default function Home() {
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden relative">
-                        <div className="h-full bg-[#2585C7] animate-loading-bar rounded-full relative overflow-hidden">
+                        <div 
+                          className="h-full bg-[#2585C7] rounded-full relative overflow-hidden transition-all duration-100"
+                          style={{ width: `${audioProgress}%` }}
+                        >
                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" style={{ width: '200%' }} />
                         </div>
                       </div>
                       <div className="flex justify-between text-[10px] font-black text-[#02013D]/50 uppercase tracking-widest">
-                        <span>12:45</span>
-                        <span>18:30</span>
+                        <span>{currentTimeText}</span>
+                        <span>{durationText}</span>
                       </div>
                     </div>
 
@@ -359,9 +409,19 @@ export default function Home() {
                       <div className="h-10 w-10 flex items-center justify-center text-[#02013D] hover:text-[#2585C7] transition-colors cursor-pointer">
                         <Clock className="h-6 w-6" />
                       </div>
-                      <div className="h-16 w-16 bg-[#2585C7] rounded-full flex items-center justify-center text-white shadow-2xl hover:bg-[#61E3F0] hover:scale-110 transition-all cursor-pointer border-4 border-[#02013D]">
-                        <Play className="h-8 w-8 fill-current ml-1" />
-                      </div>
+                      <button 
+                        onClick={togglePlay}
+                        className="h-16 w-16 bg-[#2585C7] rounded-full flex items-center justify-center text-white shadow-2xl hover:bg-[#61E3F0] hover:scale-110 transition-all cursor-pointer border-4 border-[#02013D]"
+                      >
+                        {isPlaying ? (
+                          <div className="flex gap-1">
+                            <div className="h-6 w-1.5 bg-white rounded-full" />
+                            <div className="h-6 w-1.5 bg-white rounded-full" />
+                          </div>
+                        ) : (
+                          <Play className="h-8 w-8 fill-current ml-1" />
+                        )}
+                      </button>
                       <div className="h-10 w-10 flex items-center justify-center text-[#02013D] hover:text-[#2585C7] transition-colors cursor-pointer">
                         <Download className="h-6 w-6" />
                       </div>
@@ -371,12 +431,21 @@ export default function Home() {
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                         <div 
                           key={i} 
-                          className={`w-1.5 rounded-full bg-[#2585C7]/40 animate-wave wave-delay-${i % 4 + 1}`} 
+                          className={`w-1.5 rounded-full bg-[#2585C7]/40 ${isPlaying ? 'animate-wave' : ''} wave-delay-${i % 4 + 1}`} 
                           style={{ height: mounted ? `${Math.random() * 60 + 40}%` : "50%" }}
                         />
                       ))}
                     </div>
                   </div>
+
+                  {/* Hidden Audio Element */}
+                  <audio 
+                    ref={audioRef}
+                    src="/audio/sample.mp3"
+                    onTimeUpdate={onTimeUpdate}
+                    onLoadedMetadata={onLoadedMetadata}
+                    onEnded={onEnded}
+                  />
                 </div>
 
                 {/* Background Blobs */}
