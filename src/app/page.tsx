@@ -18,6 +18,7 @@ import {
   Loader2
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { subscribeToNewsletter } from "./actions";
 
@@ -211,7 +212,7 @@ export default function Home() {
             </div>
             <div className="h-4 w-[1px] bg-[#02013D]/10" />
             <div className="flex items-center gap-6">
-              <button className="text-xs font-black uppercase tracking-widest hover:text-[#2585C7] transition-colors">Log in</button>
+              <Link href="/login" className="text-xs font-black uppercase tracking-widest hover:text-[#2585C7] transition-colors">Log in</Link>
               <button 
                 onClick={() => setWaitlistOpen(true)}
                 className="bg-[#2585C7] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#02013D] transition-all shadow-xl shadow-[#2585C7]/20 active:scale-95"
@@ -239,7 +240,7 @@ export default function Home() {
             <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-sm font-black uppercase tracking-widest hover:text-[#2585C7]">Pricing</a>
             <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="text-sm font-black uppercase tracking-widest hover:text-[#2585C7]">FAQ</a>
             <div className="h-[1px] bg-[#02013D]/5 w-full" />
-            <button className="text-sm font-black uppercase tracking-widest text-[#2585C7] py-2">Log in</button>
+            <Link href="/login" className="text-sm font-black uppercase tracking-widest text-[#2585C7] py-2">Log in</Link>
             <button 
               onClick={() => setWaitlistOpen(true)}
               className="bg-[#2585C7] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#2585C7]/20 hover:bg-[#02013D] transition-colors"
