@@ -311,11 +311,11 @@ export default function Home() {
                   </span>
                   Coming Soon to Nigerian Winners
                 </div>
-                <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight">
+                <h1 className="text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight">
                   Study while you live.<br />
                   <span className="text-[#2585C7] italic underline decoration-4 underline-offset-8">Win while they sleep.</span>
                 </h1>
-                <p className="text-lg md:text-xl text-[#02013D]/70 max-w-xl leading-relaxed font-medium">
+                <p className="text-lg text-[#02013D]/70 max-w-xl leading-relaxed font-medium">
                   Stop grinding through textbooks like it's 1999. Join the first wave of Winners who will use JackPal to ghost their readings and finish 10 hours of study on a 30-minute walk.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -457,22 +457,22 @@ export default function Home() {
         </section>
 
         {/* Comparison Section */}
-        <section id="pricing" className="py-32 bg-[#EFEFEF]">
+        <section id="pricing" className="py-24 bg-[#EFEFEF]">
           <div className="section-container">
-            <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
-              <h2 className="text-4xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#2585C7]">"Winning".</span></h2>
-              <p className="text-lg text-[#02013D]/70 font-medium">
+            <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+              <h2 className="text-3xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#2585C7]">"Winning".</span></h2>
+              <p className="text-base text-[#02013D]/70 font-medium">
                 Don't be the student stuck in the library at 2 AM. Join the elite who study on their own terms.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {/* Them */}
-              <div className="bg-white p-10 rounded-[2rem] border border-[#E5E5E5] opacity-80 transition-all">
-                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#02013D]/70 uppercase tracking-widest">
+              <div className="bg-white p-8 rounded-3xl border border-[#E5E5E5] opacity-80 transition-all">
+                <h3 className="text-lg font-black mb-6 flex items-center gap-2 text-[#02013D]/70 uppercase tracking-widest">
                   <div className="h-2 w-2 rounded-full bg-[#02013D]/70" /> Average Users
                 </h3>
-                <ul className="space-y-6">
+                <ul className="space-y-5">
                   {[
                     "Stuck at a desk for 6+ hours",
                     "Chronic eye strain from blue light",
@@ -488,14 +488,14 @@ export default function Home() {
               </div>
 
               {/* You */}
-              <div className="bg-[#02013D] text-white p-10 rounded-[2.5rem] border-4 border-[#2585C7] shadow-2xl shadow-[#2585C7]/20 relative overflow-hidden group">
-                <div className="absolute top-4 right-4 bg-[#2585C7] text-white text-[10px] font-black uppercase px-2 py-1 rounded-md animate-pulse">
+              <div className="bg-[#02013D] text-white p-8 rounded-3xl border-4 border-[#2585C7] shadow-xl shadow-[#2585C7]/10 relative overflow-hidden group">
+                <div className="absolute top-4 right-4 bg-[#2585C7] text-white text-[9px] font-black uppercase px-2 py-1 rounded-md animate-pulse">
                   Unfair Advantage
                 </div>
-                <h3 className="text-xl font-black mb-8 flex items-center gap-2 text-[#2585C7] uppercase tracking-widest">
+                <h3 className="text-lg font-black mb-6 flex items-center gap-2 text-[#2585C7] uppercase tracking-widest">
                   <div className="h-2 w-2 rounded-full bg-[#2585C7]" /> JackPal Users
                 </h3>
-                <ul className="space-y-6">
+                <ul className="space-y-5">
                   {[
                     "Study at 2x speed while walking",
                     "Zero screen time required",
@@ -504,11 +504,11 @@ export default function Home() {
                     "Reclaim 20+ hours every week"
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-sm font-black">
-                      <CheckCircle2 className="h-5 w-5 text-[#2585C7]" /> {item}
+                      <CheckCircle2 className="h-4 w-4 text-[#2585C7]" /> {item}
                     </li>
                   ))}
                 </ul>
-                <div className="mt-12 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs font-bold text-white/50 group-hover:bg-[#2585C7]/10 transition-colors italic text-left">
+                <div className="mt-10 p-4 bg-white/5 rounded-2xl border border-white/10 text-[11px] font-bold text-white/50 group-hover:bg-[#2585C7]/10 transition-colors italic text-left">
                    "It feels like I'm cheating, but my grades are the highest they've ever been." — Yetunde F.
                 </div>
               </div>
