@@ -48,8 +48,10 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
@@ -353,7 +355,7 @@ export default function Home() {
                         <div 
                           key={i} 
                           className={`w-1.5 rounded-full bg-[#B1121B]/40 animate-wave wave-delay-${i % 4 + 1}`} 
-                          style={{ height: `${Math.random() * 60 + 40}%` }}
+                          style={{ height: mounted ? `${Math.random() * 60 + 40}%` : "50%" }}
                         />
                       ))}
                     </div>
