@@ -90,9 +90,9 @@ export default function Home() {
       {waitlistOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6">
           <div className="absolute inset-0 bg-[#02013D]/80 backdrop-blur-sm" onClick={() => setWaitlistOpen(false)} />
-          <div className="bg-white w-full max-w-xl rounded-[2.5rem] border-4 border-[#2585C7] shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
+          <div className="bg-white w-full max-w-xl rounded-[1.5rem] md:rounded-[2.5rem] border-4 border-[#2585C7] shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
             {submitted ? (
-              <div className="p-12 text-center space-y-6 text-[#02013D]">
+              <div className="p-8 md:p-12 text-center space-y-6 text-[#02013D]">
                 <div className="bg-[#2585C7]/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
                   <CheckCircle2 className="h-10 w-10 text-[#2585C7]" />
                 </div>
@@ -293,13 +293,13 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative w-full max-w-md mx-auto">
                 {/* Visual Representation of Player */}
-                <div className="relative bg-white rounded-[2rem] border-4 border-[#02013D] p-8 audio-card-shadow max-w-md mx-auto transform lg:rotate-2 z-10">
+                <div className="relative bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-[#02013D] p-5 md:p-8 audio-card-shadow w-full transform lg:rotate-2 z-10">
                   {/* Floating Trust Toast */}
-                  <div className="absolute -top-12 -left-12 bg-[#02013D] text-white p-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#2585C7]">
-                    <div className="bg-[#2585C7] h-8 w-8 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm">JP</div>
-                    <div className="text-[10px] font-bold leading-none">
+                  <div className="absolute -top-10 -left-4 md:-top-12 md:-left-12 bg-[#02013D] text-white p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-2xl flex items-center gap-2 md:gap-3 border border-[#2585C7]">
+                    <div className="bg-[#2585C7] h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center text-[7px] md:text-[8px] font-bold text-white shadow-sm">JP</div>
+                    <div className="text-[9px] md:text-[10px] font-bold leading-none">
                       JackPal Beta<br />
                       <span className="text-[#2585C7]">On the way</span>
                     </div>
@@ -455,10 +455,10 @@ export default function Home() {
         </section>
 
         {/* Offline Detail */}
-        <section className="py-32 overflow-hidden bg-white">
+        <section className="py-20 md:py-32 overflow-hidden bg-white">
           <div className="section-container">
-            <div className="bg-[#02013D] rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden border-b-8 border-[#2585C7] shadow-2xl">
-              <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10 text-left">
+            <div className="bg-[#02013D] rounded-[2rem] md:rounded-[3rem] p-8 md:p-20 text-white relative overflow-hidden border-b-8 border-[#2585C7] shadow-2xl">
+              <div className="grid lg:grid-cols-2 gap-10 md:gap-12 items-center relative z-10 text-left">
                 <div className="space-y-8">
                   <h2 className="text-4xl md:text-5xl font-black leading-tight underline decoration-[#2585C7] decoration-8 underline-offset-8 !text-white">The app that stays with you, even where the signal dies.</h2>
                   <p className="text-lg text-white/60 leading-relaxed font-bold">
