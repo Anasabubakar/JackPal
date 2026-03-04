@@ -380,12 +380,12 @@ export default function Home() {
           <div className="section-container">
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
               <div className="space-y-8 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-[#2585C7]/10 text-[#2585C7] px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                <div className="inline-flex items-center gap-2 bg-[#2585C7]/10 text-[#2585C7] px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-[#2585C7]/20 shadow-sm group hover:bg-[#2585C7] hover:text-white transition-all cursor-default">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2585C7] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2585C7]"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2585C7] group-hover:bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2585C7] group-hover:bg-white"></span>
                   </span>
-                  Coming Soon to Nigerian Winners
+                  Coming Soon
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight">
                   Study while you live.<br />
@@ -445,6 +445,7 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Hero Audio Player Header */}
                   <div className="flex items-center justify-between mb-8">
                     <div className="bg-[#EFEFEF] h-10 w-10 rounded-full flex items-center justify-center">
                       <Image src="/images/logo.svg" alt="JackPal Logo" width={20} height={20} />
@@ -453,11 +454,6 @@ export default function Home() {
                       <div className="h-1 w-1 bg-[#2585C7] rounded-full animate-ping" />
                       Unfair Advantage Active
                     </div>
-                  </div>
-                  
-                  <div className="mb-6 p-4 rounded-2xl bg-[#EFEFEF] border border-[#02013D]/10 text-[10px] font-black flex items-center justify-between">
-                     <span className="uppercase text-[#02013D]/50 tracking-widest">Top 1% Achievement</span>
-                     <span className="text-[#2585C7] bg-[#2585C7]/10 px-2 py-0.5 rounded-full border border-[#2585C7]/20">+450 XP Earned</span>
                   </div>
 
                   {/* Voice Selector */}

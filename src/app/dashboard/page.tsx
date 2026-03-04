@@ -177,9 +177,9 @@ export default function Dashboard() {
                     <div className="text-3xl font-black italic leading-none">14</div>
                     <div className="text-[9px] font-bold text-white/30 uppercase mt-1">Days</div>
                  </div>
-                 <div className="bg-[#2585C7] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#2585C7]/20">
-                    <div className="text-[9px] font-black uppercase text-white/60 mb-1 tracking-widest">XP Level</div>
-                    <div className="text-3xl font-black italic leading-none">450</div>
+                 <div className="bg-[#2585C7] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#2585C7]/20 flex flex-col justify-center">
+                    <div className="text-[9px] font-black uppercase text-white/60 mb-1 tracking-widest">Status</div>
+                    <div className="text-xl font-black italic leading-none uppercase">Active</div>
                     <div className="text-[9px] font-bold text-white/60 uppercase mt-1">Season 1</div>
                  </div>
               </div>
