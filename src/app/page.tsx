@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { subscribeToNewsletter } from "./actions";
+import { subscribeToNewsletter, submitWaitlist } from "./actions";
 
 const features = [
   {
@@ -51,10 +51,12 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistError, setWaitlistError] = useState("");
   const [mounted, setMounted] = useState(false);
   const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState(false);
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [newsletterError, setNewsletterError] = useState("");
 
   // Audio Player State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -114,15 +116,22 @@ export default function Home() {
 
   const handleNewsletterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setNewsletterError("");
     setNewsletterSubmitting(true);
     const formData = new FormData(e.currentTarget);
     const result = await subscribeToNewsletter(formData);
     setNewsletterSubmitting(false);
     if (result.success) {
+      if (result.redirectTo) {
+        window.location.assign(result.redirectTo);
+        return;
+      }
       setNewsletterSuccess(true);
       setTimeout(() => setNewsletterSuccess(false), 3000);
       (e.target as HTMLFormElement).reset();
+      return;
     }
+    setNewsletterError(result.error || "Something went wrong. Please try again.");
   };
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -141,13 +150,35 @@ export default function Home() {
     setMobileMenuOpen(false);
   };
 
-  const handleWaitlistSubmit = (e: React.FormEvent) => {
+  const handleWaitlistSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setWaitlistOpen(false);
-      setSubmitted(false);
-    }, 3000);
+    setWaitlistError("");
+    setWaitlistSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await submitWaitlist(formData);
+    setWaitlistSubmitting(false);
+
+    if (result.success) {
+      if (result.redirectTo) {
+        window.location.assign(result.redirectTo);
+        return;
+      }
+      e.currentTarget.reset();
+      setSubmitted(true);
+      setTimeout(() => {
+        setWaitlistOpen(false);
+        setSubmitted(false);
+      }, 3000);
+      return;
+    }
+
+    setWaitlistError(result.error || "Something went wrong. Please try again.");
+  };
+
+  const openWaitlist = () => {
+    setWaitlistError("");
+    setSubmitted(false);
+    setWaitlistOpen(true);
   };
 
   return (
@@ -167,12 +198,12 @@ export default function Home() {
               </div>
             ) : (
               <div className="max-h-[90vh] overflow-y-auto p-8 md:p-10 text-[#02013D]">
-                <button 
-                  onClick={() => setWaitlistOpen(false)}
-                  className="absolute top-6 right-6 p-2 hover:bg-[#F7F7F7] rounded-full transition-colors text-[#02013D]"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+                  <button
+                    onClick={() => setWaitlistOpen(false)}
+                    className="absolute top-6 right-6 p-2 hover:bg-[#F7F7F7] rounded-full transition-colors text-[#02013D]"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
                 
                 <div className="mb-8">
                   <div className="inline-block bg-[#2585C7]/10 text-[#2585C7] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
@@ -186,17 +217,17 @@ export default function Home() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2 text-left">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40 px-1">Full Name</label>
-                      <input required type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="Aminu Adamu" />
+                      <input required name="fullName" type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="Aminu Adamu" />
                     </div>
                     <div className="space-y-2 text-left">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40 px-1">Student Email</label>
-                      <input required type="email" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="aminu@uni.edu.ng" />
+                      <input required name="email" type="email" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="aminu@uni.edu.ng" />
                     </div>
                   </div>
 
                   <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40 px-1">Level of Study</label>
-                    <select className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors appearance-none text-[#02013D]">
+                    <select name="studyLevel" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors appearance-none text-[#02013D]">
                       <option>Undergraduate</option>
                       <option>Postgraduate (Masters/PhD)</option>
                       <option>Professional Exams (Law/Med/Tech)</option>
@@ -206,12 +237,12 @@ export default function Home() {
 
                   <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40 px-1">What features do you want to see on JackPal?</label>
-                    <textarea required className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors min-h-[100px] text-[#02013D]" placeholder="Tell us your dream study tool..." />
+                    <textarea required name="featuresWanted" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors min-h-[100px] text-[#02013D]" placeholder="Tell us your dream study tool..." />
                   </div>
 
                   <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40 px-1">What's your biggest study pain point right now?</label>
-                    <input type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="Reading fatigue, lack of time, etc." />
+                    <input name="painPoint" type="text" className="w-full bg-[#F7F7F7] border-2 border-[#EFEFEF] rounded-2xl px-4 py-3 font-bold focus:outline-none focus:border-[#2585C7] transition-colors text-[#02013D]" placeholder="Reading fatigue, lack of time, etc." />
                   </div>
 
                   <div className="space-y-2 text-left">
@@ -219,15 +250,22 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-2">
                       {["Physical Books", "PDFs/Screens", "Audio/Podcasts", "Flashcards"].map((opt) => (
                         <label key={opt} className="flex items-center gap-2 bg-[#F7F7F7] p-3 rounded-xl border border-[#EFEFEF] cursor-pointer hover:border-[#2585C7] transition-colors">
-                          <input type="checkbox" className="accent-[#2585C7]" />
+                          <input name="studyMethods" value={opt} type="checkbox" className="accent-[#2585C7]" />
                           <span className="text-[10px] font-bold uppercase">{opt}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
-                  <button className="w-full bg-[#2585C7] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-[#2585C7]/20 hover:bg-[#02013D] transition-all transform active:scale-95">
-                    Claim My Unfair Advantage
+                  {waitlistError && (
+                    <p className="text-xs font-bold text-red-600">{waitlistError}</p>
+                  )}
+
+                  <button
+                    disabled={waitlistSubmitting}
+                    className="w-full bg-[#2585C7] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-[#2585C7]/20 hover:bg-[#02013D] transition-all transform active:scale-95 disabled:opacity-70"
+                  >
+                    {waitlistSubmitting ? "Submitting..." : "Claim My Unfair Advantage"}
                   </button>
                 </form>
               </div>
@@ -261,7 +299,7 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <Link href="/login" className="text-xs font-black uppercase tracking-widest hover:text-[#2585C7] transition-colors">Log in</Link>
               <button 
-                onClick={() => setWaitlistOpen(true)}
+                onClick={openWaitlist}
                 className="bg-[#2585C7] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#02013D] transition-all shadow-xl shadow-[#2585C7]/20 active:scale-95"
               >
                 Join Waitlist
@@ -289,7 +327,7 @@ export default function Home() {
             <div className="h-[1px] bg-[#02013D]/5 w-full" />
             <Link href="/login" className="text-sm font-black uppercase tracking-widest text-[#2585C7] py-2">Log in</Link>
             <button 
-              onClick={() => setWaitlistOpen(true)}
+              onClick={openWaitlist}
               className="bg-[#2585C7] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#2585C7]/20 hover:bg-[#02013D] transition-colors"
             >
               Join Waitlist
@@ -320,7 +358,7 @@ export default function Home() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button 
-                    onClick={() => setWaitlistOpen(true)}
+                    onClick={openWaitlist}
                     className="w-full sm:w-auto bg-[#2585C7] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#2585C7]/20 hover:bg-[#61E3F0] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
                     Join the Waitlist Now <ArrowRight className="h-5 w-5" />
@@ -614,7 +652,7 @@ export default function Home() {
                     ))}
                   </ul>
                   <button 
-                    onClick={() => setWaitlistOpen(true)}
+                    onClick={openWaitlist}
                     className="bg-[#2585C7] text-white px-8 py-4 rounded-full text-lg font-black hover:bg-[#61E3F0] transition-all shadow-xl shadow-[#2585C7]/20"
                   >
                     Join the Waitlist
@@ -780,13 +818,13 @@ export default function Home() {
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button 
-                onClick={() => setWaitlistOpen(true)}
+                onClick={openWaitlist}
                 className="bg-[#2585C7] text-white px-10 py-5 rounded-full text-xl font-black uppercase tracking-widest shadow-2xl shadow-[#2585C7]/30 hover:bg-[#61E3F0] hover:scale-105 transition-all"
               >
                 Get Early Access
               </button>
               <button 
-                onClick={() => setWaitlistOpen(true)}
+                onClick={openWaitlist}
                 className="text-lg font-black uppercase tracking-widest px-10 py-5 hover:text-[#2585C7] transition-colors flex items-center gap-2 group text-[#02013D]"
               >
                 Join the exclusive beta <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" />
@@ -833,7 +871,7 @@ export default function Home() {
               <ul className="space-y-4 text-sm font-bold text-white/60">
                 <li><a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-white transition-colors">AI Engine</a></li>
                 <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-white transition-colors">Offline Mode</a></li>
-                <li><button onClick={() => setWaitlistOpen(true)} className="hover:text-white transition-colors uppercase">Waitlist Beta</button></li>
+                <li><button onClick={openWaitlist} className="hover:text-white transition-colors uppercase">Waitlist Beta</button></li>
                 <li><a href="#" className="hover:text-white transition-colors">DRM Security</a></li>
               </ul>
             </div>
@@ -885,6 +923,9 @@ export default function Home() {
                         "Subscribe"
                       )}
                     </button>
+                    {newsletterError && (
+                      <p className="text-[10px] font-bold text-red-300">{newsletterError}</p>
+                    )}
                   </form>
                 </>
               )}

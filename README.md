@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Resend Setup
+
+1. Create `.env.local` from `.env.example`.
+2. Replace `re_xxxxxxxxx` with your real Resend API key.
+3. Optionally set `FORM_SUCCESS_REDIRECT_URL` if you want form submissions to redirect after success.
+
 ## Getting Started
 
 First, run the development server:
