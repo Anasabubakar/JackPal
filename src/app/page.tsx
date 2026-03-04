@@ -46,6 +46,13 @@ const stats = [
   { label: "Beta Testing", value: "Incoming" },
 ];
 
+const voices = [
+  { id: "adaora", name: "Adaora", file: "/audio/adaora_yarngpt.mp3" },
+  { id: "zainab", name: "Zainab", file: "/audio/zainab_yarngpt.mp3" },
+  { id: "nonso", name: "Nonso", file: "/audio/nonso_yarngpt.mp3" },
+  { id: "jude", name: "Jude", file: "/audio/jude_yarngpt.mp3" },
+];
+
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -63,6 +70,7 @@ export default function Home() {
   const [audioProgress, setAudioProgress] = useState(0);
   const [currentTimeText, setCurrentTimeText] = useState("00:00");
   const [durationText, setDurationText] = useState("00:00");
+  const [selectedVoice, setSelectedVoice] = useState(voices[0]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -73,6 +81,27 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Handle voice change effect
+  useEffect(() => {
+    if (isPlaying && audioRef.current) {
+      const playAudio = async () => {
+        try {
+          await audioRef.current?.play();
+        } catch (err) {
+          console.log("Audio play failed on voice change:", err);
+        }
+      };
+      playAudio();
+    }
+  }, [selectedVoice]);
+
+  const handleVoiceChange = (voice: typeof voices[0]) => {
+    if (selectedVoice.id === voice.id) return;
+    setSelectedVoice(voice);
+    setAudioProgress(0);
+    setCurrentTimeText("00:00");
+  };
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -423,6 +452,32 @@ export default function Home() {
                      <span className="text-[#2585C7] bg-[#2585C7]/10 px-2 py-0.5 rounded-full border border-[#2585C7]/20">+450 XP Earned</span>
                   </div>
 
+                  {/* Voice Selector */}
+                  <div className="mb-8 space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#02013D]/40">Choose Voice</span>
+                      <div className="flex items-center gap-1">
+                        <Mic2 className="h-3 w-3 text-[#2585C7]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#2585C7]">{selectedVoice.name}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {voices.map((voice) => (
+                        <button
+                          key={voice.id}
+                          onClick={() => handleVoiceChange(voice)}
+                          className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border-2 ${
+                            selectedVoice.id === voice.id
+                              ? "bg-[#2585C7] text-white border-[#2585C7] shadow-lg shadow-[#2585C7]/20 scale-[1.02]"
+                              : "bg-[#F7F7F7] text-[#02013D]/60 border-[#EFEFEF] hover:border-[#2585C7]/30 hover:bg-white"
+                          }`}
+                        >
+                          {voice.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden relative">
@@ -480,7 +535,7 @@ export default function Home() {
                   {/* Hidden Audio Element */}
                   <audio 
                     ref={audioRef}
-                    src="/audio/sample.mp3"
+                    src={selectedVoice.file}
                     onTimeUpdate={onTimeUpdate}
                     onLoadedMetadata={onLoadedMetadata}
                     onEnded={onEnded}
