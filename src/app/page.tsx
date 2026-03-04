@@ -482,58 +482,83 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="relative group/progress h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden">
-                        {/* Interactive Range Input Overlay */}
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="0.1"
-                          value={audioProgress}
-                          onChange={handleSeek}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                        />
-                        {/* Visual Progress Bar */}
-                        <div 
-                          className="absolute left-0 top-0 h-full bg-[#2585C7] rounded-full transition-all duration-100 z-10"
-                          style={{ width: `${audioProgress}%` }}
-                        >
-                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" style={{ width: '200%' }} />
+                  <div className="space-y-8">
+                    {/* Progress Bar Board */}
+                    <div className="bg-[#F7F7F7] p-6 rounded-[2rem] border-2 border-[#EFEFEF] shadow-inner space-y-6 relative overflow-hidden group/board">
+                      {/* Decorative background element */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#2585C7]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                      
+                      <div className="space-y-4 relative z-10">
+                        <div className="space-y-3">
+                          <div className="relative h-4 flex items-center group/progress">
+                            {/* Native Range Input for accessibility and logic */}
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={audioProgress}
+                              onChange={handleSeek}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                            />
+                            
+                            {/* Track Background */}
+                            <div className="absolute inset-0 h-2 my-auto bg-[#EFEFEF] rounded-full w-full border border-[#02013D]/5" />
+                            
+                            {/* Active Progress Fill */}
+                            <div 
+                              className="absolute left-0 h-2 my-auto bg-[#2585C7] rounded-full transition-all duration-100 z-10"
+                              style={{ width: `${audioProgress}%` }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ width: '200%' }} />
+                            </div>
+
+                            {/* THE THUMB (Circle) */}
+                            <div 
+                              className="absolute h-5 w-5 bg-white border-4 border-[#2585C7] rounded-full shadow-xl z-20 transition-all duration-100 -translate-x-1/2 group-hover/progress:scale-110"
+                              style={{ left: `${audioProgress}%` }}
+                            />
+                          </div>
+                          
+                          <div className="flex justify-between text-[10px] font-black text-[#02013D]/40 uppercase tracking-widest px-1">
+                            <span className="bg-white px-2 py-0.5 rounded-full border border-[#EFEFEF]">{currentTimeText}</span>
+                            <span className="bg-[#02013D] text-white px-2 py-0.5 rounded-full">{durationText}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-center py-2">
+                          <h3 className="text-xl md:text-2xl font-black tracking-tight text-[#02013D] leading-tight">Biology 101: Cell Theory</h3>
+                          <div className="flex items-center justify-center gap-2">
+                             <div className="h-1 w-1 bg-[#2585C7] rounded-full" />
+                             <p className="text-[#02013D]/50 font-black uppercase text-[9px] tracking-[0.2em]">Chapter 4 — The Nucleus</p>
+                             <div className="h-1 w-1 bg-[#2585C7] rounded-full" />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex justify-between text-[10px] font-black text-[#02013D]/50 uppercase tracking-widest">
-                        <span>{currentTimeText}</span>
-                        <span>{durationText}</span>
-                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <h3 className="text-2xl font-black tracking-tight text-[#02013D]">Biology 101: Cell Theory</h3>
-                      <p className="text-[#02013D]/60 font-bold uppercase text-[10px] tracking-widest">Chapter 4 — The Nucleus</p>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-8 py-4">
-                      <div className="h-10 w-10 flex items-center justify-center text-[#02013D] hover:text-[#2585C7] transition-colors cursor-pointer">
-                        <Clock className="h-6 w-6" />
-                      </div>
+                    <div className="flex items-center justify-center gap-10">
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Clock className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+                      </button>
+                      
                       <button 
                         onClick={togglePlay}
-                        className="h-16 w-16 bg-[#2585C7] rounded-full flex items-center justify-center text-white shadow-2xl hover:bg-[#61E3F0] hover:scale-110 transition-all cursor-pointer border-4 border-[#02013D]"
+                        className="h-20 w-20 bg-[#2585C7] rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-[#2585C7]/40 hover:bg-[#02013D] hover:scale-105 active:scale-95 transition-all cursor-pointer border-4 border-white group"
                       >
                         {isPlaying ? (
-                          <div className="flex gap-1">
-                            <div className="h-6 w-1.5 bg-white rounded-full" />
-                            <div className="h-6 w-1.5 bg-white rounded-full" />
+                          <div className="flex gap-1.5">
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
                           </div>
                         ) : (
-                          <Play className="h-8 w-8 fill-current ml-1" />
+                          <Play className="h-10 w-10 fill-current ml-1 group-hover:text-[#61E3F0]" />
                         )}
                       </button>
-                      <div className="h-10 w-10 flex items-center justify-center text-[#02013D] hover:text-[#2585C7] transition-colors cursor-pointer">
-                        <Download className="h-6 w-6" />
-                      </div>
+
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Download className="h-6 w-6 group-hover:-translate-y-1 transition-transform" />
+                      </button>
                     </div>
 
                     <div className="flex items-center justify-center gap-1 h-12">
