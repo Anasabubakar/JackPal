@@ -154,7 +154,8 @@ export default function Home() {
     e.preventDefault();
     setWaitlistError("");
     setWaitlistSubmitting(true);
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const result = await submitWaitlist(formData);
     setWaitlistSubmitting(false);
 
@@ -163,7 +164,7 @@ export default function Home() {
         window.location.assign(result.redirectTo);
         return;
       }
-      e.currentTarget.reset();
+      form.reset();
       setSubmitted(true);
       setTimeout(() => {
         setWaitlistOpen(false);
