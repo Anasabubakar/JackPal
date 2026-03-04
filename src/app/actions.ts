@@ -1,45 +1,94 @@
 'use server';
 
-import { Resend } from 'resend';
-
-const getResendClient = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-  return new Resend(apiKey);
-};
-
 const getRedirectUrl = () => process.env.FORM_SUCCESS_REDIRECT_URL?.trim() || null;
 
 const sanitize = (value: FormDataEntryValue | null) => (typeof value === 'string' ? value.trim() : '');
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+const MAILERLITE_BASE_URL = 'https://connect.mailerlite.com/api';
+
+const parseGroupIds = (value: string | undefined) =>
+  (value || '')
+    .split(',')
+    .map((groupId) => groupId.trim())
+    .filter(Boolean);
+
+type SyncSubscriberOptions = {
+  email: string;
+  name?: string;
+  groups?: string[];
+};
+
+const syncMailerLiteSubscriber = async ({ email, name, groups = [] }: SyncSubscriberOptions) => {
+  const apiKey = process.env.MAILERLITE_API_KEY?.trim();
+  if (!apiKey) {
+    return { ok: false as const, error: 'Missing MAILERLITE_API_KEY. Add it in .env.local.' };
+  }
+
+  const payload: {
+    email: string;
+    fields?: { name?: string };
+    groups?: string[];
+  } = {
+    email,
+  };
+
+  if (name) {
+    payload.fields = { name };
+  }
+
+  if (groups.length > 0) {
+    payload.groups = groups;
+  }
+
+  const response = await fetch(`${MAILERLITE_BASE_URL}/subscribers`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    let details = '';
+    try {
+      details = JSON.stringify(await response.json());
+    } catch {
+      details = await response.text();
+    }
+
+    console.error('MailerLite sync failed:', response.status, details);
+    return { ok: false as const, error: 'Failed to sync subscriber to MailerLite. Please try again.' };
+  }
+
+  return { ok: true as const };
+};
+
 export async function subscribeToNewsletter(formData: FormData) {
   const email = sanitize(formData.get('email'));
 
   if (!email || !isValidEmail(email)) {
-    return { error: 'Email is required' };
-  }
-
-  const resend = getResendClient();
-  if (!resend) {
-    return { error: 'Missing RESEND_API_KEY. Add it in .env.local.' };
+    return { error: 'Please enter a valid email address.' };
   }
 
   try {
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-      to: process.env.RESEND_TO_EMAIL || 'jackpal.read@gmail.com',
-      subject: 'New JackPal newsletter signup',
-      html: `<p><strong>Newsletter signup:</strong> ${email}</p>`,
+    const result = await syncMailerLiteSubscriber({
+      email,
+      groups: parseGroupIds(process.env.MAILERLITE_NEWSLETTER_GROUP_IDS),
     });
+
+    if (!result.ok) {
+      return { error: result.error };
+    }
 
     return { success: true, redirectTo: getRedirectUrl() };
   } catch (error) {
-    console.error('Newsletter email failed:', error);
-    return { error: 'Failed to send email. Please try again.' };
+    console.error('Newsletter MailerLite sync failed:', error);
+    return { error: 'Failed to sync subscriber. Please try again.' };
   }
 }
 
@@ -63,33 +112,30 @@ export async function submitWaitlist(formData: FormData) {
     return { error: 'Please enter a valid email address.' };
   }
 
-  const resend = getResendClient();
-  if (!resend) {
-    return { error: 'Missing RESEND_API_KEY. Add it in .env.local.' };
-  }
-
-  const safeStudyMethods = studyMethods.length > 0 ? studyMethods.join(', ') : 'None selected';
-  const safePainPoint = painPoint || 'Not provided';
-
   try {
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-      to: process.env.RESEND_TO_EMAIL || 'jackpal.read@gmail.com',
-      subject: 'New JackPal waitlist submission',
-      html: `
-        <h2>New Waitlist Submission</h2>
-        <p><strong>Full Name:</strong> ${fullName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Level of Study:</strong> ${studyLevel}</p>
-        <p><strong>Features Wanted:</strong> ${featuresWanted}</p>
-        <p><strong>Pain Point:</strong> ${safePainPoint}</p>
-        <p><strong>Current Study Methods:</strong> ${safeStudyMethods}</p>
-      `,
+    const result = await syncMailerLiteSubscriber({
+      email,
+      name: fullName,
+      groups: parseGroupIds(process.env.MAILERLITE_WAITLIST_GROUP_IDS),
+    });
+
+    if (!result.ok) {
+      return { error: result.error };
+    }
+
+    // Keep waitlist-specific details for internal debugging/tracing in server logs.
+    console.log('Waitlist submission synced to MailerLite:', {
+      email,
+      fullName,
+      studyLevel,
+      featuresWanted,
+      painPoint: painPoint || 'Not provided',
+      studyMethods: studyMethods.length > 0 ? studyMethods : ['None selected'],
     });
 
     return { success: true, redirectTo: getRedirectUrl() };
   } catch (error) {
-    console.error('Waitlist email failed:', error);
-    return { error: 'Failed to send waitlist form. Please try again.' };
+    console.error('Waitlist MailerLite sync failed:', error);
+    return { error: 'Failed to sync waitlist signup. Please try again.' };
   }
 }
