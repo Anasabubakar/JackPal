@@ -107,12 +107,27 @@ const sendResendNotification = async (subject: string, html: string) => {
   const to = process.env.RESEND_TO_EMAIL?.trim() || 'jackpal.read@gmail.com';
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from,
       to,
       subject,
       html,
     });
+
+    if (result.error) {
+      console.error('Resend notification API error:', result.error);
+      return {
+        ok: false as const,
+        error: `Resend error: ${result.error.message || 'Unknown Resend error.'}`,
+      };
+    }
+
+    if (!result.data?.id) {
+      console.error('Resend notification returned no message id:', result);
+      return { ok: false as const, error: 'Resend did not confirm message delivery request.' };
+    }
+
+    console.log('Resend notification queued:', result.data.id);
     return { ok: true as const };
   } catch (error) {
     console.error('Resend notification failed:', error);
