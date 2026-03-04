@@ -1,5 +1,7 @@
 'use server';
 
+import { Resend } from 'resend';
+
 const getRedirectUrl = () => process.env.FORM_SUCCESS_REDIRECT_URL?.trim() || null;
 
 const sanitize = (value: FormDataEntryValue | null) => (typeof value === 'string' ? value.trim() : '');
@@ -7,6 +9,14 @@ const sanitize = (value: FormDataEntryValue | null) => (typeof value === 'string
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const MAILERLITE_BASE_URL = 'https://connect.mailerlite.com/api';
+
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+};
 
 const parseGroupIds = (value: string | undefined) =>
   (value || '')
@@ -68,6 +78,29 @@ const syncMailerLiteSubscriber = async ({ email, name, groups = [] }: SyncSubscr
   return { ok: true as const };
 };
 
+const sendResendNotification = async (subject: string, html: string) => {
+  const resend = getResendClient();
+  if (!resend) {
+    return { ok: false as const, error: 'Missing RESEND_API_KEY. Add it in .env.local.' };
+  }
+
+  const from = process.env.RESEND_FROM_EMAIL?.trim() || 'onboarding@resend.dev';
+  const to = process.env.RESEND_TO_EMAIL?.trim() || 'jackpal.read@gmail.com';
+
+  try {
+    await resend.emails.send({
+      from,
+      to,
+      subject,
+      html,
+    });
+    return { ok: true as const };
+  } catch (error) {
+    console.error('Resend notification failed:', error);
+    return { ok: false as const, error: 'Failed to send Resend notification. Please try again.' };
+  }
+};
+
 export async function subscribeToNewsletter(formData: FormData) {
   const email = sanitize(formData.get('email'));
 
@@ -76,18 +109,28 @@ export async function subscribeToNewsletter(formData: FormData) {
   }
 
   try {
-    const result = await syncMailerLiteSubscriber({
-      email,
-      groups: parseGroupIds(process.env.MAILERLITE_NEWSLETTER_GROUP_IDS),
-    });
+    const [mailerLiteResult, resendResult] = await Promise.all([
+      syncMailerLiteSubscriber({
+        email,
+        groups: parseGroupIds(process.env.MAILERLITE_NEWSLETTER_GROUP_IDS),
+      }),
+      sendResendNotification(
+        'New JackPal newsletter signup',
+        `<p><strong>Newsletter signup:</strong> ${email}</p>`
+      ),
+    ]);
 
-    if (!result.ok) {
-      return { error: result.error };
+    if (!mailerLiteResult.ok) {
+      return { error: mailerLiteResult.error };
+    }
+
+    if (!resendResult.ok) {
+      return { error: resendResult.error };
     }
 
     return { success: true, redirectTo: getRedirectUrl() };
   } catch (error) {
-    console.error('Newsletter MailerLite sync failed:', error);
+    console.error('Newsletter sync failed:', error);
     return { error: 'Failed to sync subscriber. Please try again.' };
   }
 }
@@ -112,30 +155,51 @@ export async function submitWaitlist(formData: FormData) {
     return { error: 'Please enter a valid email address.' };
   }
 
-  try {
-    const result = await syncMailerLiteSubscriber({
-      email,
-      name: fullName,
-      groups: parseGroupIds(process.env.MAILERLITE_WAITLIST_GROUP_IDS),
-    });
+  const safeStudyMethods = studyMethods.length > 0 ? studyMethods.join(', ') : 'None selected';
+  const safePainPoint = painPoint || 'Not provided';
 
-    if (!result.ok) {
-      return { error: result.error };
+  try {
+    const [mailerLiteResult, resendResult] = await Promise.all([
+      syncMailerLiteSubscriber({
+        email,
+        name: fullName,
+        groups: parseGroupIds(process.env.MAILERLITE_WAITLIST_GROUP_IDS),
+      }),
+      sendResendNotification(
+        'New JackPal waitlist submission',
+        `
+          <h2>New Waitlist Submission</h2>
+          <p><strong>Full Name:</strong> ${fullName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Level of Study:</strong> ${studyLevel}</p>
+          <p><strong>Features Wanted:</strong> ${featuresWanted}</p>
+          <p><strong>Pain Point:</strong> ${safePainPoint}</p>
+          <p><strong>Current Study Methods:</strong> ${safeStudyMethods}</p>
+        `
+      ),
+    ]);
+
+    if (!mailerLiteResult.ok) {
+      return { error: mailerLiteResult.error };
+    }
+
+    if (!resendResult.ok) {
+      return { error: resendResult.error };
     }
 
     // Keep waitlist-specific details for internal debugging/tracing in server logs.
-    console.log('Waitlist submission synced to MailerLite:', {
+    console.log('Waitlist submission synced to MailerLite + Resend:', {
       email,
       fullName,
       studyLevel,
       featuresWanted,
-      painPoint: painPoint || 'Not provided',
+      painPoint: safePainPoint,
       studyMethods: studyMethods.length > 0 ? studyMethods : ['None selected'],
     });
 
     return { success: true, redirectTo: getRedirectUrl() };
   } catch (error) {
-    console.error('Waitlist MailerLite sync failed:', error);
+    console.error('Waitlist sync failed:', error);
     return { error: 'Failed to sync waitlist signup. Please try again.' };
   }
 }

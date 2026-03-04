@@ -1,11 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## MailerLite Setup
+## MailerLite + Resend Setup
 
 1. Create `.env.local` from `.env.example`.
 2. Replace `ml_xxxxxxxxx` with your real MailerLite API key.
-3. Optionally set `MAILERLITE_NEWSLETTER_GROUP_IDS` and `MAILERLITE_WAITLIST_GROUP_IDS` with comma-separated group IDs.
-4. Optionally set `FORM_SUCCESS_REDIRECT_URL` if you want form submissions to redirect after success.
+3. Replace `re_xxxxxxxxx` with your real Resend API key.
+4. Optionally set `MAILERLITE_NEWSLETTER_GROUP_IDS` and `MAILERLITE_WAITLIST_GROUP_IDS` with comma-separated group IDs.
+5. Optionally set `FORM_SUCCESS_REDIRECT_URL` if you want form submissions to redirect after success.
 
 ## Getting Started
 
