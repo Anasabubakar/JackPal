@@ -103,6 +103,14 @@ export default function Home() {
     setCurrentTimeText("00:00");
   };
 
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTime = (parseFloat(e.target.value) / 100) * (audioRef.current?.duration || 0);
+    if (audioRef.current) {
+      audioRef.current.currentTime = seekTime;
+      setAudioProgress(parseFloat(e.target.value));
+    }
+  };
+
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -480,9 +488,20 @@ export default function Home() {
 
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <div className="h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden relative">
+                      <div className="relative group/progress h-2 bg-[#EFEFEF] rounded-full w-full overflow-hidden">
+                        {/* Interactive Range Input Overlay */}
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={audioProgress}
+                          onChange={handleSeek}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                        />
+                        {/* Visual Progress Bar */}
                         <div 
-                          className="h-full bg-[#2585C7] rounded-full relative overflow-hidden transition-all duration-100"
+                          className="absolute left-0 top-0 h-full bg-[#2585C7] rounded-full transition-all duration-100 z-10"
                           style={{ width: `${audioProgress}%` }}
                         >
                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer" style={{ width: '200%' }} />
