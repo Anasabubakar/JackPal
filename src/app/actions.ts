@@ -85,13 +85,16 @@ const syncMailerLiteSubscriber = async ({ email, name, groups = [] }: SyncSubscr
   if (!response.ok) {
     let details = '';
     try {
-      details = JSON.stringify(await response.json());
+      const errorJson = await response.json();
+      details = JSON.stringify(errorJson);
+      console.error('MailerLite sync failed with JSON:', response.status, details);
     } catch {
       details = await response.text();
+      console.error('MailerLite sync failed with text:', response.status, details);
     }
 
-    console.error('MailerLite sync failed:', response.status, details);
-    return { ok: false as const, error: 'Failed to sync subscriber to MailerLite. Please try again.' };
+    // Return the actual error message from MailerLite if available
+    return { ok: false as const, error: `MailerLite Error: ${response.status}. Details: ${details}` };
   }
 
   return { ok: true as const };
