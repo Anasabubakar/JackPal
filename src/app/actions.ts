@@ -24,6 +24,25 @@ const parseGroupIds = (value: string | undefined) =>
     .map((groupId) => groupId.trim())
     .filter(Boolean);
 
+const getSharedMailerLiteGroupIds = () =>
+  parseGroupIds(process.env.MAILERLITE_GROUP_IDS);
+
+const getNewsletterGroupIds = () => {
+  const shared = getSharedMailerLiteGroupIds();
+  if (shared.length > 0) {
+    return shared;
+  }
+  return parseGroupIds(process.env.MAILERLITE_NEWSLETTER_GROUP_IDS);
+};
+
+const getWaitlistGroupIds = () => {
+  const shared = getSharedMailerLiteGroupIds();
+  if (shared.length > 0) {
+    return shared;
+  }
+  return parseGroupIds(process.env.MAILERLITE_WAITLIST_GROUP_IDS);
+};
+
 type SyncSubscriberOptions = {
   email: string;
   name?: string;
@@ -112,7 +131,7 @@ export async function subscribeToNewsletter(formData: FormData) {
     const [mailerLiteResult, resendResult] = await Promise.all([
       syncMailerLiteSubscriber({
         email,
-        groups: parseGroupIds(process.env.MAILERLITE_NEWSLETTER_GROUP_IDS),
+        groups: getNewsletterGroupIds(),
       }),
       sendResendNotification(
         'New JackPal newsletter signup',
@@ -163,7 +182,7 @@ export async function submitWaitlist(formData: FormData) {
       syncMailerLiteSubscriber({
         email,
         name: fullName,
-        groups: parseGroupIds(process.env.MAILERLITE_WAITLIST_GROUP_IDS),
+        groups: getWaitlistGroupIds(),
       }),
       sendResendNotification(
         'New JackPal waitlist submission',
