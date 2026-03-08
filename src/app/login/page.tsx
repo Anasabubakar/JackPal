@@ -19,14 +19,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     // Simulate login delay
     setTimeout(() => {
       setLoading(false);
-      router.push("/dashboard");
+      setError("Invalid credentials. Please try again or join the waitlist.");
     }, 1500);
   };
 
@@ -104,6 +106,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg animate-in fade-in slide-in-from-top-1 duration-300">
+                <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{error}</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#02013D]/40 px-1">Student Email</label>
               <div className="relative group">
