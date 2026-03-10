@@ -75,13 +75,13 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
   if (!mounted) return null;
 
   return (
-    <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 w-auto min-w-[320px] max-w-[90vw] z-[200]">
-      {/* Premium Glassmorphic Dock Container */}
-      <nav className="relative flex items-center justify-between gap-4 bg-white/40 backdrop-blur-[30px] border border-white/20 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-3 h-20 overflow-visible transition-all duration-500">
-        
-        {/* Left Side Group */}
-        <div className="flex items-center justify-start gap-4">
-          {navItems.slice(0, 2).map((item) => {
+    <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center w-full px-6">
+      <div className="flex items-center gap-4">
+        {/* Glassmorphic Pill Navigation */}
+        <div 
+          className="flex items-center gap-1 p-1.5 rounded-full bg-white/72 backdrop-blur-[24px] border border-white/90 shadow-[0_12px_40px_rgba(160,160,180,0.22),0_2px_8px_rgba(160,160,180,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
+        >
+          {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <a
@@ -89,80 +89,51 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
                 href={item.href}
                 onClick={(e) => scrollToSection(e, item.href)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all duration-500",
+                  "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)] outline-none cursor-pointer overflow-hidden rounded-full",
                   isActive 
-                    ? "bg-[#02013D] text-white shadow-lg -translate-y-1 scale-110" 
-                    : "text-[#02013D]/60 hover:bg-[#02013D]/5"
+                    ? "bg-[#F0F0F4]/85 px-5 py-3 shadow-[0_2px_12px_rgba(140,140,160,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-[#111] min-w-[120px]" 
+                    : "px-3.5 py-3 text-[#bbbbc8] hover:text-[#111] min-w-[48px]"
                 )}
               >
-                <item.icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
-                {isActive && (
-                  <span className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
-                )}
+                <item.icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
+                <span 
+                  className={cn(
+                    "text-[15px] font-semibold tracking-tight whitespace-nowrap transition-all duration-300",
+                    isActive ? "opacity-100 ml-2.5 w-auto" : "opacity-0 w-0 h-0"
+                  )}
+                >
+                  {item.label}
+                </span>
               </a>
             );
           })}
         </div>
 
-        {/* Prominent Center Action Button */}
-        <div className="relative h-full flex items-center justify-center -mt-2">
-          <button 
-            onClick={() => {
-              if (onCenterAction) {
-                onCenterAction();
-              } else if (type === 'landing') {
-                const waitlistBtn = document.querySelector('[data-waitlist-btn]') as HTMLButtonElement;
-                if (waitlistBtn) waitlistBtn.click();
-              }
-            }}
-            className="relative group transition-all duration-500"
-          >
-            {/* Outer Glow / Halo */}
-            <div className="absolute inset-0 bg-[#2585C7]/30 rounded-full blur-[20px] scale-125 opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <div className="relative w-16 h-16 bg-[#2585C7] rounded-[1.8rem] flex items-center justify-center shadow-[0_15px_30px_-5px_rgba(37,133,199,0.5)] border-[5px] border-white/40 transition-all duration-500 hover:scale-110 hover:-translate-y-2 active:scale-95 active:translate-y-0 z-10">
-              {type === 'landing' ? (
-                <Plus className="h-9 w-9 text-white stroke-[3.5px]" />
-              ) : (
-                <CloudUpload className="h-8 w-8 text-white stroke-[2.5px]" />
-              )}
-            </div>
-            
-            {/* Context Label (Floating above) */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#02013D] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl pointer-events-none -translate-y-2 group-hover:translate-y-0">
-              {type === 'landing' ? 'Join Now' : 'Upload'}
-            </div>
-          </button>
-        </div>
-
-        {/* Right Side Group */}
-        <div className="flex items-center justify-end gap-4">
-          {navItems.slice(2, 4).map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <a
-                key={item.id}
-                href={item.href}
-                onClick={(e) => scrollToSection(e, item.href)}
-                className={cn(
-                  "relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all duration-500",
-                  isActive 
-                    ? "bg-[#02013D] text-white shadow-lg -translate-y-1 scale-110" 
-                    : "text-[#02013D]/60 hover:bg-[#02013D]/5"
-                )}
-              >
-                <item.icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
-                {isActive && (
-                  <span className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
-                )}
-              </a>
-            );
-          })}
-        </div>
-      </nav>
-      
-      {/* Subtle depth shadow */}
-      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[90%] h-8 bg-black/[0.08] blur-[40px] -z-10 rounded-full" />
+        {/* Floating Coral FAB */}
+        <button
+          onClick={() => {
+            if (onCenterAction) {
+              onCenterAction();
+            } else if (type === 'landing') {
+              const waitlistBtn = document.querySelector('[data-waitlist-btn]') as HTMLButtonElement;
+              if (waitlistBtn) waitlistBtn.click();
+            }
+          }}
+          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#f4857a] to-[#e85d50] shadow-[0_8px_28px_rgba(232,93,80,0.48),0_2px_8px_rgba(232,93,80,0.28),inset_0_1px_0_rgba(255,200,190,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
+          aria-label={type === 'landing' ? "Join Waitlist" : "Upload Content"}
+        >
+          {type === 'landing' ? (
+            <Plus className="h-7 w-7 text-white stroke-[2.4px]" />
+          ) : (
+            <CloudUpload className="h-6 w-6 text-white stroke-[2.4px]" />
+          )}
+          
+          {/* Label Tooltip */}
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#02013D] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
+            {type === 'landing' ? 'Join Now' : 'Upload'}
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
