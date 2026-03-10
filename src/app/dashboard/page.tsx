@@ -26,7 +26,9 @@ import {
   Cloud,
   Globe,
   LayoutGrid,
-  Grid
+  Grid,
+  Mic2,
+  ArrowRight
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -61,233 +63,312 @@ export default function Dashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#F0F2F5] text-[#02013D] font-sans overflow-hidden relative selection:bg-[#2585C7] selection:text-white">
       
+      {/* Abstract Background Elements for Premium Look */}
+      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#2585C7]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#61E3F0]/10 rounded-full blur-[100px] pointer-events-none" />
+
       {/* ========================================== */}
       {/* MAIN CONTENT AREA                          */}
       {/* ========================================== */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative z-10 w-full max-w-[1600px] mx-auto">
         
-        {/* DESKTOP TOP BAR */}
-        <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/images/logo.svg" alt="JackPal" width={28} height={28} />
-            <span className="text-xl font-black italic tracking-tighter uppercase text-[#2585C7]">JackPal</span>
+        {/* TOP BAR - Glassmorphic */}
+        <header className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-6 lg:px-10 py-4 bg-white/40 backdrop-blur-2xl border-b border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/30">
+          <Link href="/" className="flex items-center gap-2 group hover:opacity-90 transition-opacity">
+            <div className="relative w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
+               <Image src="/images/logo.svg" alt="JackPal" fill className="object-contain" />
+            </div>
+            <span className="text-lg sm:text-xl font-black italic tracking-tighter uppercase bg-gradient-to-r from-[#2585C7] to-[#02013D] bg-clip-text text-transparent transform origin-left transition-transform duration-300 group-hover:scale-105">JackPal</span>
           </Link>
-          <div className="relative w-80 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#02013D]/20 group-focus-within:text-[#2585C7] transition-colors" />
+          
+          {/* SEARCH (Hidden on very small mobile, expandable on tablet/desktop) */}
+          <div className="hidden sm:block relative w-64 lg:w-96 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#02013D]/40 group-focus-within:text-[#2585C7] transition-colors z-10" />
             <input 
               type="text" 
               placeholder="Search your library..." 
-              className="w-full bg-[#F7F7F7] border-2 border-transparent rounded-xl py-2 pl-10 pr-4 font-bold text-[10px] focus:outline-none focus:border-[#2585C7] focus:bg-white transition-all"
+              className="w-full bg-white/60 border border-white/80 rounded-2xl py-2.5 pl-11 pr-4 text-xs font-semibold text-[#02013D] placeholder:text-[#02013D]/40 focus:outline-none focus:ring-2 focus:ring-[#2585C7]/30 focus:bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-all backdrop-blur-md"
             />
           </div>
-          <div className="flex items-center gap-4">
-             <button className="relative bg-white p-2 rounded-lg border border-[#EFEFEF] hover:border-[#2585C7] transition-all">
-                <Bell className="h-4 w-4 text-[#02013D]/60" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2585C7] rounded-full border-2 border-white" />
+
+          <div className="flex items-center gap-3 sm:gap-5">
+             <button className="relative bg-white/50 backdrop-blur-md p-2.5 rounded-xl border border-white/60 hover:bg-white hover:shadow-md hover:scale-105 transition-all text-[#02013D]/70 hover:text-[#2585C7] group">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 group-hover:rotate-12 transition-transform" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-gradient-to-tr from-[#2585C7] to-[#61E3F0] rounded-full border-2 border-white shadow-sm" />
              </button>
-             <div className="h-8 w-[1px] bg-[#EFEFEF]" />
-             <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-tighter">Winner Adamu</div>
-                  <div className="text-[9px] font-bold text-[#2585C7] uppercase">Elite Member</div>
+             
+             <div className="hidden lg:block h-8 w-[1px] bg-[#02013D]/10" />
+             
+             <div className="flex items-center gap-3 bg-white/40 backdrop-blur-md px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl border border-white/50 hover:bg-white/60 transition-colors cursor-pointer group">
+                <div className="hidden lg:block text-right">
+                  <div className="text-[11px] font-black uppercase tracking-tighter text-[#02013D]">Winner Adamu</div>
+                  <div className="text-[9px] font-bold text-[#2585C7] uppercase tracking-wider flex items-center justify-end gap-1">
+                     <Flame className="w-2.5 h-2.5" /> Elite Member
+                  </div>
                 </div>
-                <div className="h-8 w-8 bg-[#2585C7] rounded-lg flex items-center justify-center text-white font-black italic text-xs">WA</div>
+                <div className="h-8 w-8 sm:h-9 sm:w-9 bg-gradient-to-br from-[#2585C7] to-[#0F1774] rounded-xl flex items-center justify-center text-white font-black italic text-xs shadow-lg shadow-[#2585C7]/30 border border-white/20 group-hover:scale-105 transition-transform overflow-hidden relative">
+                   <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                   WA
+                </div>
              </div>
           </div>
         </header>
 
-        {/* MOBILE TOP BAR */}
-        <header className="md:hidden flex items-center justify-between px-6 py-3 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
-           <div className="flex items-center gap-2">
-             <Image src="/images/logo.svg" alt="JackPal" width={24} height={24} />
-             <span className="text-base font-black italic tracking-tighter uppercase text-[#2585C7]">JackPal</span>
-           </div>
-           <div className="flex items-center gap-3">
-              <button className="relative bg-white p-2 rounded-lg border border-[#EFEFEF]">
-                 <Bell className="h-4 w-4 text-[#02013D]/60" />
-                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2585C7] rounded-full border-2 border-white" />
-              </button>
-              <div className="h-8 w-8 bg-[#2585C7] rounded-lg flex items-center justify-center text-white font-black italic text-xs shadow-lg shadow-[#2585C7]/20">WA</div>
-           </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 pb-32">
-           <div className="max-w-6xl mx-auto space-y-10">
+        {/* SCROLLABLE DASHBOARD CONTENT */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-6 lg:px-10 py-6 lg:py-10 pb-40">
+           <div className="mx-auto space-y-8 lg:space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
              
-             {/* Header Stats */}
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             {/* STATS GRID - Responsive & Glassmorphic */}
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                {[
-                 { label: "Study Streak", value: "12 Days", icon: Flame, color: "#2585C7" },
-                 { label: "Hours Listened", value: "48.5h", icon: Clock, color: "#61E3F0" },
-                 { label: "Knowledge retained", value: "92%", icon: TrendingUp, color: "#02013D" },
-                 { label: "Materials", value: "24", icon: Library, color: "#2585C7" },
-               ].map((stat) => (
-                 <div key={stat.label} className="bg-white p-6 rounded-[2rem] border border-[#EFEFEF] shadow-sm hover:shadow-md transition-shadow group overflow-hidden relative">
-                   <div className="absolute top-0 right-0 w-16 h-16 opacity-[0.03] group-hover:scale-150 transition-transform">
-                      <stat.icon className="w-full h-full" style={{ color: stat.color }} />
+                 { label: "Study Streak", value: "12 Days", icon: Flame, color: "#2585C7", gradient: "from-[#2585C7]/10 to-transparent" },
+                 { label: "Hours Listened", value: "48.5h", icon: Clock, color: "#61E3F0", gradient: "from-[#61E3F0]/10 to-transparent" },
+                 { label: "Retention", value: "92%", icon: TrendingUp, color: "#0F1774", gradient: "from-[#0F1774]/10 to-transparent" },
+                 { label: "Materials", value: "24", icon: Library, color: "#2261B9", gradient: "from-[#2261B9]/10 to-transparent" },
+               ].map((stat, i) => (
+                 <div key={stat.label} 
+                      className="bg-white/60 backdrop-blur-xl p-4 sm:p-5 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] border border-white shadow-[0_4px_24px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_32px_rgba(37,133,199,0.08)] transition-all group overflow-hidden relative flex flex-col justify-between min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]"
+                      style={{ animationDelay: `${i * 100}ms` }}
+                 >
+                   <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${stat.gradient} rounded-full blur-2xl opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500`} />
+                   
+                   <div className="flex items-start justify-between relative z-10 w-full">
+                     <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white border border-white/50 shadow-sm group-hover:-translate-y-1 transition-transform duration-300">
+                        <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" style={{ color: stat.color }} />
+                     </div>
+                     <span className="bg-white/80 backdrop-blur text-[9px] sm:text-[10px] font-bold text-[#02013D]/60 uppercase tracking-widest px-2 py-1 rounded-lg border border-white/50">
+                        Top 5%
+                     </span>
                    </div>
-                   <div className="flex flex-col gap-1 relative z-10">
-                      <span className="text-[10px] font-bold text-[#02013D]/40 uppercase tracking-widest">{stat.label}</span>
-                      <span className="text-2xl font-black italic tracking-tighter uppercase">{stat.value}</span>
+                   
+                   <div className="flex flex-col gap-0.5 sm:gap-1 relative z-10 mt-4 sm:mt-6">
+                      <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold text-[#02013D]/50 uppercase tracking-widest">{stat.label}</span>
+                      <span className="text-xl sm:text-2xl lg:text-3xl font-black italic tracking-tighter uppercase text-[#02013D] group-hover:text-[#2585C7] transition-colors">{stat.value}</span>
                    </div>
                  </div>
                ))}
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Left Col: Recents & Progress */}
-                <div className="lg:col-span-2 space-y-10">
-                   <section className="space-y-6">
-                      <div className="flex items-center justify-between">
-                         <h2 className="text-2xl font-black italic tracking-tighter uppercase">Continue Learning</h2>
-                         <button className="text-[10px] font-black uppercase tracking-widest text-[#2585C7] flex items-center gap-1 hover:gap-2 transition-all">
-                            View Full Library <ChevronRight className="h-3 w-3" />
+             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-10">
+                {/* Left Column: Hero & Recents */}
+                <div className="xl:col-span-2 space-y-8 lg:space-y-10">
+                   
+                   {/* PREMIUM HERO SECTION */}
+                   <section className="relative overflow-hidden bg-[#02013D] rounded-[2rem] lg:rounded-[3rem] p-6 sm:p-8 lg:p-12 shadow-[0_20px_40px_rgba(2,1,61,0.2)] group border border-white/10">
+                      {/* Abstract Background for Hero */}
+                      <div className="absolute top-0 right-0 w-full h-full bg-[url('/images/noise.png')] opacity-20 mix-blend-overlay pointer-events-none" />
+                      <div className="absolute -top-[50%] -right-[20%] w-[100%] h-[150%] bg-gradient-to-b from-[#2585C7]/40 to-transparent blur-[100px] rounded-full group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-in-out pointer-events-none" />
+                      <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-[#61E3F0]/20 blur-[80px] rounded-full group-hover:translate-x-10 transition-transform duration-1000 ease-in-out pointer-events-none" />
+                      
+                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 lg:gap-12">
+                         <div className="space-y-4 sm:space-y-6 text-center md:text-left flex-1">
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 w-fit mx-auto md:mx-0">
+                               <span className="w-2 h-2 rounded-full bg-[#61E3F0] animate-pulse" />
+                               <span className="text-[10px] font-bold text-white uppercase tracking-widest">Personalized Session</span>
+                            </div>
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic tracking-tighter uppercase leading-[1.1] text-white">
+                               Master your <br className="hidden md:block" />
+                               <span className="bg-gradient-to-r from-[#61E3F0] to-[#2585C7] bg-clip-text text-transparent">next lesson</span>
+                            </h2>
+                            <p className="text-white/70 text-xs sm:text-sm font-medium max-w-sm mx-auto md:mx-0 leading-relaxed">
+                               We've curated a high-yield audio study session based on your weakness in Cellular Biology.
+                            </p>
+                            <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+                               <button className="w-full sm:w-auto bg-gradient-to-r from-[#2585C7] to-[#2261B9] hover:from-[#61E3F0] hover:to-[#2585C7] text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 hover:shadow-[0_10px_20px_rgba(37,133,199,0.3)] hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-2">
+                                  <Play className="w-4 h-4 fill-white" /> Start Listening
+                               </button>
+                               <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest">Est. 25 Mins</span>
+                            </div>
+                         </div>
+                         
+                         {/* 3D-like Floating Element */}
+                         <div className="hidden sm:flex relative w-48 h-48 lg:w-56 lg:h-56 items-center justify-center">
+                            <div className="absolute inset-0 bg-white/10 backdrop-blur-2xl rounded-[3rem] border border-white/20 rotate-12 group-hover:rotate-[15deg] transition-transform duration-700 ease-out" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#2585C7] to-transparent opacity-20 rounded-[3rem] -rotate-6 group-hover:-rotate-12 transition-transform duration-700 ease-out" />
+                            <Mic2 className="w-20 h-20 text-[#61E3F0] relative z-10 filter drop-shadow-[0_0_15px_rgba(97,227,240,0.5)] group-hover:scale-110 transition-transform duration-500 delay-100" />
+                         </div>
+                      </div>
+                   </section>
+
+                   {/* RECENT AUDIOS */}
+                   <section className="space-y-5 sm:space-y-6">
+                      <div className="flex items-end justify-between">
+                         <div>
+                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter uppercase text-[#02013D]">Continue Learning</h2>
+                            <p className="text-[10px] sm:text-xs font-bold text-[#02013D]/40 uppercase tracking-widest mt-1">Pick up where you left off</p>
+                         </div>
+                         <button className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[#2585C7] flex items-center gap-1 hover:gap-2 transition-all p-2 bg-white/50 backdrop-blur-md rounded-xl border border-white/60 hover:bg-white hover:shadow-sm">
+                            View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                          </button>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {recentAudios.map((audio) => (
-                          <div key={audio.id} className="bg-white group p-5 rounded-[2.5rem] border border-[#EFEFEF] hover:border-[#2585C7] transition-all flex items-center gap-5 cursor-pointer relative overflow-hidden">
+                        {recentAudios.map((audio, i) => (
+                           <div key={audio.id} 
+                                className="bg-white/60 backdrop-blur-xl group p-4 sm:p-5 rounded-[2rem] border border-white shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(37,133,199,0.08)] hover:bg-white transition-all duration-300 flex items-center gap-4 cursor-pointer relative overflow-hidden"
+                                style={{ animationDelay: `${(i + 4) * 100}ms` }}
+                           >
+                             <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-[#2585C7]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                             
                              <div 
-                                className="h-20 w-20 rounded-[1.5rem] flex items-center justify-center text-white flex-shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform"
+                                className="h-16 w-16 sm:h-20 sm:w-20 rounded-[1.25rem] sm:rounded-[1.5rem] flex items-center justify-center text-white flex-shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform duration-300 border border-black/5 shadow-inner"
                                 style={{ backgroundColor: audio.color }}
                              >
-                                <Play className="h-8 w-8 fill-white" />
-                                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                                <Play className="h-6 w-6 sm:h-8 sm:w-8 fill-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
+                                {/* Subtle internal shine */}
+                                <div className="absolute top-0 left-[-100%] w-[50%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] group-hover:left-[200%] transition-all duration-1000 ease-in-out" />
                              </div>
-                             <div className="flex-1 space-y-1.5">
-                                <div className="text-[10px] font-bold text-[#02013D]/40 uppercase tracking-widest">{audio.chapter}</div>
-                                <h4 className="text-sm font-black uppercase tracking-tighter line-clamp-1">{audio.title}</h4>
-                                <div className="flex items-center gap-3">
-                                   <div className="flex-1 h-1.5 bg-[#EFEFEF] rounded-full overflow-hidden">
-                                      <div className="h-full bg-[#2585C7] rounded-full" style={{ width: `${audio.progress}%` }} />
+                             
+                             <div className="flex-1 space-y-1.5 min-w-0">
+                                <div className="flex items-center justify-between">
+                                   <div className="text-[9px] sm:text-[10px] font-bold text-[#2585C7] bg-[#2585C7]/10 px-2 py-0.5 rounded-md uppercase tracking-widest">{audio.chapter}</div>
+                                   <span className="text-[9px] sm:text-[10px] font-bold text-[#02013D]/40 uppercase flex items-center gap-1">
+                                      <Clock className="w-3 h-3" /> {audio.duration}
+                                   </span>
+                                </div>
+                                <h4 className="text-sm sm:text-base font-black uppercase tracking-tighter text-[#02013D] truncate group-hover:text-[#2585C7] transition-colors">{audio.title}</h4>
+                                <div className="flex items-center gap-3 pt-1">
+                                   <div className="flex-1 h-2 bg-[#EFEFEF] rounded-full overflow-hidden shadow-inner">
+                                      <div className="h-full bg-gradient-to-r from-[#2585C7] to-[#61E3F0] rounded-full relative" style={{ width: `${audio.progress}%` }}>
+                                         <div className="absolute inset-0 bg-[#02013D]/10 mix-blend-overlay opacity-20" />
+                                      </div>
                                    </div>
-                                   <span className="text-[9px] font-bold text-[#02013D]/60">{audio.progress}%</span>
+                                   <span className="text-[9px] sm:text-[10px] font-black text-[#02013D]/60 min-w-[30px]">{audio.progress}%</span>
                                 </div>
                              </div>
                           </div>
                         ))}
                       </div>
                    </section>
-
-                   <section className="bg-[#02013D] text-white p-10 rounded-[3rem] relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-[#2585C7]/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-[#2585C7]/30 transition-colors" />
-                      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                         <div className="space-y-4 text-center md:text-left">
-                            <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none">Ready for your<br />next lesson?</h2>
-                            <p className="text-white/60 text-sm font-medium max-w-sm">We've prepared a personalized study session based on your recent activity.</p>
-                            <button className="bg-[#2585C7] hover:bg-[#61E3F0] hover:text-[#02013D] text-white px-8 py-4 rounded-2xl text-[12px] font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#2585C7]/20">
-                               Start Now
-                            </button>
-                         </div>
-                         <div className="h-40 w-40 bg-white/10 backdrop-blur-xl rounded-[2.5rem] border border-white/20 flex items-center justify-center p-8 group-hover:rotate-6 transition-transform">
-                            <Mic2 className="w-full h-full text-[#61E3F0]" />
-                         </div>
-                      </div>
-                   </section>
                 </div>
 
-                {/* Right Col: Quick Actions & News */}
-                <aside className="space-y-6">
-                   <section className="bg-white p-8 rounded-[3rem] border border-[#EFEFEF] space-y-6">
-                      <h3 className="text-sm font-black uppercase tracking-tighter">Your Progress</h3>
-                      <div className="space-y-6">
+                {/* Right Column: Progress & Updates */}
+                <aside className="space-y-6 lg:space-y-8">
+                   
+                   {/* DETAILED PROGRESS */}
+                   <section className="bg-white/70 backdrop-blur-2xl p-6 sm:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-white shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-6 relative overflow-hidden group">
+                      <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#2585C7]/5 rounded-full blur-[40px] group-hover:bg-[#2585C7]/10 transition-colors" />
+                      
+                      <div className="flex items-center gap-3">
+                         <div className="p-2.5 bg-[#02013D]/5 rounded-xl border border-[#02013D]/10">
+                            <TrendingUp className="h-5 w-5 text-[#02013D]" />
+                         </div>
+                         <h3 className="text-sm sm:text-base font-black uppercase tracking-tighter text-[#02013D]">Weekly Overview</h3>
+                      </div>
+                      
+                      <div className="space-y-5">
                          {[
                            { label: "Daily Goal", progress: 65, color: "#2585C7" },
                            { label: "Exam Readiness", progress: 82, color: "#61E3F0" },
-                           { label: "Memory Retention", progress: 45, color: "#02013D" },
-                         ].map((p) => (
-                           <div key={p.label} className="space-y-2">
-                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-                               <span className="text-[#02013D]/40">{p.label}</span>
-                               <span className="text-[#02013D]">{p.progress}%</span>
+                           { label: "Memory Retention", progress: 45, color: "#0F1774" },
+                         ].map((p, i) => (
+                           <div key={p.label} className="space-y-2" style={{ animationDelay: `${i * 150}ms` }}>
+                             <div className="flex justify-between items-center px-1">
+                               <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#02013D]/60">{p.label}</span>
+                               <span className="text-[10px] sm:text-xs font-black text-[#02013D]">{p.progress}%</span>
                              </div>
-                             <div className="h-2 bg-[#EFEFEF] rounded-full overflow-hidden">
-                               <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${p.progress}%`, backgroundColor: p.color }} />
+                             <div className="h-2.5 bg-[#02013D]/5 rounded-full overflow-hidden border border-[#02013D]/5">
+                               <div className="h-full rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${p.progress}%`, backgroundColor: p.color }}>
+                                  <div className="absolute inset-0 bg-white/20 w-1/2 rounded-full blur-[2px]" />
+                               </div>
                              </div>
                            </div>
                          ))}
                       </div>
-                      <button className="w-full py-4 rounded-2xl bg-[#EFEFEF] hover:bg-[#2585C7] hover:text-white transition-all text-[10px] font-black uppercase tracking-widest group">
-                         Detailed Analytics <ArrowRight className="inline-block h-3 w-3 ml-2 group-hover:translate-x-1 transition-transform" />
+                      
+                      <button className="w-full py-4 rounded-xl bg-gradient-to-b from-white to-[#F7F7F7] border border-[#EFEFEF] hover:border-[#2585C7]/30 hover:shadow-md transition-all text-[10px] font-black uppercase tracking-widest text-[#02013D] group/btn flex items-center justify-center gap-2">
+                         Full Analytics Report <ChevronRight className="h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
                       </button>
                    </section>
 
-                   <section className="bg-[#EFEFEF]/50 p-8 rounded-[3rem] border border-[#EFEFEF] space-y-4">
+                   {/* STUDENT UPDATES */}
+                   <section className="bg-gradient-to-br from-[#2585C7]/5 to-[#61E3F0]/5 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] lg:rounded-[2.5rem] border border-white/50 shadow-inner space-y-5">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-[#2585C7]" />
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/60">Student Updates</h3>
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white shadow-sm">
+                           <CheckCircle2 className="h-3.5 w-3.5 text-[#2585C7]" />
+                        </div>
+                        <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] text-[#02013D]/70">Student Hub</h3>
                       </div>
-                      <div className="space-y-4">
+                      <div className="space-y-3 pt-2">
                          {[
-                           "New Yorùbá voice model now available",
-                           "Beta: AI Summary for Medical Students",
-                           "Refer a friend and get 1 month Premium",
+                           { text: "New Yorùbá voice model now available", tag: "New" },
+                           { text: "Beta: AI Summary for Medical Students", tag: "Beta" },
+                           { text: "Refer a friend and get 1 month Premium", tag: "Promo" },
                          ].map((news, i) => (
-                           <div key={i} className="flex gap-3 group cursor-pointer">
-                              <div className="h-1.5 w-1.5 bg-[#2585C7] rounded-full mt-1.5 flex-shrink-0" />
-                              <p className="text-[10px] font-bold text-[#02013D]/70 group-hover:text-[#2585C7] transition-colors">{news}</p>
+                           <div key={i} className="flex gap-3 items-start group cursor-pointer p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-white/80">
+                              <div className="h-1.5 w-1.5 bg-[#2585C7] rounded-full mt-1.5 flex-shrink-0 shadow-[0_0_5px_rgba(37,133,199,0.5)] group-hover:scale-150 transition-transform" />
+                              <div className="space-y-1 mt-[-2px]">
+                                 <p className="text-[10px] sm:text-xs font-bold text-[#02013D]/80 group-hover:text-[#2585C7] transition-colors leading-snug">{news.text}</p>
+                                 <span className="inline-block text-[8px] font-black uppercase tracking-widest text-[#2585C7]/60 bg-[#2585C7]/10 px-1.5 py-0.5 rounded">{news.tag}</span>
+                              </div>
                            </div>
                          ))}
                       </div>
                    </section>
+
                 </aside>
              </div>
            </div>
         </div>
 
+        {/* DOCK WILL NEVER BE TOUCHED */}
         <Dock onCenterAction={() => setIsOthersModalOpen(true)} />
 
         {/* ========================================== */}
-        {/* OTHERS UPLOAD MODAL (Bouncy)              */}
+        {/* OTHERS UPLOAD MODAL (Intact logic, UI tweaked for glassmorphism) */}
         {/* ========================================== */}
         {isOthersModalOpen && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-6">
             <div 
-              className="absolute inset-0 bg-[#02013D]/80 backdrop-blur-md animate-in fade-in duration-300"
+              className="absolute inset-0 bg-[#02013D]/40 backdrop-blur-sm animate-in fade-in duration-300"
               onClick={() => setIsOthersModalOpen(false)}
             />
-            <div className="bg-[#F7F7F7] w-full max-w-2xl rounded-[3rem] border-8 border-[#02013D] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in spin-in-1 duration-500 hover:scale-[1.01] transition-transform">
-              <div className="p-10 md:p-12 space-y-10">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-3xl font-black tracking-tighter uppercase italic">Import Library</h3>
-                    <p className="text-xs font-bold text-[#02013D]/40 uppercase tracking-widest">Select your source to begin learning</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsOthersModalOpen(false)}
-                    className="bg-[#02013D] text-white p-3 rounded-2xl hover:bg-[#2585C7] transition-colors active:scale-90"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
+            <div className="flex flex-col bg-white/80 backdrop-blur-3xl w-full max-w-2xl border border-white/60 shadow-[0_40px_80px_rgba(0,0,0,0.2)] relative z-10 overflow-hidden animate-in zoom-in-95 fade-in duration-300 ease-out rounded-t-[2.5rem] rounded-b-none sm:rounded-[3rem] mt-auto sm:mt-0 mb-0 sm:mb-auto max-h-[90vh]">
+              
+              <div className="flex items-center justify-between p-6 sm:p-10 md:p-12 pb-2 sm:pb-6">
+                <div className="space-y-1.5">
+                  <h3 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase italic text-[#02013D] flex items-center gap-3">
+                     <CloudUpload className="h-7 w-7 sm:h-8 sm:w-8 text-[#2585C7]" />
+                     Import 
+                  </h3>
+                  <p className="text-[10px] sm:text-xs font-bold text-[#02013D]/50 uppercase tracking-widest">Select source to generate audio</p>
                 </div>
+                <button 
+                  onClick={() => setIsOthersModalOpen(false)}
+                  className="bg-[#F0F2F5] hover:bg-[#EFEFEF] text-[#02013D] p-3 rounded-2xl transition-all hover:scale-105 active:scale-95 border border-transparent hover:border-[#02013D]/10"
+                >
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                </button>
+              </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="p-6 sm:p-10 md:p-12 pt-2 sm:pt-4 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5">
                   {allUploadOptions.map((option) => (
                     <button
                       key={option.label}
-                      className="bg-white p-6 rounded-[2rem] border-2 border-[#EFEFEF] hover:border-[#2585C7] hover:shadow-2xl hover:shadow-[#2585C7]/10 transition-all group text-left space-y-4"
+                      className="bg-white/60 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white hover:border-[#2585C7]/30 shadow-[0_4px_15px_rgba(0,0,0,0.02)] hover:shadow-[0_10px_30px_rgba(37,133,199,0.1)] hover:-translate-y-1 transition-all duration-300 group text-left space-y-3 sm:space-y-4"
                     >
                       <div 
-                        className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform"
+                        className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300"
                         style={{ backgroundColor: option.color }}
                       >
-                        <option.icon className="h-5 w-5" />
+                        <option.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <div className="space-y-1">
-                        <div className="text-xs font-black uppercase tracking-tighter group-hover:text-[#2585C7] transition-colors">{option.label}</div>
-                        <p className="text-[9px] font-bold text-[#02013D]/40 uppercase leading-none">{option.desc}</p>
+                        <div className="text-[10px] sm:text-xs font-black uppercase tracking-tighter text-[#02013D] group-hover:text-[#2585C7] transition-colors">{option.label}</div>
+                        <p className="text-[8px] sm:text-[9px] font-bold text-[#02013D]/40 uppercase leading-snug">{option.desc}</p>
                       </div>
                     </button>
                   ))}
                 </div>
 
-                <div className="pt-6 border-t border-[#EFEFEF] flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/20">
-                   <span>JackPal Secure Import</span>
-                   <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5" />
+                <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-[#02013D]/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/40">
+                   <span className="bg-[#02013D]/5 px-3 py-1.5 rounded-lg">JackPal Secure Import</span>
+                   <div className="flex items-center gap-2 text-[#2585C7]">
+                      <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       <span>Military-grade Encryption</span>
                    </div>
                 </div>
@@ -300,60 +381,19 @@ export default function Dashboard() {
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #EFEFEF;
+          background: rgba(2, 1, 61, 0.1);
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #2585C7;
+          background: rgba(37, 133, 199, 0.5);
         }
       ` }} />
     </div>
-  );
-}
-
-// Mic2 Proxy Icon
-function Mic2({ className }: { className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="m12 8-9.04 9.06a2.82 2.82 0 1 0 3.98 3.98L16 12" />
-      <circle cx="17" cy="7" r="5" />
-    </svg>
-  );
-}
-
-function ArrowRight({ className }: { className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   );
 }
