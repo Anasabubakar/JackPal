@@ -26,12 +26,12 @@ const dashboardNavItems: NavItem[] = [
   { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
 ];
 
-interface MobileDockProps {
+interface DockProps {
   type?: 'landing' | 'dashboard';
   onCenterAction?: () => void;
 }
 
-export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps) {
+export function Dock({ type = 'landing', onCenterAction }: DockProps) {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -75,11 +75,11 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
   if (!mounted) return null;
 
   return (
-    <div className="md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center w-full px-6">
+    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center w-full px-6">
       <div className="flex items-center gap-4">
         {/* Glassmorphic Pill Navigation */}
         <div 
-          className="flex items-center gap-1 p-1.5 rounded-full bg-white/72 backdrop-blur-[24px] border border-white/90 shadow-[0_12px_40px_rgba(160,160,180,0.22),0_2px_8px_rgba(160,160,180,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
+          className="flex items-center gap-1 p-1.5 rounded-full bg-white/70 backdrop-blur-[20px] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
         >
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
@@ -91,14 +91,14 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
                 className={cn(
                   "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)] outline-none cursor-pointer overflow-hidden rounded-full",
                   isActive 
-                    ? "bg-[#F0F0F4]/85 px-5 py-3 shadow-[0_2px_12px_rgba(140,140,160,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-[#111] min-w-[120px]" 
-                    : "px-3.5 py-3 text-[#bbbbc8] hover:text-[#111] min-w-[48px]"
+                    ? "bg-[#B1121B] px-5 py-3 shadow-lg text-white min-w-[120px]" 
+                    : "px-3.5 py-3 text-[#111111]/60 hover:text-[#B1121B] min-w-[48px]"
                 )}
               >
                 <item.icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
                 <span 
                   className={cn(
-                    "text-[15px] font-semibold tracking-tight whitespace-nowrap transition-all duration-300",
+                    "text-[15px] font-medium tracking-tight whitespace-nowrap transition-all duration-300",
                     isActive ? "opacity-100 ml-2.5 w-auto" : "opacity-0 w-0 h-0"
                   )}
                 >
@@ -109,7 +109,7 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
           })}
         </div>
 
-        {/* Floating Coral FAB */}
+        {/* Floating Brand Red FAB */}
         <button
           onClick={() => {
             if (onCenterAction) {
@@ -119,7 +119,7 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
               if (waitlistBtn) waitlistBtn.click();
             }
           }}
-          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#f4857a] to-[#e85d50] shadow-[0_8px_28px_rgba(232,93,80,0.48),0_2px_8px_rgba(232,93,80,0.28),inset_0_1px_0_rgba(255,200,190,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
+          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#B1121B] to-[#E10600] shadow-[0_8px_28px_rgba(177,18,27,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
           aria-label={type === 'landing' ? "Join Waitlist" : "Upload Content"}
         >
           {type === 'landing' ? (
@@ -129,7 +129,7 @@ export function MobileDock({ type = 'landing', onCenterAction }: MobileDockProps
           )}
           
           {/* Label Tooltip */}
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#02013D] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#111111] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
             {type === 'landing' ? 'Join Now' : 'Upload'}
           </div>
         </button>
