@@ -22,7 +22,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { subscribeToNewsletter, submitWaitlist } from "./actions";
 
-import { Dock } from "@/components/Dock";
+
 
 const features = [
   {
@@ -1025,7 +1025,7 @@ export default function Home() {
         </div>
       </footer>
 
-      <Dock type="landing" />
+
     </div>
   );
 }
