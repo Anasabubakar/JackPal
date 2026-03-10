@@ -896,12 +896,14 @@ export default function Home() {
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button 
+                data-waitlist-btn
                 onClick={openWaitlist}
                 className="bg-[#2585C7] text-white px-10 py-5 rounded-full text-xl font-black uppercase tracking-widest shadow-2xl shadow-[#2585C7]/30 hover:bg-[#61E3F0] hover:scale-105 transition-all"
               >
                 Get Early Access
               </button>
               <button 
+                data-waitlist-btn
                 onClick={openWaitlist}
                 className="text-lg font-black uppercase tracking-widest px-10 py-5 hover:text-[#2585C7] transition-colors flex items-center gap-2 group text-[#02013D]"
               >
@@ -949,7 +951,7 @@ export default function Home() {
               <ul className="space-y-4 text-sm font-bold text-white/60">
                 <li><a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-white transition-colors">AI Engine</a></li>
                 <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-white transition-colors">Offline Mode</a></li>
-                <li><button onClick={openWaitlist} className="hover:text-white transition-colors uppercase">Waitlist Beta</button></li>
+                <li><button data-waitlist-btn onClick={openWaitlist} className="hover:text-white transition-colors uppercase">Waitlist Beta</button></li>
                 <li><a href="#" className="hover:text-white transition-colors">DRM Security</a></li>
               </ul>
             </div>
