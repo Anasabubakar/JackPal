@@ -22,6 +22,8 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { subscribeToNewsletter, submitWaitlist } from "./actions";
 
+import { MobileDock } from "@/components/MobileDock";
+
 const features = [
   {
     icon: Upload,
@@ -337,6 +339,7 @@ export default function Home() {
             <div className="flex items-center gap-6">
               <Link href="/login" className="text-xs font-black uppercase tracking-widest hover:text-[#2585C7] transition-colors">Log in</Link>
               <button 
+                data-waitlist-btn
                 onClick={openWaitlist}
                 className="bg-[#2585C7] text-white px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#02013D] transition-all shadow-xl shadow-[#2585C7]/20 active:scale-95"
               >
@@ -345,31 +348,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Mobile Toggle */}
-          <button 
-            className="md:hidden p-2 text-[#02013D] hover:bg-[#EFEFEF] rounded-lg transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X /> : <Menu />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        <div className={`md:hidden absolute top-full left-0 right-0 bg-[#F7F7F7] border-b border-[#EFEFEF] transition-all duration-300 ease-in-out overflow-hidden ${
-          mobileMenuOpen ? "max-h-[400px] py-8 shadow-2xl opacity-100" : "max-h-0 opacity-0"
-        }`}>
-          <div className="section-container flex flex-col gap-6 text-center">
-            <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="text-sm font-black uppercase tracking-widest hover:text-[#2585C7]">Features</a>
-            <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-sm font-black uppercase tracking-widest hover:text-[#2585C7]">Pricing</a>
-            <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="text-sm font-black uppercase tracking-widest hover:text-[#2585C7]">FAQ</a>
-            <div className="h-[1px] bg-[#02013D]/5 w-full" />
-            <Link href="/login" className="text-sm font-black uppercase tracking-widest text-[#2585C7] py-2">Log in</Link>
-            <button 
-              onClick={openWaitlist}
-              className="bg-[#2585C7] text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-[#2585C7]/20 hover:bg-[#02013D] transition-colors"
-            >
-              Join Waitlist
-            </button>
+          {/* Mobile Toggle - HIDDEN since we use Dock */}
+          <div className="md:hidden">
+             {/* Logo already on left, nothing on right to keep it clean for dock */}
           </div>
         </div>
       </nav>
@@ -396,6 +377,7 @@ export default function Home() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button 
+                    data-waitlist-btn
                     onClick={openWaitlist}
                     className="w-full sm:w-auto bg-[#2585C7] text-white px-8 py-4 rounded-full text-lg font-bold shadow-xl shadow-[#2585C7]/20 hover:bg-[#61E3F0] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
@@ -1040,6 +1022,8 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      <MobileDock type="landing" />
     </div>
   );
 }
