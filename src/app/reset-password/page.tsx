@@ -11,26 +11,50 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ResetPasswordPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [token, setToken] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Supabase puts the token in the URL hash or as query param
+    const t = searchParams.get("access_token") || searchParams.get("token") || "";
+    setToken(t);
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
-    // Simulate Supabase password update delay
-    setTimeout(() => {
-      setLoading(false);
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/auth/update-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: token, new_password: password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Request failed" }));
+        throw new Error(err.detail || "Reset failed.");
+      }
       setSubmitted(true);
-    }, 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Reset failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -124,6 +148,12 @@ export default function ResetPasswordPage() {
                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">New Password</h2>
                 <p className="text-[10px] md:text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em]">Update your credentials for secure access</p>
               </div>
+
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{error}</p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-1.5">

@@ -12,20 +12,26 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { requestPasswordReset } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate reset delay
-    setTimeout(() => {
-      setLoading(false);
+    setError("");
+    try {
+      await requestPasswordReset(email);
       setSubmitted(true);
-    }, 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Request failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -120,6 +126,12 @@ export default function ForgotPasswordPage() {
                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Reset Password</h2>
                 <p className="text-[10px] md:text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em]">Enter your email to receive a recovery link</p>
               </div>
+
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{error}</p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-1.5">

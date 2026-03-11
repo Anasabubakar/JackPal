@@ -35,3 +35,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/dev_storage/
+backend/test_output.mp3
+backend/test_yarngpt.wav
+
+# logs
+*.log
+*.err.log
+
+# claude
+.claude/
