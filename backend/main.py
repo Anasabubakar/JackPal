@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-from routers import auth, documents, audio, ai
+from routers import auth, documents, audio, ai, user
 
 app = FastAPI(
     title="JackPal API",
@@ -30,6 +30,7 @@ app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(audio.router)
 app.include_router(ai.router)
+app.include_router(user.router)
 
 
 @app.on_event("startup")
