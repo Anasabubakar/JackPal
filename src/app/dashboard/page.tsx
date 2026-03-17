@@ -189,6 +189,12 @@ export default function Dashboard() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
+  const lastTimeUpdateRef = useRef(0);
+  const documentsRef = useRef<Document[]>([]);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   const filteredDocuments = useMemo(() => {
     if (!searchQuery.trim()) return documents;
@@ -297,15 +303,21 @@ export default function Dashboard() {
   }, []);
 
   // Poll status for docs that are still generating
+  const hasGenerating = documents.some(d => d.status === "generating" || d.status === "streaming");
+
   useEffect(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    const generating = documents.filter(d => d.status === "generating" || d.status === "streaming");
-    if (!generating.length) return;
+    if (!hasGenerating) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
 
     pollRef.current = setInterval(async () => {
       let anyUpdated = false;
       const updated = await Promise.all(
-        documents.map(async (doc) => {
+        documentsRef.current.map(async (doc) => {
           if (doc.status !== "generating" && doc.status !== "streaming") return doc;
           try {
             const s = await getAudioStatus(doc.id);
@@ -327,8 +339,13 @@ export default function Dashboard() {
       if (anyUpdated) setDocuments(updated);
     }, 3000);
 
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [documents]);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [hasGenerating]);
 
   async function fetchDocuments() {
     setDocsLoading(true);
@@ -387,7 +404,13 @@ export default function Dashboard() {
     setDuration(0);
     setIsAudioLoading(true);
 
-    audio.ontimeupdate = () => setCurrentTime(audio.currentTime || 0);
+    lastTimeUpdateRef.current = 0;
+    audio.ontimeupdate = () => {
+      const now = audio.currentTime || 0;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 0.25) return;
+      lastTimeUpdateRef.current = now;
+      setCurrentTime(now);
+    };
     audio.onloadedmetadata = () => setDuration(audio.duration || 0);
     audio.onwaiting = () => setIsAudioLoading(true);
     audio.oncanplay = () => setIsAudioLoading(false);
@@ -757,7 +780,13 @@ export default function Dashboard() {
     setCurrentDocId(docId);
     setCurrentTitle(documents.find(d => d.id === docId)?.filename ?? "Podcast");
 
-    audio.ontimeupdate = () => setCurrentTime(audio.currentTime || 0);
+    lastTimeUpdateRef.current = 0;
+    audio.ontimeupdate = () => {
+      const now = audio.currentTime || 0;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 0.25) return;
+      lastTimeUpdateRef.current = now;
+      setCurrentTime(now);
+    };
     audio.onloadedmetadata = () => setDuration(audio.duration || 0);
     audio.oncanplay = () => setIsAudioLoading(false);
     audio.onplaying = () => { setPodcastPlayingDocId(docId); setIsAudioLoading(false); };
