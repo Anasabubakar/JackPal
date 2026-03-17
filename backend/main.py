@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-from routers import auth, documents, audio, ai, user
+from routers import auth, documents, audio, ai
 
 app = FastAPI(
     title="JackPal API",
@@ -13,15 +13,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
-frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-allow_origins = {
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    frontend_url,
-}
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=sorted(allow_origins),
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "*",  # keep wildcard for other environments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,7 +30,6 @@ app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(audio.router)
 app.include_router(ai.router)
-app.include_router(user.router)
 
 
 @app.on_event("startup")
