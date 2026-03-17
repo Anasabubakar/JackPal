@@ -684,29 +684,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            {/* Bottom Trust Bar */}
-            <div className="mt-20 p-8 rounded-[2rem] bg-[#2585C7]/5 border-2 border-[#2585C7]/10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="flex -space-x-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-12 w-12 rounded-full border-4 border-white bg-[#EFEFEF] overflow-hidden">
-                      <Image src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="User" width={48} height={48} />
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div className="text-lg font-black text-[#02013D]">500+ Students</div>
-                  <div className="text-xs font-bold text-[#2585C7] uppercase tracking-widest">Ready for the Beta</div>
-                </div>
-              </div>
-              <button 
-                onClick={openWaitlist}
-                className="w-full md:w-auto bg-[#02013D] text-white px-8 py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#2585C7] transition-all flex items-center justify-center gap-2 group"
-              >
-                Claim Your Advantage <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
           </div>
         </section>
 
