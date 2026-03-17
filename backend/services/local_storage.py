@@ -4,6 +4,17 @@ Stores files and audio on disk, records in memory.
 """
 import uuid, os, time, json
 from pathlib import Path
+from services.cache import (
+    delete_keys,
+    key_doc_list,
+    key_doc_text,
+    key_doc_chapters,
+    key_doc_summary,
+    key_audio_status,
+    key_audio_chunks,
+    key_podcast_chunks,
+    key_user_stats,
+)
 
 # In local dev there is effectively one user, so relax ownership checks.
 # This prevents 404s when user_ids drift between server restarts.
@@ -62,6 +73,7 @@ def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds
     }
     _activity.append(entry)
     _save_db()
+    delete_keys(key_user_stats(user_id))
 
 
 def get_activity(user_id: str) -> list[dict]:
@@ -100,6 +112,7 @@ def save_document(user_id: str, filename: str, file_bytes: bytes, text: str) -> 
     }
     _documents[doc_id] = record
     _save_db()
+    delete_keys(key_doc_list(user_id), key_user_stats(user_id))
     return record
 
 
@@ -147,6 +160,16 @@ def delete_document(doc_id: str, user_id: str) -> bool:
             except Exception:
                 pass
             _audio_tracks.pop(aid)
+    delete_keys(
+        key_doc_list(user_id),
+        key_doc_text(user_id, doc_id),
+        key_doc_chapters(user_id, doc_id),
+        key_doc_summary(user_id, doc_id),
+        key_audio_status(user_id, doc_id),
+        key_audio_chunks(user_id, doc_id),
+        key_podcast_chunks(user_id, doc_id),
+        key_user_stats(user_id),
+    )
     return True
 
 
@@ -166,6 +189,10 @@ def clear_audio_chunks(doc_id: str, user_id: str):
         _documents[doc_id]["total_chunks"] = 0
 
     _save_db()
+    delete_keys(
+        key_audio_status(user_id, doc_id),
+        key_audio_chunks(user_id, doc_id),
+    )
 
 
 def _audio_ext(data: bytes) -> str:
@@ -194,6 +221,10 @@ def save_audio_chunk(user_id: str, doc_id: str, chunk_index: int, audio_bytes: b
         _documents[doc_id]["ready_chunks"] = max(current, chunk_index + 1)
 
     _save_db()
+    delete_keys(
+        key_audio_status(user_id, doc_id),
+        key_audio_chunks(user_id, doc_id),
+    )
     return record
 
 
@@ -247,6 +278,17 @@ def update_document(doc_id: str, updates: dict):
     if doc_id in _documents:
         _documents[doc_id].update(updates)
         _save_db()
+        user_id = _documents[doc_id].get("user_id")
+        if user_id:
+            delete_keys(
+                key_doc_list(user_id),
+                key_doc_text(user_id, doc_id),
+                key_doc_chapters(user_id, doc_id),
+                key_doc_summary(user_id, doc_id),
+                key_audio_status(user_id, doc_id),
+                key_audio_chunks(user_id, doc_id),
+                key_podcast_chunks(user_id, doc_id),
+            )
 
 
 # ── Podcast storage ───────────────────────────────────────────────────────────
@@ -254,6 +296,9 @@ def update_document(doc_id: str, updates: dict):
 def save_podcast_script(doc_id: str, script: list[dict]):
     _podcast_scripts[doc_id] = script
     _save_db()
+    doc = _documents.get(doc_id)
+    if doc:
+        delete_keys(key_podcast_chunks(doc["user_id"], doc_id))
 
 
 def get_podcast_script(doc_id: str) -> list[dict] | None:
@@ -281,6 +326,7 @@ def save_podcast_chunk(user_id: str, doc_id: str, chunk_index: int, audio_bytes:
         _documents[doc_id]["podcast_ready"] = max(current, chunk_index + 1)
 
     _save_db()
+    delete_keys(key_podcast_chunks(user_id, doc_id))
     return record
 
 
@@ -317,6 +363,7 @@ def save_podcast_chunks_batch(
         _documents[doc_id]["podcast_ready"] = max(current, max_index + 1)
 
     _save_db()
+    delete_keys(key_podcast_chunks(user_id, doc_id))
     return records
 
 
@@ -356,3 +403,4 @@ def clear_podcast_chunks(doc_id: str, user_id: str):
         _documents[doc_id]["podcast_status"] = None
 
     _save_db()
+    delete_keys(key_podcast_chunks(user_id, doc_id))
