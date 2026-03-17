@@ -49,3 +49,24 @@ def list_audio_chunks(user_id: str, doc_id: str, kind: str = "chunk") -> list[di
 
 def download_audio_chunk(storage_path: str) -> bytes:
     return _bucket().download(storage_path)
+
+
+def delete_audio_chunks(user_id: str, doc_id: str, kind: str = "chunk") -> int:
+    prefix = f"{user_id}/{doc_id}"
+    entries = _bucket().list(prefix)
+    if not entries:
+        return 0
+    targets = []
+    for entry in entries:
+        name = entry.get("name") or ""
+        match = _CHUNK_RE.match(name)
+        if not match:
+            continue
+        entry_kind, _idx, _ext = match.groups()
+        if entry_kind != kind:
+            continue
+        targets.append(_make_path(user_id, doc_id, name))
+    if not targets:
+        return 0
+    _bucket().remove(targets)
+    return len(targets)
