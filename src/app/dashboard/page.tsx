@@ -832,9 +832,9 @@ export default function Dashboard() {
 
         {/* Upload error banner */}
         {uploadError && (
-          <div className="mx-6 mt-4 bg-[#2585C7]/10 border-l-4 border-[#2585C7] p-3 rounded-lg flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#2585C7]">{uploadError}</p>
-            <button onClick={() => setUploadError("")}><X className="h-4 w-4 text-[#2585C7]" /></button>
+          <div className="mx-6 mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded-lg flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{uploadError}</p>
+            <button onClick={() => setUploadError("")}><X className="h-4 w-4 text-red-400" /></button>
           </div>
         )}
 
@@ -852,15 +852,15 @@ export default function Dashboard() {
 
             {/* HERO */}
             <section id="home" className="bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] p-6 md:p-10 text-[#02013D] relative overflow-hidden border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_24px_64px_rgba(180,180,200,0.18),0_4px_16px_rgba(180,180,200,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#2585C7]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#B1121B]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
               <div className="space-y-3 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-[#2585C7]/10 text-[#2585C7] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#2585C7]/20">
+                <div className="inline-flex items-center gap-2 bg-[#B1121B]/10 text-[#B1121B] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#B1121B]/20">
                   <AudioLines className="h-3 w-3" />
                   Nigerian AI Study Platform
                 </div>
                 <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
                   Welcome back, <br />
-                  <span className="text-[#2585C7] underline decoration-[#2585C7]/20 decoration-4 underline-offset-4">{firstName}.</span>
+                  <span className="text-[#B1121B] underline decoration-[#B1121B]/20 decoration-4 underline-offset-4">{firstName}.</span>
                 </h1>
                 <p className="text-xs md:text-base text-[#02013D]/60 font-bold max-w-md leading-relaxed">
                   {documents.length > 0
@@ -875,11 +875,11 @@ export default function Dashboard() {
               </div>
               <div className="flex gap-3 relative z-10">
                 <div className="bg-white/40 backdrop-blur-xl p-4 rounded-2xl border border-[#02013D]/10 text-center min-w-[100px] shadow-sm">
-                  <div className="text-[9px] font-black uppercase text-[#2585C7] mb-1 tracking-widest">Docs</div>
+                  <div className="text-[9px] font-black uppercase text-[#B1121B] mb-1 tracking-widest">Docs</div>
                   <div className="text-3xl font-black italic leading-none">{documents.length}</div>
                   <div className="text-[9px] font-bold text-[#02013D]/30 uppercase mt-1">Total</div>
                 </div>
-                <div className="bg-[#2585C7] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#2585C7]/20 flex flex-col justify-center">
+                <div className="bg-[#B1121B] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#B1121B]/20 flex flex-col justify-center">
                   <div className="text-[9px] font-black uppercase text-white/60 mb-1 tracking-widest">Audio</div>
                   <div className="text-xl font-black italic leading-none uppercase text-white">
                     {documents.filter(d => d.status === "audio_ready").length}
@@ -893,13 +893,13 @@ export default function Dashboard() {
             <section className="space-y-8 lg:space-y-12">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 {[
-                  { label: "Study Streak", value: "12 Days", icon: Flame, color: "#2585C7", gradient: "from-[#2585C7]/10 to-transparent" },
+                  { label: "Study Streak", value: "12 Days", icon: Flame, color: "#B1121B", gradient: "from-[#B1121B]/10 to-transparent" },
                   { label: "Hours Listened", value: "48.5h", icon: Clock, color: "#0F1774", gradient: "from-[#0F1774]/10 to-transparent" },
                   { label: "Retention", value: "92%", icon: TrendingUp, color: "#0A5C3A", gradient: "from-[#0A5C3A]/10 to-transparent" },
                   { label: "Materials", value: "24", icon: Library, color: "#2261B9", gradient: "from-[#2261B9]/10 to-transparent" },
                 ].map((stat, i) => (
                   <div key={stat.label}
-                       className="bg-white/40 backdrop-blur-[18px] p-4 sm:p-5 lg:p-6 rounded-[2.25rem] border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_12px_32px_rgba(180,180,200,0.12),inset_0_1px_0_rgba(255,255,255,0.6)] hover:shadow-[0_16px_48px_rgba(37,133,199,0.08)] transition-all group overflow-hidden relative flex flex-col justify-between min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]"
+                       className="bg-white/40 backdrop-blur-[18px] p-4 sm:p-5 lg:p-6 rounded-[2.25rem] border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_12px_32px_rgba(180,180,200,0.12),inset_0_1px_0_rgba(255,255,255,0.6)] hover:shadow-[0_16px_48px_rgba(177,18,27,0.08)] transition-all group overflow-hidden relative flex flex-col justify-between min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]"
                        style={{ animationDelay: `${i * 100}ms` }}
                   >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${stat.gradient} rounded-full blur-2xl opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500`} />
@@ -925,24 +925,24 @@ export default function Dashboard() {
                 <div className="xl:col-span-2 space-y-8 lg:space-y-10">
                   <section className="relative overflow-hidden bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] lg:rounded-[3rem] p-6 sm:p-8 lg:p-12 border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_24px_64px_rgba(180,180,200,0.12)] group">
                     <div className="absolute top-0 right-0 w-full h-full bg-[url('/images/noise.png')] opacity-5 mix-blend-overlay pointer-events-none" />
-                    <div className="absolute -top-[50%] -right-[20%] w-[100%] h-[150%] bg-gradient-to-b from-[#2585C7]/10 to-transparent blur-[100px] rounded-full group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-in-out pointer-events-none" />
-                    <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-[#2585C7]/5 blur-[80px] rounded-full group-hover:translate-x-10 transition-transform duration-1000 ease-in-out pointer-events-none" />
+                    <div className="absolute -top-[50%] -right-[20%] w-[100%] h-[150%] bg-gradient-to-b from-[#B1121B]/10 to-transparent blur-[100px] rounded-full group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-in-out pointer-events-none" />
+                    <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-[#B1121B]/5 blur-[80px] rounded-full group-hover:translate-x-10 transition-transform duration-1000 ease-in-out pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 lg:gap-12">
                       <div className="space-y-4 sm:space-y-6 text-center md:text-left flex-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2585C7]/10 backdrop-blur-md border border-[#2585C7]/20 w-fit mx-auto md:mx-0">
-                          <span className="w-2 h-2 rounded-full bg-[#2585C7] animate-pulse" />
-                          <span className="text-[10px] font-bold text-[#2585C7] uppercase tracking-widest">Personalized Session</span>
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#B1121B]/10 backdrop-blur-md border border-[#B1121B]/20 w-fit mx-auto md:mx-0">
+                          <span className="w-2 h-2 rounded-full bg-[#B1121B] animate-pulse" />
+                          <span className="text-[10px] font-bold text-[#B1121B] uppercase tracking-widest">Personalized Session</span>
                         </div>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic tracking-tighter uppercase leading-[1.1] text-[#02013D]">
                           Master your <br className="hidden md:block" />
-                          <span className="bg-gradient-to-r from-[#2585C7] to-[#61E3F0] bg-clip-text text-transparent">next lesson</span>
+                          <span className="bg-gradient-to-r from-[#B1121B] to-[#E10600] bg-clip-text text-transparent">next lesson</span>
                         </h2>
                         <p className="text-[#02013D]/70 text-xs sm:text-sm font-medium max-w-sm mx-auto md:mx-0 leading-relaxed">
                           We've curated a high-yield audio study session based on your weakness in Cellular Biology.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                          <button className="w-full sm:w-auto bg-gradient-to-r from-[#2585C7] to-[#61E3F0] hover:scale-105 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 shadow-[0_10px_20px_rgba(37,133,199,0.2)] flex items-center justify-center gap-2">
+                          <button className="w-full sm:w-auto bg-gradient-to-r from-[#B1121B] to-[#E10600] hover:scale-105 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 shadow-[0_10px_20px_rgba(177,18,27,0.2)] flex items-center justify-center gap-2">
                             <Play className="w-4 h-4 fill-white" /> Start Listening
                           </button>
                           <span className="text-[#02013D]/50 text-[10px] uppercase font-bold tracking-widest">Est. 25 Mins</span>
@@ -951,7 +951,7 @@ export default function Dashboard() {
 
                       <div className="hidden sm:flex relative w-48 h-48 lg:w-56 lg:h-56 items-center justify-center">
                         <div className="absolute inset-0 bg-white/20 backdrop-blur-2xl rounded-[3rem] border border-[#B4B4C8]/30 rotate-12 group-hover:rotate-[15deg] transition-transform duration-700 ease-out" />
-                        <Mic2 className="w-20 h-20 text-[#2585C7] relative z-10 filter drop-shadow-[0_0_15px_rgba(37,133,199,0.2)] group-hover:scale-110 transition-transform duration-500 delay-100" />
+                        <Mic2 className="w-20 h-20 text-[#B1121B] relative z-10 filter drop-shadow-[0_0_15px_rgba(177,18,27,0.2)] group-hover:scale-110 transition-transform duration-500 delay-100" />
                       </div>
                     </div>
                   </section>
@@ -1312,7 +1312,7 @@ export default function Dashboard() {
                 <section id="library" className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-black uppercase tracking-tighter flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-[#2585C7]" />
+                      <Clock className="h-4 w-4 text-[#B1121B]" />
                       Your Documents
                     </h3>
                     <button
@@ -1368,14 +1368,14 @@ export default function Dashboard() {
                         const subject = subjects[doc.id];
 
                         return (
-                          <div key={doc.id} className={`bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] border-[1.5px] border-dashed shadow-sm hover:shadow-lg transition-all overflow-hidden ${isPodcastPlaying ? "border-[#2585C7] shadow-[#2585C7]/10" : playingDocId === doc.id ? "border-[#2585C7]" : "border-[#B4B4C8]/45 hover:border-[#2585C7]"}`}>
+                          <div key={doc.id} className={`bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] border-[1.5px] border-dashed shadow-sm hover:shadow-lg transition-all overflow-hidden ${isPodcastPlaying ? "border-[#B1121B] shadow-[#B1121B]/10" : playingDocId === doc.id ? "border-[#B1121B]" : "border-[#B4B4C8]/45 hover:border-[#B1121B]"}`}>
                             <div className="p-5 flex flex-col gap-3">
 
                               {/* Header: subject tag + filename + action icons */}
                               <div className="flex items-start justify-between gap-2">
                                 <div className="space-y-1 flex-1 min-w-0">
                                   {subject ? (
-                                    <div className="inline-flex items-center gap-1 bg-[#2585C7]/10 text-[#2585C7] px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest mb-1">
+                                    <div className="inline-flex items-center gap-1 bg-[#B1121B]/10 text-[#B1121B] px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest mb-1">
                                       {subject}
                                     </div>
                                   ) : (
@@ -1384,7 +1384,7 @@ export default function Dashboard() {
                                         const tag = prompt("Enter course / subject (e.g. BIO 201, Law of Tort):");
                                         if (tag?.trim()) saveSubject(doc.id, tag.trim());
                                       }}
-                                      className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/20 hover:text-[#2585C7] mb-1 block"
+                                      className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/20 hover:text-[#B1121B] mb-1 block"
                                     >
                                       + Tag course
                                     </button>
@@ -1393,7 +1393,7 @@ export default function Dashboard() {
                                   <div className="flex flex-wrap items-center gap-2 text-[9px] font-bold text-[#02013D]/40 uppercase tracking-widest">
                                     <span>{doc.word_count.toLocaleString()} words</span>
                                     {doc.audio_voice && (
-                                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[8px] text-[#2585C7]">
+                                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[8px] text-[#B1121B]">
                                         {getVoiceMeta(doc.audio_voice).label}
                                       </span>
                                     )}
@@ -1408,28 +1408,28 @@ export default function Dashboard() {
                                   <button
                                     onClick={() => handleDownload(doc.id)}
                                     disabled={readyChunks === 0 || downloadingDocId === doc.id}
-                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#B1121B] hover:bg-white/50 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                                     title="Download for offline"
                                   >
                                     {downloadingDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                                   </button>
                                   <button
                                     onClick={() => handleSummarize(doc)}
-                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50 transition-colors"
+                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#B1121B] hover:bg-white/50 transition-colors"
                                     title="AI Summary"
                                   >
                                     <Sparkles className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleViewChapters(doc)}
-                                    className={`p-2 rounded-xl transition-colors ${chaptersDocId === doc.id ? "bg-[#2585C7] text-white" : "text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50"}`}
+                                    className={`p-2 rounded-xl transition-colors ${chaptersDocId === doc.id ? "bg-[#B1121B] text-white" : "text-[#02013D]/30 hover:text-[#B1121B] hover:bg-white/50"}`}
                                     title="Chapters"
                                   >
                                     <Library className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteDoc(doc.id)}
-                                    className="p-2 rounded-xl text-[#02013D]/20 hover:text-[#2585C7] hover:bg-white/50 transition-colors"
+                                    className="p-2 rounded-xl text-[#02013D]/20 hover:text-red-500 hover:bg-red-50 transition-colors"
                                     title="Delete document"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1661,7 +1661,7 @@ export default function Dashboard() {
                 <section className="space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-[#02013D]/40">Voices</h3>
                   <div className="bg-white/40 backdrop-blur-[18px] p-5 rounded-[2.25rem] border-[1.5px] border-dashed border-[#B4B4C8]/45 space-y-4 relative overflow-hidden shadow-sm">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#2585C7]/5 rounded-full blur-2xl" />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#B1121B]/5 rounded-full blur-2xl" />
                     <div className="space-y-1">
                       <div className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/30">Read Aloud Voice</div>
                       <select
@@ -1679,7 +1679,7 @@ export default function Dashboard() {
                       <div className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/30 mb-2">Podcast Hosts</div>
                       {PODCAST_HOSTS.map((host) => (
                         <div key={host.voice} className="flex items-center gap-3 py-1">
-                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-black ${host.voice === "chinenye" ? "bg-[#2585C7]/10 text-[#2585C7]" : "bg-[#2585C7] text-white"}`}>
+                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-black ${host.voice === "chinenye" ? "bg-[#B1121B]/10 text-[#B1121B]" : "bg-[#B1121B] text-white"}`}>
                             {host.name[0]}
                           </div>
                           <div>
