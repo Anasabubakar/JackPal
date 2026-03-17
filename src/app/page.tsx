@@ -665,7 +665,7 @@ export default function Home() {
                 <div className="space-y-3">
                   <h3 className="text-xl font-black uppercase tracking-tight text-white">AI Voice Engine</h3>
                   <p className="text-sm font-bold text-white/50 leading-relaxed">
-                    Our YarnGPT-powered voices convert your text into natural, relatable Nigerian accents. It feels like a friend is explaining the topic to you.
+                    Our AI-powered voices convert your text into natural, relatable Nigerian accents. It feels like a friend is explaining the topic to you.
                   </p>
                 </div>
               </div>
