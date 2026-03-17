@@ -15,6 +15,7 @@ from services.cache import (
     key_podcast_chunks,
     key_user_stats,
 )
+from services.supabase_storage import delete_audio_chunks as delete_audio_chunks_supabase
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -169,7 +170,7 @@ async def list_documents(authorization: str = Header(...)):
 
     from services.supabase import get_supabase_admin
     result = get_supabase_admin().table("documents") \
-        .select("id, filename, word_count, status, created_at") \
+        .select("id, filename, word_count, status, created_at, audio_voice, audio_engine, ready_chunks, total_chunks, podcast_status, podcast_ready, podcast_total") \
         .eq("user_id", user_id).order("created_at", desc=True).execute()
     set_json(cache_key, result.data, 10)
     return result.data
@@ -220,7 +221,16 @@ async def get_chapters(doc_id: str, authorization: str = Header(...)):
         set_json(cache_key, payload, 3600)
         return {"chapters": payload}
 
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    from services.supabase import get_supabase_admin
+    result = get_supabase_admin().table("documents") \
+        .select("extracted_text").eq("id", doc_id).eq("user_id", user_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    from services.chapters import detect_chapters
+    chapters = detect_chapters(result.data.get("extracted_text") or "")
+    payload = [{"title": c["title"], "word_count": c["word_count"], "start_word": c["start_word"], "is_skippable": c.get("is_skippable", False)} for c in chapters]
+    set_json(cache_key, payload, 3600)
+    return {"chapters": payload}
 
 
 @router.delete("/{doc_id}")
@@ -249,6 +259,8 @@ async def delete_document(doc_id: str, authorization: str = Header(...)):
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found.")
     supabase.storage.from_("documents").remove([doc.data["storage_path"]])
+    delete_audio_chunks_supabase(user_id, doc_id, "chunk")
+    delete_audio_chunks_supabase(user_id, doc_id, "podcast")
     supabase.table("documents").delete().eq("id", doc_id).execute()
     delete_keys(
         key_doc_list(user_id),
