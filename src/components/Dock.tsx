@@ -54,12 +54,12 @@ export function Dock({ active, setActive, onCenterAction }: DockProps) {
                   cursor: "pointer",
                   transition: "all 0.3s cubic-bezier(0.34,1.2,0.64,1)",
                   background: isActive
-                    ? "rgba(240,240,244,0.85)"
+                    ? "rgba(37, 133, 199, 0.12)"
                     : "transparent",
                   boxShadow: isActive
-                    ? "0 2px 12px rgba(140,140,160,0.13), inset 0 1px 0 rgba(255,255,255,0.8)"
+                    ? "0 2px 12px rgba(37, 133, 199, 0.08), inset 0 1px 0 rgba(255,255,255,0.8)"
                     : "none",
-                  color: isActive ? "#111" : "#bbbbc8",
+                  color: isActive ? "#2585C7" : "#bbbbc8",
                   minWidth: isActive ? 130 : 52,
                 }}
                 aria-label={tab.label}
