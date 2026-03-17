@@ -617,7 +617,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* About / How it Works Section */}
+        {/* About Section */}
         <section id="about" className="py-24 bg-white relative overflow-hidden">
           {/* Subtle Background Elements */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
@@ -626,86 +626,73 @@ export default function Home() {
           </div>
 
           <div className="section-container relative z-10">
-            <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-[#02013D] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#2585C7]">
-                The JackPal System
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tight uppercase">
-                How we turn your textbooks into <span className="text-[#2585C7]">Academic Gold.</span>
-              </h2>
-              <p className="text-lg text-[#02013D]/70 leading-relaxed font-medium">
-                JackPal isn't just a player; it's a high-performance engine designed to help you consume 10x more material with zero reading fatigue.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 relative">
-              {/* Connector Lines (Desktop) */}
-              <div className="hidden md:block absolute top-1/2 left-[30%] right-[30%] h-[2px] bg-dashed-gradient -translate-y-1/2 -z-10" />
-              
-              {/* Step 1: Import */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#02013D] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-white shadow-lg">01</div>
-                <div className="bg-white p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Upload className="h-8 w-8 text-[#2585C7] group-hover:text-white" />
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="space-y-8">
+                <div className="inline-flex items-center gap-2 bg-[#02013D] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#2585C7]">
+                  Our Mission
                 </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-[#02013D]">Import Everything</h3>
-                  <p className="text-sm font-bold text-[#02013D]/50 leading-relaxed">
-                    Upload PDFs, Word docs, or simply paste your lecture notes. Our engine extracts every bit of value while removing the "fluff."
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2: Convert */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#02013D] border-4 border-[#2585C7] shadow-2xl transform md:-translate-y-4 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#2585C7] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-[#02013D] shadow-lg">02</div>
-                <div className="bg-white/10 p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Zap className="h-8 w-8 text-[#2585C7]" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-white">AI Voice Engine</h3>
-                  <p className="text-sm font-bold text-white/50 leading-relaxed">
-                    Our YarnGPT-powered voices convert your text into natural, relatable Nigerian accents. It feels like a friend is explaining the topic to you.
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3: Master */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#02013D] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-white shadow-lg">03</div>
-                <div className="bg-white p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Target className="h-8 w-8 text-[#2585C7] group-hover:text-white" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-[#02013D]">Master Offline</h3>
-                  <p className="text-sm font-bold text-[#02013D]/50 leading-relaxed">
-                    Download your study packs and listen at 2x speed anywhere—no data required. Reclaim your commute and win while they sleep.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Trust Bar */}
-            <div className="mt-20 p-8 rounded-[2rem] bg-[#2585C7]/5 border-2 border-[#2585C7]/10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="flex -space-x-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-12 w-12 rounded-full border-4 border-white bg-[#EFEFEF] overflow-hidden">
-                      <Image src={`https://i.pravatar.cc/150?u=${i + 10}`} alt="User" width={48} height={48} />
+                <h2 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tight uppercase">
+                  We're on a mission to <span className="text-[#2585C7]">end the textbook grind.</span>
+                </h2>
+                <p className="text-lg text-[#02013D]/70 leading-relaxed font-medium">
+                  JackPal wasn't built in a library. It was built in the real world, for students who have more ambition than time. We believe that your success shouldn't depend on how many hours you can stay awake at a desk.
+                </p>
+                
+                <div className="grid sm:grid-cols-2 gap-6 pt-4">
+                  <div className="space-y-3 p-6 rounded-2xl bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
+                    <div className="bg-white p-3 rounded-xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
+                      <Target className="h-5 w-5 text-[#2585C7] group-hover:text-white" />
                     </div>
-                  ))}
-                </div>
-                <div>
-                  <div className="text-lg font-black text-[#02013D]">500+ Students</div>
-                  <div className="text-xs font-bold text-[#2585C7] uppercase tracking-widest">Ready for the Beta</div>
+                    <h4 className="font-black uppercase tracking-tight text-[#02013D]">The "Why"</h4>
+                    <p className="text-xs font-bold text-[#02013D]/50 leading-relaxed">To democratize top-tier academic performance through audio mastery.</p>
+                  </div>
+                  <div className="space-y-3 p-6 rounded-2xl bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
+                    <div className="bg-white p-3 rounded-xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
+                      <Users className="h-5 w-5 text-[#2585C7] group-hover:text-white" />
+                    </div>
+                    <h4 className="font-black uppercase tracking-tight text-[#02013D]">The "Who"</h4>
+                    <p className="text-xs font-bold text-[#02013D]/50 leading-relaxed">Built by students, for the ambitious 1% who refuse to settle for average.</p>
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={openWaitlist}
-                className="w-full md:w-auto bg-[#02013D] text-white px-8 py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#2585C7] transition-all flex items-center justify-center gap-2 group"
-              >
-                Claim Your Advantage <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+
+              <div className="relative">
+                <div className="relative z-10 grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div className="aspect-square bg-[#02013D] rounded-3xl p-8 flex flex-col justify-end border-4 border-[#2585C7] shadow-xl transform hover:-rotate-2 transition-transform cursor-default">
+                      <Zap className="h-8 w-8 text-[#2585C7] mb-4" />
+                      <div className="text-3xl font-black text-white leading-none">10X</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-white/50 mt-1">Faster Study</div>
+                    </div>
+                    <div className="aspect-[4/5] bg-[#F7F7F7] rounded-3xl border-2 border-[#EFEFEF] p-6 flex flex-col justify-between hover:scale-105 transition-all">
+                      <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <Clock className="h-5 w-5 text-[#2585C7]" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#02013D]">Freedom</div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40">Study anywhere</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4 pt-8">
+                    <div className="aspect-[4/5] bg-white rounded-3xl border-4 border-[#02013D] p-6 flex flex-col justify-between shadow-2xl hover:rotate-2 transition-transform">
+                      <div className="h-10 w-10 bg-[#EFEFEF] rounded-xl flex items-center justify-center">
+                        <Smartphone className="h-5 w-5 text-[#02013D]" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#02013D]">Offline</div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40">No data needed</div>
+                      </div>
+                    </div>
+                    <div className="aspect-square bg-[#2585C7] rounded-3xl p-8 flex flex-col justify-end shadow-xl hover:scale-105 transition-all">
+                      <div className="text-3xl font-black text-white leading-none">Win.</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-white/80 mt-1">Join the 1%</div>
+                    </div>
+                  </div>
+                </div>
+                {/* Decorative glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[#2585C7]/10 blur-[100px] -z-10 rounded-full" />
+              </div>
             </div>
           </div>
         </section>
