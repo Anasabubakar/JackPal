@@ -12,12 +12,20 @@ from typing import Optional
 from starlette.background import BackgroundTask
 from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
 from services.cache import (
+    delete_keys,
     get_json,
     set_json,
     key_tts_caps,
     key_audio_chunks,
     key_audio_status,
 )
+from services.supabase_storage import (
+    upload_audio_chunk,
+    list_audio_chunks as list_audio_chunks_supabase,
+    download_audio_chunk,
+    delete_audio_chunks as delete_audio_chunks_supabase,
+)
+from services.supabase_activity import log_activity as log_activity_supabase
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -109,7 +117,35 @@ async def stream_audio_direct(
             },
         )
 
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    from services.supabase import get_supabase_admin
+    from fastapi.responses import RedirectResponse
+
+    supabase = get_supabase_admin()
+    doc = supabase.table("documents") \
+        .select("extracted_text, audio_voice, audio_engine") \
+        .eq("id", doc_id).eq("user_id", user_id).single().execute()
+    if not doc.data:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    text = doc.data.get("extracted_text") or ""
+    if not text:
+        raise HTTPException(status_code=422, detail="No text extracted.")
+
+    existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
+    if existing_chunks and doc.data.get("audio_voice") == voice and doc.data.get("audio_engine", DEFAULT_ENGINE) == engine:
+        api_token = auth_header.split(" ")[1]
+        first_url = f"http://localhost:8000/audio/{doc_id}/chunk/0?token={api_token}"
+        return RedirectResponse(url=first_url)
+
+    chunks = split_into_chunks(text)
+    first_chunk_text = chunks[0] if chunks else text
+    return StreamingResponse(
+        _tts_stream_generator(first_chunk_text, voice),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 async def _generate_remaining_chunks(
@@ -142,6 +178,51 @@ async def _generate_remaining_chunks(
         "audio_voice": voice,
         "audio_engine": engine,
     })
+    print(f"[TTS] All {len(chunks)} chunks done for doc {doc_id}")
+
+
+async def _generate_remaining_chunks_supabase(
+    doc_id: str,
+    user_id: str,
+    chunks: list[str],
+    start_index: int,
+    voice: str,
+    engine: str,
+):
+    """Background task: generate chunks start_index onwards, save to Supabase storage."""
+    from services.supabase import get_supabase_admin
+    engine = normalize_engine(engine)
+    voice = resolve_voice_for_engine(voice, engine)
+    sem = asyncio.Semaphore(_TTS_CONCURRENCY)
+    supabase = get_supabase_admin()
+    progress = {"ready": start_index}
+    lock = asyncio.Lock()
+
+    async def _one(i: int):
+        async with sem:
+            try:
+                audio_bytes = await synthesize_chunk(chunks[i], voice, engine)
+                upload_audio_chunk(user_id, doc_id, i, audio_bytes, "chunk")
+                async with lock:
+                    progress["ready"] = max(progress["ready"], i + 1)
+                    ready_now = progress["ready"]
+            except Exception as e:
+                print(f"[TTS] Chunk {i} failed: {e}")
+                return
+        if ready_now % 3 == 0 or ready_now == len(chunks):
+            supabase.table("documents").update({
+                "ready_chunks": ready_now,
+            }).eq("id", doc_id).execute()
+
+    await asyncio.gather(*[_one(i) for i in range(start_index, len(chunks))])
+
+    supabase.table("documents").update({
+        "status": "audio_ready",
+        "total_chunks": len(chunks),
+        "ready_chunks": progress["ready"],
+        "audio_voice": voice,
+        "audio_engine": engine,
+    }).eq("id", doc_id).execute()
     print(f"[TTS] All {len(chunks)} chunks done for doc {doc_id}")
 
 
@@ -209,8 +290,62 @@ async def generate_audio(
             "message": f"First chunk ready. Generating {total_chunks - 1} more in background.",
         }
 
-    # Supabase path (same progressive approach)
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented for chunks.")
+    from services.supabase import get_supabase_admin
+    supabase = get_supabase_admin()
+
+    doc = supabase.table("documents").select("extracted_text, audio_voice, audio_engine") \
+        .eq("id", doc_id).eq("user_id", user_id).single().execute()
+    if not doc.data:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    text = doc.data.get("extracted_text", "")
+    if not text:
+        raise HTTPException(status_code=422, detail="Document has no extracted text.")
+
+    chunks = split_into_chunks(text)
+    total_chunks = len(chunks)
+    if total_chunks == 0:
+        raise HTTPException(status_code=422, detail="Document has no usable text.")
+
+    if doc.data.get("audio_voice") != voice or doc.data.get("audio_engine", DEFAULT_ENGINE) != engine:
+        delete_audio_chunks_supabase(user_id, doc_id, "chunk")
+
+    supabase.table("documents").update({
+        "status": "generating",
+        "total_chunks": total_chunks,
+        "ready_chunks": 0,
+        "audio_voice": voice,
+        "audio_engine": engine,
+    }).eq("id", doc_id).execute()
+    delete_keys(key_audio_status(user_id, doc_id), key_audio_chunks(user_id, doc_id))
+
+    try:
+        first_audio = await synthesize_chunk(chunks[0], voice, engine)
+        upload_audio_chunk(user_id, doc_id, 0, first_audio, "chunk")
+        supabase.table("documents").update({
+            "status": "streaming",
+            "ready_chunks": 1,
+            "audio_voice": voice,
+            "audio_engine": engine,
+        }).eq("id", doc_id).execute()
+        delete_keys(key_audio_status(user_id, doc_id), key_audio_chunks(user_id, doc_id))
+    except Exception as e:
+        supabase.table("documents").update({"status": "ready"}).eq("id", doc_id).execute()
+        raise HTTPException(status_code=500, detail=f"TTS failed: {str(e)}")
+
+    if total_chunks > 1:
+        background_tasks.add_task(
+            _generate_remaining_chunks_supabase, doc_id, user_id, chunks, 1, voice, engine
+        )
+
+    return {
+        "status": "streaming",
+        "ready_chunks": 1,
+        "total_chunks": total_chunks,
+        "audio_voice": voice,
+        "audio_engine": engine,
+        "message": f"First chunk ready. Generating {total_chunks - 1} more in background.",
+    }
 
 
 @router.get("/{doc_id}/chunks")
@@ -225,30 +360,30 @@ async def get_audio_chunks(
         raise HTTPException(status_code=401, detail="Missing token.")
     user_id = _get_user_id(auth_header)
 
+    cache_key = key_audio_chunks(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        api_token = auth_header.split(" ")[1]
+        return {
+            "status": cached["status"],
+            "ready_chunks": cached["ready_chunks"],
+            "total_chunks": cached.get("total_chunks", 0),
+            "audio_voice": cached.get("audio_voice"),
+            "audio_engine": cached.get("audio_engine"),
+            "chunks": [
+                {
+                    "index": idx,
+                    "url": f"http://localhost:8000/audio/{doc_id}/chunk/{idx}?token={api_token}",
+                }
+                for idx in cached.get("chunk_indices", [])
+            ],
+        }
+
     if USE_LOCAL:
         from services.local_storage import get_document, list_audio_chunks
         doc = get_document(doc_id, user_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
-
-        cache_key = key_audio_chunks(user_id, doc_id)
-        cached = get_json(cache_key)
-        if cached is not None:
-            api_token = auth_header.split(" ")[1]
-            return {
-                "status": cached["status"],
-                "ready_chunks": cached["ready_chunks"],
-                "total_chunks": cached.get("total_chunks", 0),
-                "audio_voice": cached.get("audio_voice"),
-                "audio_engine": cached.get("audio_engine"),
-                "chunks": [
-                    {
-                        "index": idx,
-                        "url": f"http://localhost:8000/audio/{doc_id}/chunk/{idx}?token={api_token}",
-                    }
-                    for idx in cached.get("chunk_indices", [])
-                ],
-            }
 
         chunks = list_audio_chunks(doc_id, user_id)
         api_token = auth_header.split(" ")[1]
@@ -276,7 +411,38 @@ async def get_audio_chunks(
         }, 3)
         return payload
 
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    from services.supabase import get_supabase_admin
+    supabase = get_supabase_admin()
+    doc = supabase.table("documents").select("status, ready_chunks, total_chunks, audio_voice, audio_engine") \
+        .eq("id", doc_id).eq("user_id", user_id).single().execute()
+    if not doc.data:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
+    api_token = auth_header.split(" ")[1]
+    payload = {
+        "status": doc.data.get("status") or "ready",
+        "ready_chunks": doc.data.get("ready_chunks", len(chunks)),
+        "total_chunks": doc.data.get("total_chunks", 0),
+        "audio_voice": doc.data.get("audio_voice"),
+        "audio_engine": doc.data.get("audio_engine"),
+        "chunks": [
+            {
+                "index": c["chunk_index"],
+                "url": f"http://localhost:8000/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
+            }
+            for c in chunks
+        ],
+    }
+    set_json(cache_key, {
+        "status": payload["status"],
+        "ready_chunks": payload["ready_chunks"],
+        "total_chunks": payload.get("total_chunks", 0),
+        "audio_voice": payload.get("audio_voice"),
+        "audio_engine": payload.get("audio_engine"),
+        "chunk_indices": [c["chunk_index"] for c in chunks],
+    }, 3)
+    return payload
 
 
 @router.get("/{doc_id}/chunk/{chunk_index}")
@@ -304,7 +470,15 @@ async def stream_chunk(
         mime = "audio/wav" if chunk["storage_path"].endswith(".wav") else "audio/mpeg"
         return FileResponse(chunk["storage_path"], media_type=mime)
 
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
+    match = next((c for c in chunks if c["chunk_index"] == chunk_index), None)
+    if not match:
+        raise HTTPException(status_code=404, detail=f"Chunk {chunk_index} not ready yet.")
+
+    log_activity_supabase(user_id, doc_id, "listen_chunk", 45)
+    data = download_audio_chunk(match["storage_path"])
+    mime = "audio/wav" if match["storage_path"].endswith(".wav") else "audio/mpeg"
+    return StreamingResponse(iter([data]), media_type=mime)
 
 
 @router.get("/{doc_id}/download")
@@ -374,7 +548,15 @@ async def stream_podcast_chunk(
         mime = "audio/wav" if chunk["storage_path"].endswith(".wav") else "audio/mpeg"
         return FileResponse(chunk["storage_path"], media_type=mime)
 
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+    match = next((c for c in chunks if c["chunk_index"] == chunk_index), None)
+    if not match:
+        raise HTTPException(status_code=404, detail=f"Podcast chunk {chunk_index} not ready yet.")
+
+    log_activity_supabase(user_id, doc_id, "listen_podcast", 30)
+    data = download_audio_chunk(match["storage_path"])
+    mime = "audio/wav" if match["storage_path"].endswith(".wav") else "audio/mpeg"
+    return StreamingResponse(iter([data]), media_type=mime)
 
 
 @router.get("/{doc_id}/status")
@@ -387,12 +569,12 @@ async def get_audio_status(
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
     user_id = _get_user_id(auth_header)
+    cache_key = key_audio_status(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return cached
 
     if USE_LOCAL:
-        cache_key = key_audio_status(user_id, doc_id)
-        cached = get_json(cache_key)
-        if cached is not None:
-            return cached
         from services.local_storage import get_document
         doc = get_document(doc_id, user_id)
         if not doc:
@@ -408,7 +590,17 @@ async def get_audio_status(
         return payload
 
     from services.supabase import get_supabase_admin
-    doc = get_supabase_admin().table("documents").select("status").eq("id", doc_id).eq("user_id", user_id).single().execute()
+    doc = get_supabase_admin().table("documents") \
+        .select("status, ready_chunks, total_chunks, audio_voice, audio_engine") \
+        .eq("id", doc_id).eq("user_id", user_id).single().execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found.")
-    return {"status": doc.data["status"]}
+    payload = {
+        "status": doc.data.get("status") or "ready",
+        "ready_chunks": doc.data.get("ready_chunks", 0),
+        "total_chunks": doc.data.get("total_chunks", 0),
+        "audio_voice": doc.data.get("audio_voice"),
+        "audio_engine": doc.data.get("audio_engine"),
+    }
+    set_json(cache_key, payload, 3)
+    return payload
