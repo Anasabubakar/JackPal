@@ -108,5 +108,68 @@ async def get_user_stats(authorization: str = Header(...)):
         set_json(cache_key, payload, 10)
         return payload
 
-    # Supabase path
-    raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+    from services.supabase_activity import list_activity
+    from services.supabase import get_supabase_admin
+
+    activity = list_activity(user_id)
+    docs = get_supabase_admin().table("documents").select("id").eq("user_id", user_id).execute().data or []
+
+    dates = sorted(list(set([a["created_at"].split("T")[0] for a in activity if a.get("created_at")])), reverse=True)
+    streak = 0
+    if dates:
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        curr = today
+        if dates[0] == today or dates[0] == yesterday:
+            idx = 0
+            if dates[0] == today:
+                streak = 1
+                curr = today
+            elif dates[0] == yesterday:
+                streak = 1
+                curr = yesterday
+
+            temp_date = datetime.strptime(curr, "%Y-%m-%d")
+            for i in range(1, len(dates)):
+                prev_day = (temp_date - timedelta(days=1)).strftime("%Y-%m-%d")
+                if dates[i+idx if idx else i] == prev_day:
+                    streak += 1
+                    temp_date = datetime.strptime(prev_day, "%Y-%m-%d")
+                else:
+                    break
+
+    total_seconds = sum([a.get("duration", 0) for a in activity])
+    hours_listened = round(total_seconds / 3600, 1)
+
+    retention = 85
+    if activity:
+        unique_docs_listened = len(set([a["doc_id"] for a in activity if a.get("doc_id")]))
+        total_docs = len(docs)
+        if total_docs > 0:
+            retention = min(98, 70 + (unique_docs_listened / total_docs) * 20)
+
+    materials = len(docs)
+
+    weekly_progress = []
+    for i in range(6, -1, -1):
+        day = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+        day_activity = [a for a in activity if a.get("created_at", "").split("T")[0] == day]
+        day_seconds = sum([a.get("duration", 0) for a in day_activity])
+        progress = min(100, int((day_seconds / 1800) * 100))
+        weekly_progress.append(progress)
+
+    payload = {
+        "streak": streak,
+        "hours_listened": hours_listened,
+        "retention": f"{int(retention)}%",
+        "materials": materials,
+        "weekly_overview": {
+            "daily_goal": weekly_progress[-1] if weekly_progress else 0,
+            "exam_readiness": 75 if materials > 0 else 0,
+            "memory_retention": int(retention)
+        },
+        "recent_activity": activity[-5:] if activity else []
+    }
+    set_json(cache_key, payload, 10)
+    return payload
