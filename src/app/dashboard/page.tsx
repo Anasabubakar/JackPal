@@ -168,6 +168,7 @@ export default function Dashboard() {
   // Transcript / seeking
   const [docText, setDocText] = useState<string>("");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showFullTranscript, setShowFullTranscript] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   // 80-word chunks matching backend split — enables click-to-seek
@@ -180,6 +181,36 @@ export default function Dashboard() {
     }
     return result;
   }, [docText]);
+
+  const visibleTextChunks = useMemo(() => {
+    if (!showTranscript) return [];
+    if (showFullTranscript) {
+      return textChunks.map((chunk, index) => ({ chunk, index }));
+    }
+    if (!textChunks.length) return [];
+    const windowSize = 25;
+    const start = Math.max(0, activeChunk - windowSize);
+    const end = Math.min(textChunks.length, activeChunk + windowSize + 1);
+    return textChunks.slice(start, end).map((chunk, offset) => ({
+      chunk,
+      index: start + offset,
+    }));
+  }, [textChunks, activeChunk, showFullTranscript, showTranscript]);
+
+  const visiblePodcastLines = useMemo(() => {
+    if (!showTranscript) return [];
+    if (showFullTranscript) {
+      return podcastScript.map((line, index) => ({ line, index }));
+    }
+    if (!podcastScript.length) return [];
+    const windowSize = 25;
+    const start = Math.max(0, podcastChunkIndex - windowSize);
+    const end = Math.min(podcastScript.length, podcastChunkIndex + windowSize + 1);
+    return podcastScript.slice(start, end).map((line, offset) => ({
+      line,
+      index: start + offset,
+    }));
+  }, [podcastScript, podcastChunkIndex, showFullTranscript, showTranscript]);
 
   // Course subject labels (stored locally per docId)
   const [subjects, setSubjects] = useState<Record<string, string>>({});
@@ -1372,6 +1403,18 @@ export default function Dashboard() {
                         >
                           {showTranscript ? "Hide" : "Transcript"}
                         </button>
+                        {showTranscript && (
+                          <button
+                            onClick={() => setShowFullTranscript(v => !v)}
+                            className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-all ${
+                              showFullTranscript
+                                ? "border-[#2585C7] text-[#2585C7] bg-[#2585C7]/10"
+                                : "border-white/20 text-white/40 hover:text-white/70"
+                            }`}
+                          >
+                            {showFullTranscript ? "Windowed" : "Full"}
+                          </button>
+                        )}
                         <span>{formatTime(duration)}</span>
                       </div>
                     </div>
@@ -1397,13 +1440,13 @@ export default function Dashboard() {
                     >
                       {podcastPlayingDocId ? (
                         /* Podcast mode: show script lines, click to jump */
-                        podcastScript.length > 0 ? podcastScript.map((line, i) => (
+                        visiblePodcastLines.length > 0 ? visiblePodcastLines.map(({ line, index }) => (
                           <button
-                            key={i}
-                            data-active={i === podcastChunkIndex}
-                            onClick={() => jumpToPodcastLine(i)}
+                            key={index}
+                            data-active={index === podcastChunkIndex}
+                            onClick={() => jumpToPodcastLine(index)}
                             className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
-                              i === podcastChunkIndex
+                              index === podcastChunkIndex
                                 ? "bg-[#61E3F0]/15 border border-[#61E3F0]/30"
                                 : "hover:bg-white/5"
                             }`}
@@ -1411,7 +1454,7 @@ export default function Dashboard() {
                             <span className={`text-[9px] font-black uppercase tracking-widest mr-2 ${line.speaker === "Ezinne" ? "text-[#61E3F0]" : "text-[#2585C7]"}`}>
                               {line.speaker}
                             </span>
-                            <span className={`text-[10px] font-bold ${i === podcastChunkIndex ? "text-white" : "text-white/50"}`}>
+                            <span className={`text-[10px] font-bold ${index === podcastChunkIndex ? "text-white" : "text-white/50"}`}>
                               {line.text}
                             </span>
                           </button>
@@ -1420,19 +1463,19 @@ export default function Dashboard() {
                         )
                       ) : (
                         /* Listen mode: text chunks, click to jump to that chunk */
-                        textChunks.length > 0 ? textChunks.map((chunk, i) => (
+                        visibleTextChunks.length > 0 ? visibleTextChunks.map(({ chunk, index }) => (
                           <button
-                            key={i}
-                            data-active={i === activeChunk}
-                            onClick={() => currentDocId && handlePlayChunks(currentDocId, i, currentTitle)}
+                            key={index}
+                            data-active={index === activeChunk}
+                            onClick={() => currentDocId && handlePlayChunks(currentDocId, index, currentTitle)}
                             className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
-                              i === activeChunk
+                              index === activeChunk
                                 ? "bg-[#61E3F0]/15 border border-[#61E3F0]/30"
                                 : "hover:bg-white/5"
                             }`}
                           >
-                            <span className="text-[9px] font-black text-white/20 mr-2 tabular-nums">{i + 1}</span>
-                            <span className={`text-[10px] font-bold ${i === activeChunk ? "text-white" : "text-white/50"}`}>
+                            <span className="text-[9px] font-black text-white/20 mr-2 tabular-nums">{index + 1}</span>
+                            <span className={`text-[10px] font-bold ${index === activeChunk ? "text-white" : "text-white/50"}`}>
                               {chunk.length > 140 ? chunk.slice(0, 140) + "…" : chunk}
                             </span>
                           </button>
