@@ -4,10 +4,16 @@ from fastapi import APIRouter, HTTPException, Header, BackgroundTasks
 from pydantic import BaseModel
 from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines
 from services.cache import (
+    delete_keys,
     get_json,
     set_json,
     key_doc_summary,
     key_podcast_chunks,
+)
+from services.supabase_storage import (
+    upload_audio_chunk,
+    list_audio_chunks as list_audio_chunks_supabase,
+    delete_audio_chunks as delete_audio_chunks_supabase,
 )
 
 
@@ -94,6 +100,61 @@ async def _podcast_pipeline(doc_id: str, user_id: str, text: str, mode: str = "s
     return script, first_ready, task
 
 
+async def _podcast_pipeline_supabase(doc_id: str, user_id: str, text: str, mode: str = "standard"):
+    """
+    Supabase pipeline: stream lines, synthesize, store chunks in storage,
+    and persist script/progress on the document record.
+    """
+    from services.tts import synthesize_chunk, get_tts_capabilities
+    from services.supabase import get_supabase_admin
+
+    caps = get_tts_capabilities()
+    engine = "premium" if caps.get("premium_available") else "fast"
+    if engine == "premium":
+        print(f"[Podcast] Using YarnGPT premium engine for {mode} mode")
+    else:
+        print(f"[Podcast] Using edge-tts fast engine for {mode} mode (Premium not available)")
+
+    supabase = get_supabase_admin()
+    script: list[dict] = []
+    first_ready = asyncio.Event()
+
+    async def _run():
+        idx = 0
+        async for line in stream_podcast_lines(text, mode=mode):
+            script.append(line)
+            try:
+                try:
+                    audio = await synthesize_chunk(line["text"], line["voice"], engine)
+                except Exception as tts_err:
+                    print(f"[Podcast] Line {idx} premium TTS failed ({tts_err}), falling back to edge-tts")
+                    audio = await synthesize_chunk(line["text"], line["voice"], "fast")
+                upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
+                supabase.table("documents").update({
+                    "podcast_ready": idx + 1,
+                    "podcast_status": "generating",
+                    "podcast_script": script,
+                }).eq("id", doc_id).execute()
+            except Exception as e:
+                print(f"[Podcast] Line {idx} TTS failed: {e}")
+            finally:
+                if idx == 0:
+                    first_ready.set()
+                idx += 1
+
+        supabase.table("documents").update({
+            "podcast_status": "ready",
+            "podcast_total": len(script),
+            "podcast_script": script,
+        }).eq("id", doc_id).execute()
+        if not first_ready.is_set():
+            first_ready.set()
+        print(f"[Podcast] Pipeline complete — {len(script)} lines for {doc_id}")
+
+    task = asyncio.create_task(_run())
+    return script, first_ready, task
+
+
 @router.post("/podcast/{doc_id}")
 async def generate_podcast(
     doc_id: str,
@@ -114,7 +175,79 @@ async def generate_podcast(
     user_id = _get_user_id(authorization)
 
     if not USE_LOCAL:
-        raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
+        from services.supabase import get_supabase_admin
+        from services.chapters import detect_chapters
+
+        supabase = get_supabase_admin()
+        doc = supabase.table("documents") \
+            .select("extracted_text, podcast_status, podcast_script, podcast_total") \
+            .eq("id", doc_id).eq("user_id", user_id).single().execute()
+        if not doc.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        existing_script = doc.data.get("podcast_script") or []
+        existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+
+        if not force_regen and existing_script and doc.data.get("podcast_status") == "ready":
+            return {
+                "status": "ready",
+                "total_lines": doc.data.get("podcast_total", len(existing_script)),
+                "ready_lines": len(existing_chunks),
+                "script": existing_script,
+                "cached": True,
+            }
+
+        if not force_regen and existing_script and doc.data.get("podcast_status") == "generating":
+            return {
+                "status": "generating",
+                "total_lines": doc.data.get("podcast_total", len(existing_script)),
+                "ready_lines": len(existing_chunks),
+                "script": existing_script,
+                "cached": True,
+            }
+
+        full_text = doc.data.get("extracted_text") or ""
+        if not full_text.strip():
+            raise HTTPException(status_code=422, detail="Document has no extracted text.")
+
+        if topic_text:
+            text = topic_text
+        elif chapter is not None:
+            chapter_list = detect_chapters(full_text)
+            if 0 <= chapter < len(chapter_list):
+                ch = chapter_list[chapter]
+                words = full_text.split()
+                text = " ".join(words[ch["start_word"]: ch["start_word"] + ch["word_count"]])
+            else:
+                text = full_text
+        else:
+            text = full_text
+
+        delete_audio_chunks_supabase(user_id, doc_id, "podcast")
+        supabase.table("documents").update({
+            "podcast_status": "generating",
+            "podcast_ready": 0,
+            "podcast_total": 0,
+            "podcast_script": None,
+        }).eq("id", doc_id).execute()
+        delete_keys(key_podcast_chunks(user_id, doc_id))
+
+        script_ref, first_ready, _task = await _podcast_pipeline_supabase(doc_id, user_id, text, mode=mode)
+
+        try:
+            await asyncio.wait_for(first_ready.wait(), timeout=120)
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Podcast generation timed out.")
+
+        ready_chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+
+        return {
+            "status": "generating",
+            "total_lines": len(script_ref),
+            "ready_lines": len(ready_chunks),
+            "script": script_ref,
+            "cached": False,
+        }
 
     from services.local_storage import (
         get_document, get_podcast_script, list_podcast_chunks, update_document,
@@ -174,6 +307,7 @@ async def generate_podcast(
     from services.local_storage import clear_podcast_chunks
     clear_podcast_chunks(doc_id, user_id)
     update_document(doc_id, {"podcast_status": "generating", "podcast_ready": 0, "podcast_total": 0})
+    delete_keys(key_podcast_chunks(user_id, doc_id))
 
     # Start pipeline — script generation + TTS run concurrently
     script_ref, first_ready, _task = await _podcast_pipeline(doc_id, user_id, text, mode=mode)
@@ -202,9 +336,6 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
     """Return list of ready podcast chunk URLs."""
     user_id = _get_user_id(authorization)
 
-    if not USE_LOCAL:
-        raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
-
     cache_key = key_podcast_chunks(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:
@@ -223,6 +354,45 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
                 for idx, speaker in cached.get("chunk_entries", [])
             ],
         }
+
+    if not USE_LOCAL:
+        from services.supabase import get_supabase_admin
+        supabase = get_supabase_admin()
+        doc = supabase.table("documents") \
+            .select("podcast_status, podcast_ready, podcast_total, podcast_script") \
+            .eq("id", doc_id).eq("user_id", user_id).single().execute()
+        if not doc.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+        script = doc.data.get("podcast_script") or []
+        token = authorization.split(" ")[1]
+
+        payload = {
+            "status": doc.data.get("podcast_status") or "none",
+            "ready_lines": len(chunks),
+            "total_lines": doc.data.get("podcast_total", len(script)),
+            "script": script,
+            "chunks": [
+                {
+                    "index": c["chunk_index"],
+                    "speaker": (script[c["chunk_index"]]["speaker"] if c["chunk_index"] < len(script) else "Ezinne"),
+                    "url": f"http://localhost:8000/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
+                }
+                for c in chunks
+            ],
+        }
+        set_json(cache_key, {
+            "status": payload["status"],
+            "ready_lines": payload["ready_lines"],
+            "total_lines": payload["total_lines"],
+            "script": script,
+            "chunk_entries": [
+                (c["chunk_index"], (script[c["chunk_index"]]["speaker"] if c["chunk_index"] < len(script) else "Ezinne"))
+                for c in chunks
+            ],
+        }, 5)
+        return payload
 
     from services.local_storage import get_document, list_podcast_chunks, get_podcast_script
 
