@@ -3,6 +3,12 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Header, BackgroundTasks
 from pydantic import BaseModel
 from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines
+from services.cache import (
+    get_json,
+    set_json,
+    key_doc_summary,
+    key_podcast_chunks,
+)
 
 
 class PodcastRequest(BaseModel):
@@ -199,6 +205,25 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
     if not USE_LOCAL:
         raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
 
+    cache_key = key_podcast_chunks(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        token = authorization.split(" ")[1]
+        return {
+            "status": cached.get("status") or "none",
+            "ready_lines": cached.get("ready_lines", 0),
+            "total_lines": cached.get("total_lines", 0),
+            "script": cached.get("script", []),
+            "chunks": [
+                {
+                    "index": idx,
+                    "speaker": speaker,
+                    "url": f"http://localhost:8000/audio/{doc_id}/podcast/{idx}?token={token}",
+                }
+                for idx, speaker in cached.get("chunk_entries", [])
+            ],
+        }
+
     from services.local_storage import get_document, list_podcast_chunks, get_podcast_script
 
     doc = get_document(doc_id, user_id)
@@ -208,8 +233,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
     chunks = list_podcast_chunks(doc_id, user_id)
     script = get_podcast_script(doc_id) or []
     token = authorization.split(" ")[1]
-
-    return {
+    payload = {
         "status": doc.get("podcast_status") or "none",
         "ready_lines": len(chunks),
         "total_lines": doc.get("podcast_total", len(script)),
@@ -223,11 +247,23 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
             for c in chunks
         ],
     }
+    set_json(cache_key, {
+        "status": doc.get("podcast_status") or "none",
+        "ready_lines": len(chunks),
+        "total_lines": doc.get("podcast_total", len(script)),
+        "script": script,
+        "chunk_entries": [(c["chunk_index"], c["speaker"]) for c in chunks],
+    }, 5)
+    return payload
 
 
 @router.post("/summarize/{doc_id}")
 async def summarize(doc_id: str, authorization: str = Header(...)):
     user_id = _get_user_id(authorization)
+    cache_key = key_doc_summary(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return {"summary": cached, "cached": True}
 
     if USE_LOCAL:
         from services.local_storage import get_document, update_document
@@ -235,9 +271,11 @@ async def summarize(doc_id: str, authorization: str = Header(...)):
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
         if doc.get("summary"):
+            set_json(cache_key, doc["summary"], 86400)
             return {"summary": doc["summary"], "cached": True}
         summary = await summarize_document(doc["extracted_text"])
         update_document(doc_id, {"summary": summary})
+        set_json(cache_key, summary, 86400)
         return {"summary": summary, "cached": False}
 
     from services.supabase import get_supabase_admin
@@ -246,7 +284,9 @@ async def summarize(doc_id: str, authorization: str = Header(...)):
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found.")
     if doc.data.get("summary"):
+        set_json(cache_key, doc.data["summary"], 86400)
         return {"summary": doc.data["summary"], "cached": True}
     summary = await summarize_document(doc.data["extracted_text"])
     supabase.table("documents").update({"summary": summary}).eq("id", doc_id).execute()
+    set_json(cache_key, summary, 86400)
     return {"summary": summary, "cached": False}

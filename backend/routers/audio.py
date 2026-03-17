@@ -11,6 +11,13 @@ from fastapi.responses import FileResponse, StreamingResponse
 from typing import Optional
 from starlette.background import BackgroundTask
 from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
+from services.cache import (
+    get_json,
+    set_json,
+    key_tts_caps,
+    key_audio_chunks,
+    key_audio_status,
+)
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -41,7 +48,13 @@ async def _tts_stream_generator(text: str, voice: str):
 
 @router.get("/capabilities")
 async def audio_capabilities():
-    return get_tts_capabilities()
+    cache_key = key_tts_caps()
+    cached = get_json(cache_key)
+    if cached is not None:
+        return cached
+    caps = get_tts_capabilities()
+    set_json(cache_key, caps, 300)
+    return caps
 
 
 @router.get("/{doc_id}/stream")
@@ -218,10 +231,28 @@ async def get_audio_chunks(
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
 
+        cache_key = key_audio_chunks(user_id, doc_id)
+        cached = get_json(cache_key)
+        if cached is not None:
+            api_token = auth_header.split(" ")[1]
+            return {
+                "status": cached["status"],
+                "ready_chunks": cached["ready_chunks"],
+                "total_chunks": cached.get("total_chunks", 0),
+                "audio_voice": cached.get("audio_voice"),
+                "audio_engine": cached.get("audio_engine"),
+                "chunks": [
+                    {
+                        "index": idx,
+                        "url": f"http://localhost:8000/audio/{doc_id}/chunk/{idx}?token={api_token}",
+                    }
+                    for idx in cached.get("chunk_indices", [])
+                ],
+            }
+
         chunks = list_audio_chunks(doc_id, user_id)
         api_token = auth_header.split(" ")[1]
-
-        return {
+        payload = {
             "status": doc["status"],
             "ready_chunks": len(chunks),
             "total_chunks": doc.get("total_chunks", 0),
@@ -235,6 +266,15 @@ async def get_audio_chunks(
                 for c in chunks
             ],
         }
+        set_json(cache_key, {
+            "status": doc["status"],
+            "ready_chunks": len(chunks),
+            "total_chunks": doc.get("total_chunks", 0),
+            "audio_voice": doc.get("audio_voice"),
+            "audio_engine": doc.get("audio_engine"),
+            "chunk_indices": [c["chunk_index"] for c in chunks],
+        }, 3)
+        return payload
 
     raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
 
@@ -349,17 +389,23 @@ async def get_audio_status(
     user_id = _get_user_id(auth_header)
 
     if USE_LOCAL:
+        cache_key = key_audio_status(user_id, doc_id)
+        cached = get_json(cache_key)
+        if cached is not None:
+            return cached
         from services.local_storage import get_document
         doc = get_document(doc_id, user_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
-        return {
+        payload = {
             "status": doc["status"],
             "ready_chunks": doc.get("ready_chunks", 0),
             "total_chunks": doc.get("total_chunks", 0),
             "audio_voice": doc.get("audio_voice"),
             "audio_engine": doc.get("audio_engine"),
         }
+        set_json(cache_key, payload, 3)
+        return payload
 
     from services.supabase import get_supabase_admin
     doc = get_supabase_admin().table("documents").select("status").eq("id", doc_id).eq("user_id", user_id).single().execute()

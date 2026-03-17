@@ -2,6 +2,19 @@ import os
 import asyncio
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
 from services.extractor import extract_text
+from services.cache import (
+    delete_keys,
+    get_json,
+    set_json,
+    key_doc_list,
+    key_doc_text,
+    key_doc_chapters,
+    key_doc_summary,
+    key_audio_status,
+    key_audio_chunks,
+    key_podcast_chunks,
+    key_user_stats,
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -90,6 +103,7 @@ async def upload_document(
         # Return existing doc if same filename already uploaded (prevent duplicates)
         existing = get_document_by_filename(user_id, file.filename)
         if existing:
+            delete_keys(key_doc_list(user_id), key_user_stats(user_id))
             return {
                 "id": existing["id"],
                 "filename": existing["filename"],
@@ -101,6 +115,7 @@ async def upload_document(
                 "total_chunks": existing.get("total_chunks", 0),
             }
         record = save_document(user_id, file.filename, file_bytes, text)
+        delete_keys(key_doc_list(user_id), key_user_stats(user_id))
         return {
             "id": record["id"],
             "filename": record["filename"],
@@ -123,17 +138,22 @@ async def upload_document(
         "storage_path": storage_path, "extracted_text": text,
         "word_count": len(text.split()), "status": "ready",
     }).execute()
+    delete_keys(key_doc_list(user_id), key_user_stats(user_id))
     return {"id": doc_id, "filename": file.filename, "word_count": len(text.split()), "status": "ready"}
 
 
 @router.get("/")
 async def list_documents(authorization: str = Header(...)):
     user_id = _get_user_id(authorization)
+    cache_key = key_doc_list(user_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return cached
 
     if USE_LOCAL:
         from services.local_storage import list_documents
         docs = list_documents(user_id)
-        return [{
+        payload = [{
             "id": d["id"],
             "filename": d["filename"],
             "word_count": d["word_count"],
@@ -144,23 +164,31 @@ async def list_documents(authorization: str = Header(...)):
             "total_chunks": d.get("total_chunks", 0),
             "created_at": d["created_at"],
         } for d in docs]
+        set_json(cache_key, payload, 10)
+        return payload
 
     from services.supabase import get_supabase_admin
     result = get_supabase_admin().table("documents") \
         .select("id, filename, word_count, status, created_at") \
         .eq("user_id", user_id).order("created_at", desc=True).execute()
+    set_json(cache_key, result.data, 10)
     return result.data
 
 
 @router.get("/{doc_id}/text")
 async def get_document_text(doc_id: str, authorization: str = Header(...)):
     user_id = _get_user_id(authorization)
+    cache_key = key_doc_text(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return {"text": cached}
 
     if USE_LOCAL:
         from services.local_storage import get_document
         doc = get_document(doc_id, user_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
+        set_json(cache_key, doc["extracted_text"], 3600)
         return {"text": doc["extracted_text"]}
 
     from services.supabase import get_supabase_admin
@@ -168,6 +196,7 @@ async def get_document_text(doc_id: str, authorization: str = Header(...)):
         .select("extracted_text").eq("id", doc_id).eq("user_id", user_id).single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found.")
+    set_json(cache_key, result.data["extracted_text"], 3600)
     return {"text": result.data["extracted_text"]}
 
 
@@ -175,6 +204,10 @@ async def get_document_text(doc_id: str, authorization: str = Header(...)):
 async def get_chapters(doc_id: str, authorization: str = Header(...)):
     """Return chapter/section list for navigation sidebar."""
     user_id = _get_user_id(authorization)
+    cache_key = key_doc_chapters(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return {"chapters": cached}
 
     if USE_LOCAL:
         from services.local_storage import get_document
@@ -183,7 +216,9 @@ async def get_chapters(doc_id: str, authorization: str = Header(...)):
             raise HTTPException(status_code=404, detail="Document not found.")
         from services.chapters import detect_chapters
         chapters = detect_chapters(doc["extracted_text"])
-        return {"chapters": [{"title": c["title"], "word_count": c["word_count"], "start_word": c["start_word"], "is_skippable": c.get("is_skippable", False)} for c in chapters]}
+        payload = [{"title": c["title"], "word_count": c["word_count"], "start_word": c["start_word"], "is_skippable": c.get("is_skippable", False)} for c in chapters]
+        set_json(cache_key, payload, 3600)
+        return {"chapters": payload}
 
     raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
 
@@ -196,6 +231,16 @@ async def delete_document(doc_id: str, authorization: str = Header(...)):
         from services.local_storage import delete_document
         if not delete_document(doc_id, user_id):
             raise HTTPException(status_code=404, detail="Document not found.")
+        delete_keys(
+            key_doc_list(user_id),
+            key_doc_text(user_id, doc_id),
+            key_doc_chapters(user_id, doc_id),
+            key_doc_summary(user_id, doc_id),
+            key_audio_status(user_id, doc_id),
+            key_audio_chunks(user_id, doc_id),
+            key_podcast_chunks(user_id, doc_id),
+            key_user_stats(user_id),
+        )
         return {"message": "Document deleted."}
 
     from services.supabase import get_supabase_admin
@@ -205,4 +250,14 @@ async def delete_document(doc_id: str, authorization: str = Header(...)):
         raise HTTPException(status_code=404, detail="Document not found.")
     supabase.storage.from_("documents").remove([doc.data["storage_path"]])
     supabase.table("documents").delete().eq("id", doc_id).execute()
+    delete_keys(
+        key_doc_list(user_id),
+        key_doc_text(user_id, doc_id),
+        key_doc_chapters(user_id, doc_id),
+        key_doc_summary(user_id, doc_id),
+        key_audio_status(user_id, doc_id),
+        key_audio_chunks(user_id, doc_id),
+        key_podcast_chunks(user_id, doc_id),
+        key_user_stats(user_id),
+    )
     return {"message": "Document deleted."}

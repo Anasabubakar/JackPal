@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from datetime import datetime, timedelta
 import os
+from services.cache import get_json, set_json, key_user_stats
 
 router = APIRouter(prefix="/user", tags=["user"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -24,6 +25,10 @@ def _get_user_id(authorization: str) -> str:
 @router.get("/stats")
 async def get_user_stats(authorization: str = Header(...)):
     user_id = _get_user_id(authorization)
+    cache_key = key_user_stats(user_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return cached
     
     if USE_LOCAL:
         from services.local_storage import get_activity, list_documents
@@ -88,7 +93,7 @@ async def get_user_stats(authorization: str = Header(...)):
             progress = min(100, int((day_seconds / 1800) * 100))
             weekly_progress.append(progress)
             
-        return {
+        payload = {
             "streak": streak,
             "hours_listened": hours_listened,
             "retention": f"{int(retention)}%",
@@ -100,6 +105,8 @@ async def get_user_stats(authorization: str = Header(...)):
             },
             "recent_activity": activity[-5:] if activity else []
         }
+        set_json(cache_key, payload, 10)
+        return payload
 
     # Supabase path
     raise HTTPException(status_code=501, detail="Supabase path not yet implemented.")
