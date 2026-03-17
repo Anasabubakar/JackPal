@@ -46,13 +46,14 @@ async def _podcast_pipeline(doc_id: str, user_id: str, text: str, mode: str = "s
     from services.tts import synthesize_chunk, get_tts_capabilities
     from services.local_storage import save_podcast_chunk, save_podcast_script, update_document
 
-    # Pidgin mode → try YarnGPT premium Nigerian voices if the model is loaded
+    # Prefer YarnGPT premium Nigerian voices if the model is loaded/available
     caps = get_tts_capabilities()
-    engine = "premium" if (mode == "pidgin" and caps["premium_available"]) else "fast"
+    engine = "premium" if caps.get("premium_available") else "fast"
+    
     if engine == "premium":
         print(f"[Podcast] Using YarnGPT premium engine for {mode} mode")
     else:
-        print(f"[Podcast] Using edge-tts fast engine for {mode} mode")
+        print(f"[Podcast] Using edge-tts fast engine for {mode} mode (Premium not available)")
 
     script: list[dict] = []
     first_ready = asyncio.Event()
