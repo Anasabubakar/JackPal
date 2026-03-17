@@ -3,28 +3,15 @@ from datetime import datetime, timedelta
 import os
 from services.cache import get_json, set_json, key_user_stats
 
+from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/user", tags=["user"])
-USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
+USE_LOCAL = is_local_mode()
 
-def _get_user_id(authorization: str) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token.")
-    token = authorization.split(" ")[1]
-    if USE_LOCAL:
-        from services.local_auth import get_user_from_token
-        user = get_user_from_token(token)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token.")
-        return user["id"]
-    from services.supabase import get_supabase_admin
-    result = get_supabase_admin().auth.get_user(token)
-    if not result.user:
-        raise HTTPException(status_code=401, detail="Invalid token.")
-    return result.user.id
+# Centered auth moved to services.auth_utils
 
 @router.get("/stats")
 async def get_user_stats(authorization: str = Header(...)):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
     cache_key = key_user_stats(user_id)
     cached = get_json(cache_key)
     if cached is not None:

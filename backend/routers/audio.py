@@ -27,25 +27,12 @@ from services.supabase_storage import (
 )
 from services.supabase_activity import log_activity as log_activity_supabase
 
+from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/audio", tags=["audio"])
-USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
+USE_LOCAL = is_local_mode()
 
 
-def _get_user_id(authorization: str) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token.")
-    token = authorization.split(" ")[1]
-    if USE_LOCAL:
-        from services.local_auth import get_user_from_token
-        user = get_user_from_token(token)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token.")
-        return user["id"]
-    from services.supabase import get_supabase_admin
-    result = get_supabase_admin().auth.get_user(token)
-    if not result.user:
-        raise HTTPException(status_code=401, detail="Invalid token.")
-    return result.user.id
+# Centered auth moved to services.auth_utils
 
 
 async def _tts_stream_generator(text: str, voice: str):
@@ -82,7 +69,7 @@ async def stream_audio_direct(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
     engine = normalize_engine(engine)
     voice = resolve_voice_for_engine(voice, engine)
 
@@ -241,7 +228,7 @@ async def generate_audio(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
     engine = normalize_engine(engine)
     voice = resolve_voice_for_engine(voice, engine)
 
@@ -362,7 +349,7 @@ async def get_audio_chunks(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
 
     cache_key = key_audio_chunks(user_id, doc_id)
     cached = get_json(cache_key)
@@ -463,7 +450,7 @@ async def stream_chunk(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
 
     if USE_LOCAL:
         from services.local_storage import get_audio_chunk, log_activity
@@ -498,7 +485,7 @@ async def download_audio_chunks(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
 
     if USE_LOCAL:
         from services.local_storage import get_document, list_audio_chunks
@@ -541,7 +528,7 @@ async def stream_podcast_chunk(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
 
     if USE_LOCAL:
         from services.local_storage import get_podcast_chunk, log_activity
@@ -575,7 +562,7 @@ async def get_audio_status(
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = _get_user_id(auth_header)
+    user_id = get_user_id(auth_header)
     cache_key = key_audio_status(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:

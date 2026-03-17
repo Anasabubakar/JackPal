@@ -17,30 +17,15 @@ from services.cache import (
 )
 from services.supabase_storage import delete_audio_chunks as delete_audio_chunks_supabase
 
+from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/documents", tags=["documents"])
-USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
+USE_LOCAL = is_local_mode()
 
 ALLOWED_TYPES = {"pdf", "doc", "docx", "txt"}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 
-def _get_user_id(authorization: str) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token.")
-    token = authorization.split(" ")[1]
-
-    if USE_LOCAL:
-        from services.local_auth import get_user_from_token
-        user = get_user_from_token(token)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token.")
-        return user["id"]
-
-    from services.supabase import get_supabase_admin
-    result = get_supabase_admin().auth.get_user(token)
-    if not result.user:
-        raise HTTPException(status_code=401, detail="Invalid token.")
-    return result.user.id
+# Centered auth moved to services.auth_utils
 
 
 async def _auto_generate_audio(doc_id: str, user_id: str, text: str):
@@ -81,7 +66,7 @@ async def upload_document(
     file: UploadFile = File(...),
     authorization: str = Header(...),
 ):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
 
     ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename else ""
     if ext not in ALLOWED_TYPES:
@@ -145,7 +130,7 @@ async def upload_document(
 
 @router.get("/")
 async def list_documents(authorization: str = Header(...)):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
     cache_key = key_doc_list(user_id)
     cached = get_json(cache_key)
     if cached is not None:
@@ -178,7 +163,7 @@ async def list_documents(authorization: str = Header(...)):
 
 @router.get("/{doc_id}/text")
 async def get_document_text(doc_id: str, authorization: str = Header(...)):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
     cache_key = key_doc_text(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:
@@ -204,7 +189,7 @@ async def get_document_text(doc_id: str, authorization: str = Header(...)):
 @router.get("/{doc_id}/chapters")
 async def get_chapters(doc_id: str, authorization: str = Header(...)):
     """Return chapter/section list for navigation sidebar."""
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
     cache_key = key_doc_chapters(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:
@@ -235,7 +220,7 @@ async def get_chapters(doc_id: str, authorization: str = Header(...)):
 
 @router.delete("/{doc_id}")
 async def delete_document(doc_id: str, authorization: str = Header(...)):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
 
     if USE_LOCAL:
         from services.local_storage import delete_document

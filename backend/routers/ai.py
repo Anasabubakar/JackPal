@@ -20,30 +20,15 @@ from services.supabase_storage import (
 class PodcastRequest(BaseModel):
     topic: str | None = None  # Optional: specific section text to podcast about
 
+from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/ai", tags=["ai"])
-USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
+USE_LOCAL = is_local_mode()
 
 # Max concurrent edge-tts calls — edge-tts is network I/O so parallelism helps a lot
 _TTS_CONCURRENCY = 5
 
 
-def _get_user_id(authorization: str) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token.")
-    token = authorization.split(" ")[1]
-
-    if USE_LOCAL:
-        from services.local_auth import get_user_from_token
-        user = get_user_from_token(token)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token.")
-        return user["id"]
-
-    from services.supabase import get_supabase_admin
-    result = get_supabase_admin().auth.get_user(token)
-    if not result.user:
-        raise HTTPException(status_code=401, detail="Invalid token.")
-    return result.user.id
+# Centered auth moved to services.auth_utils
 
 
 async def _podcast_pipeline(doc_id: str, user_id: str, text: str, mode: str = "standard"):
@@ -172,7 +157,7 @@ async def generate_podcast(
     ?mode=pidgin      — Nigerian Pidgin English (premium)
     Body: { topic?: string } — optional specific section text to podcast about
     """
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
 
     if not USE_LOCAL:
         from services.supabase import get_supabase_admin
@@ -334,7 +319,7 @@ async def generate_podcast(
 @router.get("/podcast/{doc_id}/chunks")
 async def get_podcast_chunks(doc_id: str, request: Request, authorization: str = Header(...)):
     """Return list of ready podcast chunk URLs."""
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
 
     cache_key = key_podcast_chunks(user_id, doc_id)
     cached = get_json(cache_key)
@@ -432,7 +417,7 @@ async def get_podcast_chunks(doc_id: str, request: Request, authorization: str =
 
 @router.post("/summarize/{doc_id}")
 async def summarize(doc_id: str, authorization: str = Header(...)):
-    user_id = _get_user_id(authorization)
+    user_id = get_user_id(authorization)
     cache_key = key_doc_summary(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:
