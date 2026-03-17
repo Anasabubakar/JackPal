@@ -85,10 +85,10 @@ not just surface coverage. The listener should finish knowing WHY things work, \
 not just WHAT they are.
 
 HOSTS:
-- Ezinne: Curious, quick. Asks the question everyone is too embarrassed to ask. \
-  When Abeo says something confusing she pushes back: "hold on, say that again." \
+- Chinenye: Curious, quick. Asks the question everyone is too embarrassed to ask. \
+  When Jude says something confusing she pushes back: "hold on, say that again." \
   She never lets him get away with textbook language.
-- Abeo: The natural teacher. He explains by connecting new ideas to things \
+- Jude: The natural teacher. He explains by connecting new ideas to things \
   students already know from Nigerian life. His analogies are specific and vivid: \
   NEPA cuts and power generation, Danfo routes and algorithms, market pricing and \
   economics, okada shortcuts and network paths, eba texture and material states. \
@@ -102,25 +102,25 @@ LANGUAGE:
   "exactly, and that connects to", "so the reason that works is"
 - ONE vivid Nigerian analogy per major concept. Make it land.
 
-STRUCTURE — 14 turns, always alternating Ezinne then Abeo:
-Turn 1  Ezinne — opening question that shows she is confused about something specific
-Turn 2  Abeo   — core concept 1, explained with one tight analogy
-Turn 3  Ezinne — probes deeper or surfaces a misconception students commonly have
-Turn 4  Abeo   — corrects it clearly, adds the "why it actually works" layer
-Turn 5  Ezinne — connects to something related, or asks about an edge case
-Turn 6  Abeo   — concept 2, another analogy, builds on turn 4
-Turn 7  Ezinne — "wait so does that mean..." — testing her own understanding
-Turn 8  Abeo   — confirms, sharpens, adds the nuance that separates good students
-Turn 9  Ezinne — real-world question: where does this actually show up?
-Turn 10 Abeo   — real application with a concrete Nigerian example
-Turn 11 Ezinne — the "what confuses people in exams" question
-Turn 12 Abeo   — the sharp, memorable answer with a one-line rule they can keep
-Turn 13 Ezinne — summarises what clicked for her in her own words
-Turn 14 Abeo   — closes with energy: why this topic is actually interesting
+STRUCTURE — 14 turns, always alternating Chinenye then Jude:
+Turn 1  Chinenye — opening question that shows she is confused about something specific
+Turn 2  Jude   — core concept 1, explained with one tight analogy
+Turn 3  Chinenye — probes deeper or surfaces a misconception students commonly have
+Turn 4  Jude   — corrects it clearly, adds the "why it actually works" layer
+Turn 5  Chinenye — connects to something related, or asks about an edge case
+Turn 6  Jude   — concept 2, another analogy, builds on turn 4
+Turn 7  Chinenye — "wait so does that mean..." — testing her own understanding
+Turn 8  Jude   — confirms, sharpens, adds the nuance that separates good students
+Turn 9  Chinenye — real-world question: where does this actually show up?
+Turn 10 Jude   — real application with a concrete Nigerian example
+Turn 11 Chinenye — the "what confuses people in exams" question
+Turn 12 Jude   — the sharp, memorable answer with a one-line rule they can keep
+Turn 13 Chinenye — summarises what clicked for her in her own words
+Turn 14 Jude   — closes with energy: why this topic is actually interesting
 
 RULES:
 - Each turn: 2-3 sentences MAX. Every sentence must earn its place.
-- EVERY line MUST start with exactly "Ezinne:" or "Abeo:" — nothing else, ever
+- EVERY line MUST start with exactly "Chinenye:" or "Jude:" — nothing else, ever
 - No asterisks, no stage directions, no numbering, no blank lines between turns
 - Cover the WHOLE content — not just the first section
 
@@ -128,7 +128,7 @@ CONTENT:
 {content}
 
 Script:
-Ezinne:"""
+Chinenye:"""
 
 _PIDGIN_PODCAST_PROMPT = """\
 Write a script for "JackPal" — a Nigerian university study podcast in authentic \
@@ -137,10 +137,10 @@ na dem room dem dey — totally natural, zero pretension, but genuinely educatio
 Listener go finish the episode and actually understand the topic.
 
 HOSTS:
-- Ezinne: Sharp, funny, no filter. She go ask the question wey everybody dey \
-  think but nobody wan ask for class. When Abeo overcomplicates something she \
+- Chinenye: Sharp, funny, no filter. She go ask the question wey everybody dey \
+  think but nobody wan ask for class. When Jude overcomplicates something she \
   go call am: "abeg explain am like I be jss3 student."
-- Abeo: The explainer. He dey use Nigerian life to explain everything — \
+- Jude: The explainer. He dey use Nigerian life to explain everything — \
   NEPA light, danfo bus, eba and soup, Lagos go-slow, garri, market woman, \
   generator fuel, JAMB, Lagos Island bridge. His analogies dey always land.
 
@@ -153,25 +153,25 @@ LANGUAGE — authentic flowing Pidgin:
 - Every major concept gets a specific Nigerian daily-life analogy
 - Short punchy sentences — this na audio, rhythm matters
 
-STRUCTURE — 14 turns, strictly Ezinne then Abeo alternating:
-Turn 1  Ezinne — opens with a confused or funny observation about the topic
-Turn 2  Abeo   — hits concept 1, one vivid Pidgin analogy
-Turn 3  Ezinne — "wait so..." probes or surfaces a common wrong belief
-Turn 4  Abeo   — corrects am sharp, explains the real reason
-Turn 5  Ezinne — connects to something she knows, or asks edge case
-Turn 6  Abeo   — concept 2, builds on turn 4 with fresh analogy
-Turn 7  Ezinne — tests her own understanding out loud
-Turn 8  Abeo   — confirms and adds the detail wey separate A students
-Turn 9  Ezinne — asks where e show up for real life
-Turn 10 Abeo   — concrete Nigerian real-world example
-Turn 11 Ezinne — "wetin dey confuse people for exam" question
-Turn 12 Abeo   — the sharp one-line rule dem go remember
-Turn 13 Ezinne — summarises in her own Pidgin words
-Turn 14 Abeo   — closes with energy, makes the topic feel relevant
+STRUCTURE — 14 turns, strictly Chinenye then Jude alternating:
+Turn 1  Chinenye — opens with a confused or funny observation about the topic
+Turn 2  Jude   — hits concept 1, one vivid Pidgin analogy
+Turn 3  Chinenye — "wait so..." probes or surfaces a common wrong belief
+Turn 4  Jude   — corrects am sharp, explains the real reason
+Turn 5  Chinenye — connects to something she knows, or asks edge case
+Turn 6  Jude   — concept 2, builds on turn 4 with fresh analogy
+Turn 7  Chinenye — tests her own understanding out loud
+Turn 8  Jude   — confirms and adds the detail wey separate A students
+Turn 9  Chinenye — asks where e show up for real life
+Turn 10 Jude   — concrete Nigerian real-world example
+Turn 11 Chinenye — "wetin dey confuse people for exam" question
+Turn 12 Jude   — the sharp one-line rule dem go remember
+Turn 13 Chinenye — summarises in her own Pidgin words
+Turn 14 Jude   — closes with energy, makes the topic feel relevant
 
 RULES:
 - Each turn: 2-3 sentences MAX. Every sentence must add value.
-- EVERY line MUST start with exactly "Ezinne:" or "Abeo:" — nothing else, ever
+- EVERY line MUST start with exactly "Chinenye:" or "Jude:" — nothing else, ever
 - No asterisks, no stage directions, no numbering, no blank lines between turns
 - Cover the WHOLE content — not just the first section
 
@@ -179,7 +179,7 @@ CONTENT:
 {content}
 
 Script:
-Ezinne:"""
+Chinenye:"""
 
 
 # ── Groq streaming podcast ────────────────────────────────────────────────────
