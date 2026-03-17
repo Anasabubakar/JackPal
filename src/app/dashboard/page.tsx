@@ -1183,7 +1183,6 @@ export default function Dashboard() {
                       {[
                         { text: "New Yorùbá voice model now available", tag: "New" },
                         { text: "Beta: AI Summary for Medical Students", tag: "Beta" },
-                        { text: "Refer a friend and get 1 month Premium", tag: "Promo" },
                       ].map((news, i) => (
                         <div key={i} className="flex gap-3 items-start group cursor-pointer p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-white/80">
                           <div className="h-1.5 w-1.5 bg-[#2585C7] rounded-full mt-1.5 flex-shrink-0 shadow-[0_0_5px_rgba(37,133,199,0.5)] group-hover:scale-150 transition-transform" />
