@@ -187,6 +187,18 @@ export default function Dashboard() {
   // Real Stats
   const [userStats, setUserStats] = useState<any>(null);
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredDocuments = useMemo(() => {
+    if (!searchQuery.trim()) return documents;
+    const q = searchQuery.toLowerCase();
+    return documents.filter(doc => 
+      doc.filename.toLowerCase().includes(q) || 
+      (subjects[doc.id] && subjects[doc.id].toLowerCase().includes(q))
+    );
+  }, [documents, searchQuery, subjects]);
+
   useEffect(() => {
     setMounted(true);
     const u = getUser();
@@ -915,8 +927,18 @@ export default function Dashboard() {
             <input
               type="text"
               placeholder="Search library..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent border-none py-1.5 pl-9 pr-4 text-[11px] font-bold text-[#02013D] focus:outline-none placeholder:text-[#02013D]/20"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/5"
+              >
+                <X className="h-3 w-3 text-[#02013D]/30" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1483,9 +1505,25 @@ export default function Dashboard() {
                         Upload Your First Doc
                       </button>
                     </div>
+                  ) : filteredDocuments.length === 0 ? (
+                    <div className="bg-white/40 backdrop-blur-[18px] border-[1.5px] border-dashed border-[#B4B4C8]/45 rounded-2xl p-12 text-center space-y-4">
+                      <div className="bg-[#2585C7]/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
+                        <Search className="h-6 w-6 text-[#2585C7]" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-black uppercase tracking-widest text-[#02013D]">No matches found</p>
+                        <p className="text-[10px] font-bold text-[#02013D]/40">We couldn't find any documents matching "{searchQuery}"</p>
+                      </div>
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="text-[10px] font-black uppercase tracking-widest text-[#2585C7] hover:underline"
+                      >
+                        Clear Search
+                      </button>
+                    </div>
                   ) : (
                     <div className="space-y-4">
-                      {documents.map((doc) => {
+                      {filteredDocuments.map((doc) => {
                         const readyChunks = doc.ready_chunks ?? 0;
                         const totalChunks = doc.total_chunks ?? 0;
                         const pct = totalChunks > 0 ? Math.round((readyChunks / totalChunks) * 100) : 0;
