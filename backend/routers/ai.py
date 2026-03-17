@@ -1,6 +1,6 @@
 import os
 import asyncio
-from fastapi import APIRouter, HTTPException, Header, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Request
 from pydantic import BaseModel
 from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines
 from services.cache import (
@@ -332,7 +332,7 @@ async def generate_podcast(
 
 
 @router.get("/podcast/{doc_id}/chunks")
-async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
+async def get_podcast_chunks(doc_id: str, request: Request, authorization: str = Header(...)):
     """Return list of ready podcast chunk URLs."""
     user_id = _get_user_id(authorization)
 
@@ -340,6 +340,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
     cached = get_json(cache_key)
     if cached is not None:
         token = authorization.split(" ")[1]
+        base = str(request.base_url).rstrip("/")
         return {
             "status": cached.get("status") or "none",
             "ready_lines": cached.get("ready_lines", 0),
@@ -349,7 +350,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
                 {
                     "index": idx,
                     "speaker": speaker,
-                    "url": f"http://localhost:8000/audio/{doc_id}/podcast/{idx}?token={token}",
+                    "url": f"{base}/audio/{doc_id}/podcast/{idx}?token={token}",
                 }
                 for idx, speaker in cached.get("chunk_entries", [])
             ],
@@ -367,6 +368,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
         chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
         script = doc.data.get("podcast_script") or []
         token = authorization.split(" ")[1]
+        base = str(request.base_url).rstrip("/")
 
         payload = {
             "status": doc.data.get("podcast_status") or "none",
@@ -377,7 +379,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
                 {
                     "index": c["chunk_index"],
                     "speaker": (script[c["chunk_index"]]["speaker"] if c["chunk_index"] < len(script) else "Ezinne"),
-                    "url": f"http://localhost:8000/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
+                    "url": f"{base}/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
                 }
                 for c in chunks
             ],
@@ -403,6 +405,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
     chunks = list_podcast_chunks(doc_id, user_id)
     script = get_podcast_script(doc_id) or []
     token = authorization.split(" ")[1]
+    base = str(request.base_url).rstrip("/")
     payload = {
         "status": doc.get("podcast_status") or "none",
         "ready_lines": len(chunks),
@@ -412,7 +415,7 @@ async def get_podcast_chunks(doc_id: str, authorization: str = Header(...)):
             {
                 "index": c["chunk_index"],
                 "speaker": c["speaker"],
-                "url": f"http://localhost:8000/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
+                "url": f"{base}/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
             }
             for c in chunks
         ],

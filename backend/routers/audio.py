@@ -6,7 +6,7 @@ from pathlib import Path
 
 _TTS_CONCURRENCY = 5  # parallel edge-tts calls for chunk generation
 
-from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from typing import Optional
 from starlette.background import BackgroundTask
@@ -68,6 +68,7 @@ async def audio_capabilities():
 @router.get("/{doc_id}/stream")
 async def stream_audio_direct(
     doc_id: str,
+    request: Request,
     authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None),
     voice: str = Query(DEFAULT_VOICE),
@@ -98,7 +99,8 @@ async def stream_audio_direct(
         existing_chunks = list_audio_chunks(doc_id, user_id)
         if existing_chunks and doc.get("audio_voice") == voice and doc.get("audio_engine", DEFAULT_ENGINE) == engine:
             api_token = auth_header.split(" ")[1]
-            first_url = f"http://localhost:8000/audio/{doc_id}/chunk/0?token={api_token}"
+            base = str(request.base_url).rstrip("/")
+            first_url = f"{base}/audio/{doc_id}/chunk/0?token={api_token}"
             from fastapi.responses import RedirectResponse
             return RedirectResponse(url=first_url)
 
@@ -133,7 +135,8 @@ async def stream_audio_direct(
     existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
     if existing_chunks and doc.data.get("audio_voice") == voice and doc.data.get("audio_engine", DEFAULT_ENGINE) == engine:
         api_token = auth_header.split(" ")[1]
-        first_url = f"http://localhost:8000/audio/{doc_id}/chunk/0?token={api_token}"
+        base = str(request.base_url).rstrip("/")
+        first_url = f"{base}/audio/{doc_id}/chunk/0?token={api_token}"
         return RedirectResponse(url=first_url)
 
     chunks = split_into_chunks(text)
@@ -351,6 +354,7 @@ async def generate_audio(
 @router.get("/{doc_id}/chunks")
 async def get_audio_chunks(
     doc_id: str,
+    request: Request,
     authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None),
 ):
@@ -364,6 +368,7 @@ async def get_audio_chunks(
     cached = get_json(cache_key)
     if cached is not None:
         api_token = auth_header.split(" ")[1]
+        base = str(request.base_url).rstrip("/")
         return {
             "status": cached["status"],
             "ready_chunks": cached["ready_chunks"],
@@ -373,7 +378,7 @@ async def get_audio_chunks(
             "chunks": [
                 {
                     "index": idx,
-                    "url": f"http://localhost:8000/audio/{doc_id}/chunk/{idx}?token={api_token}",
+                        "url": f"{base}/audio/{doc_id}/chunk/{idx}?token={api_token}",
                 }
                 for idx in cached.get("chunk_indices", [])
             ],
@@ -387,6 +392,7 @@ async def get_audio_chunks(
 
         chunks = list_audio_chunks(doc_id, user_id)
         api_token = auth_header.split(" ")[1]
+        base = str(request.base_url).rstrip("/")
         payload = {
             "status": doc["status"],
             "ready_chunks": len(chunks),
@@ -396,7 +402,7 @@ async def get_audio_chunks(
             "chunks": [
                 {
                     "index": c["chunk_index"],
-                    "url": f"http://localhost:8000/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
+                    "url": f"{base}/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
                 }
                 for c in chunks
             ],
@@ -420,6 +426,7 @@ async def get_audio_chunks(
 
     chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
     api_token = auth_header.split(" ")[1]
+    base = str(request.base_url).rstrip("/")
     payload = {
         "status": doc.data.get("status") or "ready",
         "ready_chunks": doc.data.get("ready_chunks", len(chunks)),
@@ -429,7 +436,7 @@ async def get_audio_chunks(
         "chunks": [
             {
                 "index": c["chunk_index"],
-                "url": f"http://localhost:8000/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
+                "url": f"{base}/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
             }
             for c in chunks
         ],
