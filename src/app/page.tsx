@@ -15,9 +15,7 @@ import {
   Download, 
   Upload, 
   Mic2,
-  Loader2,
-  Minus,
-  Plus
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,8 +55,6 @@ const voices = [
   { id: "jude", name: "Jude", file: "/audio/jude_yarngpt.mp3" },
 ];
 
-const playbackRates = [0.5, 1, 1.5, 1.75, 2];
-
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,7 +73,6 @@ export default function Home() {
   const [currentTimeText, setCurrentTimeText] = useState("00:00");
   const [durationText, setDurationText] = useState("00:00");
   const [selectedVoice, setSelectedVoice] = useState(voices[0]);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -88,13 +83,6 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Sync playback rate
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate, selectedVoice]);
 
   // Handle voice change effect
   useEffect(() => {
@@ -115,24 +103,6 @@ export default function Home() {
     setSelectedVoice(voice);
     setAudioProgress(0);
     setCurrentTimeText("00:00");
-  };
-
-  const handlePlaybackRateChange = (newRate: number) => {
-    setPlaybackRate(newRate);
-  };
-
-  const increaseSpeed = () => {
-    const currentIndex = playbackRates.indexOf(playbackRate);
-    if (currentIndex < playbackRates.length - 1) {
-      handlePlaybackRateChange(playbackRates[currentIndex + 1]);
-    }
-  };
-
-  const decreaseSpeed = () => {
-    const currentIndex = playbackRates.indexOf(playbackRate);
-    if (currentIndex > 0) {
-      handlePlaybackRateChange(playbackRates[currentIndex - 1]);
-    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -550,37 +520,26 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center justify-center gap-10">
-                      <button 
-                        onClick={decreaseSpeed}
-                        disabled={playbackRate === playbackRates[0]}
-                        className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm disabled:opacity-20 disabled:cursor-not-allowed"
-                      >
-                        <Minus className="h-6 w-6" />
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Clock className="h-6 w-6 group-hover:rotate-12 transition-transform" />
                       </button>
                       
-                      <div className="flex flex-col items-center gap-3">
-                        <button 
-                          onClick={togglePlay}
-                          className="h-20 w-20 bg-[#2585C7] rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-[#2585C7]/40 hover:bg-[#02013D] hover:scale-105 active:scale-95 transition-all cursor-pointer border-4 border-white group"
-                        >
-                          {isPlaying ? (
-                            <div className="flex gap-1.5">
-                              <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
-                              <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
-                            </div>
-                          ) : (
-                            <Play className="h-10 w-10 fill-current ml-1 group-hover:text-[#61E3F0]" />
-                          )}
-                        </button>
-                        <span className="text-[10px] font-black text-[#2585C7] uppercase tracking-[0.2em]">{playbackRate}x Speed</span>
-                      </div>
-
                       <button 
-                        onClick={increaseSpeed}
-                        disabled={playbackRate === playbackRates[playbackRates.length - 1]}
-                        className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm disabled:opacity-20 disabled:cursor-not-allowed"
+                        onClick={togglePlay}
+                        className="h-20 w-20 bg-[#2585C7] rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-[#2585C7]/40 hover:bg-[#02013D] hover:scale-105 active:scale-95 transition-all cursor-pointer border-4 border-white group"
                       >
-                        <Plus className="h-6 w-6" />
+                        {isPlaying ? (
+                          <div className="flex gap-1.5">
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
+                          </div>
+                        ) : (
+                          <Play className="h-10 w-10 fill-current ml-1 group-hover:text-[#61E3F0]" />
+                        )}
+                      </button>
+
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Download className="h-6 w-6 group-hover:-translate-y-1 transition-transform" />
                       </button>
                     </div>
 
