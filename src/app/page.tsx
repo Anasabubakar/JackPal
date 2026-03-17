@@ -17,10 +17,7 @@ import {
   Mic2,
   Loader2,
   Minus,
-  Plus,
-  Users,
-  Target,
-  Zap
+  Plus
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -364,7 +361,6 @@ export default function Home() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-10">
             <div className="flex items-center gap-8 text-xs font-black uppercase tracking-widest text-[#02013D]/60">
-              <a href="#about" onClick={(e) => scrollToSection(e, 'about')} className="hover:text-[#2585C7] transition-colors">About</a>
               <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-[#2585C7] transition-colors">Features</a>
               <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#2585C7] transition-colors">Pricing</a>
               <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-[#2585C7] transition-colors">FAQ</a>
@@ -617,88 +613,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* About Section */}
-        <section id="about" className="py-24 bg-white relative overflow-hidden">
-          {/* Subtle Background Elements */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
-            <div className="absolute top-20 left-10 w-64 h-64 bg-[#2585C7]/5 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#2585C7]/5 rounded-full blur-3xl" />
-          </div>
-
-          <div className="section-container relative z-10">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-8">
-                <div className="inline-flex items-center gap-2 bg-[#02013D] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#2585C7]">
-                  Our Mission
-                </div>
-                <h2 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tight uppercase">
-                  We're on a mission to <span className="text-[#2585C7]">end the textbook grind.</span>
-                </h2>
-                <p className="text-lg text-[#02013D]/70 leading-relaxed font-medium">
-                  JackPal wasn't built in a library. It was built in the real world, for students who have more ambition than time. We believe that your success shouldn't depend on how many hours you can stay awake at a desk.
-                </p>
-                
-                <div className="grid sm:grid-cols-2 gap-6 pt-4">
-                  <div className="space-y-3 p-6 rounded-2xl bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                    <div className="bg-white p-3 rounded-xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                      <Target className="h-5 w-5 text-[#2585C7] group-hover:text-white" />
-                    </div>
-                    <h4 className="font-black uppercase tracking-tight text-[#02013D]">The "Why"</h4>
-                    <p className="text-xs font-bold text-[#02013D]/50 leading-relaxed">To democratize top-tier academic performance through audio mastery.</p>
-                  </div>
-                  <div className="space-y-3 p-6 rounded-2xl bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                    <div className="bg-white p-3 rounded-xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                      <Users className="h-5 w-5 text-[#2585C7] group-hover:text-white" />
-                    </div>
-                    <h4 className="font-black uppercase tracking-tight text-[#02013D]">The "Who"</h4>
-                    <p className="text-xs font-bold text-[#02013D]/50 leading-relaxed">Built by students, for the ambitious 1% who refuse to settle for average.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="relative z-10 grid grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div className="aspect-square bg-[#02013D] rounded-3xl p-8 flex flex-col justify-end border-4 border-[#2585C7] shadow-xl transform hover:-rotate-2 transition-transform cursor-default">
-                      <Zap className="h-8 w-8 text-[#2585C7] mb-4" />
-                      <div className="text-3xl font-black text-white leading-none">10X</div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-white/50 mt-1">Faster Study</div>
-                    </div>
-                    <div className="aspect-[4/5] bg-[#F7F7F7] rounded-3xl border-2 border-[#EFEFEF] p-6 flex flex-col justify-between hover:scale-105 transition-all">
-                      <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <Clock className="h-5 w-5 text-[#2585C7]" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-black text-[#02013D]">Freedom</div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40">Study anywhere</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4 pt-8">
-                    <div className="aspect-[4/5] bg-white rounded-3xl border-4 border-[#02013D] p-6 flex flex-col justify-between shadow-2xl hover:rotate-2 transition-transform">
-                      <div className="h-10 w-10 bg-[#EFEFEF] rounded-xl flex items-center justify-center">
-                        <Smartphone className="h-5 w-5 text-[#02013D]" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-black text-[#02013D]">Offline</div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40">No data needed</div>
-                      </div>
-                    </div>
-                    <div className="aspect-square bg-[#2585C7] rounded-3xl p-8 flex flex-col justify-end shadow-xl hover:scale-105 transition-all">
-                      <div className="text-3xl font-black text-white leading-none">Win.</div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-white/80 mt-1">Join the 1%</div>
-                    </div>
-                  </div>
-                </div>
-                {/* Decorative glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[#2585C7]/10 blur-[100px] -z-10 rounded-full" />
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Comparison Section */}
-        <section id="comparison" className="py-24 bg-[#EFEFEF]">
+        <section id="pricing" className="py-24 bg-[#EFEFEF]">
           <div className="section-container">
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
               <h2 className="text-3xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#2585C7]">"Winning".</span></h2>
