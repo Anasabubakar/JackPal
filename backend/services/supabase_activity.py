@@ -1,4 +1,5 @@
 from services.supabase import get_supabase_admin
+from services.cache import delete_keys, key_user_stats
 
 
 def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds: int = 0):
@@ -8,6 +9,7 @@ def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds
         "type": activity_type,
         "duration": duration_seconds,
     }).execute()
+    delete_keys(key_user_stats(user_id))
 
 
 def list_activity(user_id: str) -> list[dict]:
