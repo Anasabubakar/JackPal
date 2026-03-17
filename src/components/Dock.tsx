@@ -1,114 +1,106 @@
 'use client';
 
-import React from 'react';
-import { Home, Library, FolderOpen, User, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Library, FolderOpen, User, Plus, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
-const tabs = [
-  { id: 'home', label: 'Dashboard', icon: Home },
-  { id: 'library', label: 'Library', icon: Library },
-  { id: 'files', label: 'Materials', icon: FolderOpen },
-  { id: 'profile', label: 'Profile', icon: User },
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  href: string;
+}
+
+const dashboardNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Home', icon: Home, href: '/dashboard' },
+  { id: 'library', label: 'Library', icon: Library, href: '/library' },
+  { id: 'files', label: 'Files', icon: FolderOpen, href: '/files' },
+  { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
 ];
 
 interface DockProps {
-  active: string;
-  setActive: (id: string) => void;
   onCenterAction?: () => void;
 }
 
-export function Dock({ active, setActive, onCenterAction }: DockProps) {
+export function Dock({ onCenterAction }: DockProps) {
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  const navItems = dashboardNavItems;
+
+  useEffect(() => {
+    setMounted(true);
+    const handleActiveTab = () => {
+      const current = navItems.find(item => {
+        if (item.href.startsWith('#')) {
+          return typeof window !== 'undefined' && window.location.hash === item.href;
+        }
+        return pathname === item.href;
+      });
+      if (current) {
+        setActiveTab(current.id);
+      }
+    };
+
+    handleActiveTab();
+    window.addEventListener('hashchange', handleActiveTab);
+    return () => window.removeEventListener('hashchange', handleActiveTab);
+  }, [pathname, navItems]);
+
+  if (!mounted) return null;
+
   return (
-    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center pointer-events-none w-full px-6">
-      <div className="flex items-center gap-5 pointer-events-auto">
+    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center w-full px-6">
+      <div className="flex items-center gap-4">
         {/* Glassmorphic Pill Navigation */}
         <div 
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            padding: "6px 6px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.72)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.9)",
-            boxShadow:
-              "0 12px 40px rgba(160,160,180,0.22), 0 2px 8px rgba(160,160,180,0.14), inset 0 1px 0 rgba(255,255,255,0.95)",
-          }}
+          className="flex items-center gap-1 p-1.5 rounded-full bg-white/72 backdrop-blur-[24px] border border-white/90 shadow-[0_12px_40px_rgba(160,160,180,0.22),0_2px_8px_rgba(160,160,180,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
         >
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = active === tab.id;
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActive(tab.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: isActive ? 10 : 0,
-                  padding: isActive ? "12px 22px" : "12px 16px",
-                  borderRadius: 999,
-                  border: "none",
-                  outline: "none",
-                  cursor: "pointer",
-                  transition: "all 0.3s cubic-bezier(0.34,1.2,0.64,1)",
-                  background: isActive
-                    ? "rgba(37, 133, 199, 0.12)"
-                    : "transparent",
-                  boxShadow: isActive
-                    ? "0 2px 12px rgba(37, 133, 199, 0.08), inset 0 1px 0 rgba(255,255,255,0.8)"
-                    : "none",
-                  color: isActive ? "#2585C7" : "#bbbbc8",
-                  minWidth: isActive ? 130 : 52,
-                }}
-                aria-label={tab.label}
-              >
-                <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
-                {isActive && (
-                  <span
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 600,
-                      letterSpacing: "-0.01em",
-                      whiteSpace: "nowrap",
-                      fontFamily: "var(--font-body)",
-                    }}
-                  >
-                    {tab.label}
-                  </span>
+              <a
+                key={item.id}
+                href={item.href}
+                className={cn(
+                  "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)] outline-none cursor-pointer overflow-hidden rounded-full",
+                  isActive 
+                    ? "bg-[#2585C7]/85 px-5 py-3 shadow-[0_2px_12px_rgba(37,133,199,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-white min-w-[120px]" 
+                    : "px-3.5 py-3 text-[#02013D]/40 hover:text-[#2585C7] min-w-[48px]"
                 )}
-              </button>
+              >
+                <item.icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
+                <span 
+                  className={cn(
+                    "text-[15px] font-semibold tracking-tight whitespace-nowrap transition-all duration-300",
+                    isActive ? "opacity-100 ml-2.5 w-auto" : "opacity-0 w-0 h-0"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </a>
             );
           })}
         </div>
 
         {/* Floating Action Button (Plus) */}
         <button
-          onClick={onCenterAction}
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: "50%",
-            border: "none",
-            outline: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            background: "linear-gradient(145deg, #2585C7, #61E3F0)",
-            boxShadow:
-              "0 8px 28px rgba(37,133,199,0.48), 0 2px 8px rgba(37,133,199,0.28), inset 0 1px 0 rgba(255,255,255,0.4)",
-            transition: "transform 0.15s ease",
+          onClick={() => {
+            if (onCenterAction) {
+              onCenterAction();
+            }
           }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-          onMouseDown={e => (e.currentTarget.style.transform = "scale(0.95)")}
-          onMouseUp={e => (e.currentTarget.style.transform = "scale(1.06)")}
+          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#2585C7] to-[#61E3F0] shadow-[0_8px_28px_rgba(37,133,199,0.48),0_2px_8px_rgba(37,133,199,0.28),inset_0_1px_0_rgba(255,255,255,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
           aria-label="Upload Content"
         >
-          <Plus size={26} strokeWidth={2.4} color="white" />
+          <Plus className="h-7 w-7 text-white stroke-[2.4px]" />
+          
+          {/* Label Tooltip */}
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#02013D] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
+            Upload
+          </div>
         </button>
       </div>
     </div>

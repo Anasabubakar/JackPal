@@ -13,15 +13,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
-frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-allow_origins = {
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    frontend_url,
-}
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=sorted(allow_origins),
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "*",  # keep wildcard for other environments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

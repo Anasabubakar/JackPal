@@ -15,12 +15,7 @@ import {
   Download, 
   Upload, 
   Mic2,
-  Loader2,
-  Minus,
-  Plus,
-  Users,
-  Target,
-  Zap
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -60,8 +55,6 @@ const voices = [
   { id: "jude", name: "Jude", file: "/audio/jude_yarngpt.mp3" },
 ];
 
-const playbackRates = [0.5, 1, 1.5, 1.75, 2];
-
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,7 +73,6 @@ export default function Home() {
   const [currentTimeText, setCurrentTimeText] = useState("00:00");
   const [durationText, setDurationText] = useState("00:00");
   const [selectedVoice, setSelectedVoice] = useState(voices[0]);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -91,13 +83,6 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Sync playback rate
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate, selectedVoice]);
 
   // Handle voice change effect
   useEffect(() => {
@@ -118,24 +103,6 @@ export default function Home() {
     setSelectedVoice(voice);
     setAudioProgress(0);
     setCurrentTimeText("00:00");
-  };
-
-  const handlePlaybackRateChange = (newRate: number) => {
-    setPlaybackRate(newRate);
-  };
-
-  const increaseSpeed = () => {
-    const currentIndex = playbackRates.indexOf(playbackRate);
-    if (currentIndex < playbackRates.length - 1) {
-      handlePlaybackRateChange(playbackRates[currentIndex + 1]);
-    }
-  };
-
-  const decreaseSpeed = () => {
-    const currentIndex = playbackRates.indexOf(playbackRate);
-    if (currentIndex > 0) {
-      handlePlaybackRateChange(playbackRates[currentIndex - 1]);
-    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,7 +331,6 @@ export default function Home() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-10">
             <div className="flex items-center gap-8 text-xs font-black uppercase tracking-widest text-[#02013D]/60">
-              <a href="#about" onClick={(e) => scrollToSection(e, 'about')} className="hover:text-[#2585C7] transition-colors">About</a>
               <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-[#2585C7] transition-colors">Features</a>
               <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#2585C7] transition-colors">Pricing</a>
               <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-[#2585C7] transition-colors">FAQ</a>
@@ -554,37 +520,26 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center justify-center gap-10">
-                      <button 
-                        onClick={decreaseSpeed}
-                        disabled={playbackRate === playbackRates[0]}
-                        className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm disabled:opacity-20 disabled:cursor-not-allowed"
-                      >
-                        <Minus className="h-6 w-6" />
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Clock className="h-6 w-6 group-hover:rotate-12 transition-transform" />
                       </button>
                       
-                      <div className="flex flex-col items-center gap-3">
-                        <button 
-                          onClick={togglePlay}
-                          className="h-20 w-20 bg-[#2585C7] rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-[#2585C7]/40 hover:bg-[#02013D] hover:scale-105 active:scale-95 transition-all cursor-pointer border-4 border-white group"
-                        >
-                          {isPlaying ? (
-                            <div className="flex gap-1.5">
-                              <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
-                              <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
-                            </div>
-                          ) : (
-                            <Play className="h-10 w-10 fill-current ml-1 group-hover:text-[#61E3F0]" />
-                          )}
-                        </button>
-                        <span className="text-[10px] font-black text-[#2585C7] uppercase tracking-[0.2em]">{playbackRate}x Speed</span>
-                      </div>
-
                       <button 
-                        onClick={increaseSpeed}
-                        disabled={playbackRate === playbackRates[playbackRates.length - 1]}
-                        className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm disabled:opacity-20 disabled:cursor-not-allowed"
+                        onClick={togglePlay}
+                        className="h-20 w-20 bg-[#2585C7] rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-[#2585C7]/40 hover:bg-[#02013D] hover:scale-105 active:scale-95 transition-all cursor-pointer border-4 border-white group"
                       >
-                        <Plus className="h-6 w-6" />
+                        {isPlaying ? (
+                          <div className="flex gap-1.5">
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
+                            <div className="h-8 w-2 bg-white rounded-full group-hover:bg-[#61E3F0]" />
+                          </div>
+                        ) : (
+                          <Play className="h-10 w-10 fill-current ml-1 group-hover:text-[#61E3F0]" />
+                        )}
+                      </button>
+
+                      <button className="h-12 w-12 rounded-2xl bg-white border-2 border-[#EFEFEF] flex items-center justify-center text-[#02013D]/40 hover:text-[#2585C7] hover:border-[#2585C7] transition-all group active:scale-90 shadow-sm">
+                        <Download className="h-6 w-6 group-hover:-translate-y-1 transition-transform" />
                       </button>
                     </div>
 
@@ -617,78 +572,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* About / How it Works Section */}
-        <section id="about" className="py-24 bg-white relative overflow-hidden">
-          {/* Subtle Background Elements */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
-            <div className="absolute top-20 left-10 w-64 h-64 bg-[#2585C7]/5 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#2585C7]/5 rounded-full blur-3xl" />
-          </div>
-
-          <div className="section-container relative z-10">
-            <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-[#02013D] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#2585C7]">
-                The JackPal System
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tight uppercase">
-                How we turn your textbooks into <span className="text-[#2585C7]">Academic Gold.</span>
-              </h2>
-              <p className="text-lg text-[#02013D]/70 leading-relaxed font-medium">
-                JackPal isn't just a player; it's a high-performance engine designed to help you consume 10x more material with zero reading fatigue.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 relative">
-              {/* Connector Lines (Desktop) */}
-              <div className="hidden md:block absolute top-1/2 left-[30%] right-[30%] h-[2px] bg-dashed-gradient -translate-y-1/2 -z-10" />
-              
-              {/* Step 1: Import */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#02013D] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-white shadow-lg">01</div>
-                <div className="bg-white p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Upload className="h-8 w-8 text-[#2585C7] group-hover:text-white" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-[#02013D]">Import Everything</h3>
-                  <p className="text-sm font-bold text-[#02013D]/50 leading-relaxed">
-                    Upload PDFs, Word docs, or simply paste your lecture notes. Our engine extracts every bit of value while removing the "fluff."
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2: Convert */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#02013D] border-4 border-[#2585C7] shadow-2xl transform md:-translate-y-4 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#2585C7] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-[#02013D] shadow-lg">02</div>
-                <div className="bg-white/10 p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Zap className="h-8 w-8 text-[#2585C7]" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-white">AI Voice Engine</h3>
-                  <p className="text-sm font-bold text-white/50 leading-relaxed">
-                    Our AI-powered voices convert your text into natural, relatable Nigerian accents. It feels like a friend is explaining the topic to you.
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3: Master */}
-              <div className="relative space-y-6 p-8 rounded-[2.5rem] bg-[#F7F7F7] border-2 border-[#EFEFEF] hover:border-[#2585C7]/30 transition-all group">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#02013D] text-white rounded-2xl flex items-center justify-center font-black italic border-4 border-white shadow-lg">03</div>
-                <div className="bg-white p-5 rounded-2xl w-fit shadow-sm group-hover:bg-[#2585C7] transition-colors">
-                  <Target className="h-8 w-8 text-[#2585C7] group-hover:text-white" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-[#02013D]">Master Offline</h3>
-                  <p className="text-sm font-bold text-[#02013D]/50 leading-relaxed">
-                    Download your study packs and listen at 2x speed anywhere—no data required. Reclaim your commute and win while they sleep.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Comparison Section */}
-        <section id="comparison" className="py-24 bg-[#EFEFEF]">
+        <section id="pricing" className="py-24 bg-[#EFEFEF]">
           <div className="section-container">
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
               <h2 className="text-3xl font-black tracking-tight uppercase">The difference between "Trying" and <span className="text-[#2585C7]">"Winning".</span></h2>

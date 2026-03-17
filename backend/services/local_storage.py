@@ -34,7 +34,14 @@ def _load_db() -> dict:
             return json.loads(DB_FILE.read_text())
         except Exception:
             pass
-    return {"documents": {}, "audio_tracks": {}, "audio_chunks": {}, "activity": []}
+    return {
+        "documents": {},
+        "audio_tracks": {},
+        "audio_chunks": {},
+        "podcast_chunks": {},
+        "podcast_scripts": {},
+        "activity": [],
+    }
 
 
 def _save_db():
@@ -59,8 +66,6 @@ _audio_chunks: dict[str, dict] = _db["audio_chunks"]
 _podcast_chunks: dict[str, dict] = _db.get("podcast_chunks", {})
 _podcast_scripts: dict[str, list] = _db.get("podcast_scripts", {})
 _activity: list[dict] = _db.get("activity", [])
-
-# ... existing code ...
 
 def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds: int = 0):
     """Record a study event (e.g., 'listen_chunk', 'listen_podcast')."""

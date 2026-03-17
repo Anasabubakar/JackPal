@@ -38,7 +38,6 @@ import {
   RotateCcw,
   FastForward,
 } from "lucide-react";
-import { Dock } from "@/components/Dock";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -51,7 +50,6 @@ import {
   generateAudio,
   getAudioChunks,
   getAudioStatus,
-  getTtsCapabilities,
   downloadAudioArchive,
   deleteDocument,
   summarizeDocument,
@@ -62,30 +60,13 @@ import {
   type Document,
   type Chapter,
   type PodcastLine,
-  type TtsCapabilities,
 } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const VOICE_META: Record<string, { label: string; desc: string }> = {
-  idera: { label: "Idera", desc: "Melodic, gentle" },
-  emma: { label: "Emma", desc: "Authoritative, deep" },
-  zainab: { label: "Zainab", desc: "Soothing, gentle" },
-  osagie: { label: "Osagie", desc: "Smooth, calm" },
-  wura: { label: "Wura", desc: "Young, sweet" },
-  jude: { label: "Jude", desc: "Warm, confident" },
-  chinenye: { label: "Chinenye", desc: "Engaging, warm" },
-  tayo: { label: "Tayo", desc: "Upbeat, energetic" },
-  regina: { label: "Regina", desc: "Mature, warm" },
-  femi: { label: "Femi", desc: "Rich, reassuring" },
-  adaora: { label: "Adaora", desc: "Warm, engaging" },
-  umar: { label: "Umar", desc: "Calm, smooth" },
-  mary: { label: "Mary", desc: "Energetic, youthful" },
-  nonso: { label: "Nonso", desc: "Bold, resonant" },
-  remi: { label: "Remi", desc: "Melodious, warm" },
-  adam: { label: "Adam", desc: "Deep, clear" },
-  joke: { label: "Joke", desc: "Gentle, clear" },
-};
-const DEFAULT_FAST_VOICES = ["chinenye", "jude"];
+const VOICE_OPTIONS = [
+  { value: "chinenye", label: "Ezinne", desc: "Female · Nigerian English" },
+  { value: "jude",     label: "Abeo",   desc: "Male · Nigerian English" },
+];
 const PODCAST_HOSTS = [
   { voice: "chinenye", name: "Ezinne", role: "Asks the questions" },
   { voice: "jude",     name: "Abeo",   role: "Breaks it down" },
@@ -95,16 +76,6 @@ export default function Dashboard() {
   const SPEED_OPTIONS = [0.9, 1, 1.25, 1.5, 1.75];
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
-  useEffect(() => {
-    if (activeTab === 'home') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      const el = document.getElementById(activeTab);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  }, [activeTab]);
   const [mounted, setMounted] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isOthersModalOpen, setIsOthersModalOpen] = useState(false);
@@ -132,8 +103,6 @@ export default function Dashboard() {
   const [activeChunk, setActiveChunk] = useState(0);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
-  const [ttsCaps, setTtsCaps] = useState<TtsCapabilities | null>(null);
-  const [selectedEngine, setSelectedEngine] = useState<"fast" | "premium">("fast");
   const [selectedVoice, setSelectedVoice] = useState("chinenye");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunkQueueRef = useRef<string[]>([]);
@@ -235,25 +204,11 @@ export default function Dashboard() {
       (subjects[doc.id] && subjects[doc.id].toLowerCase().includes(q))
     );
   }, [documents, searchQuery, subjects]);
-
   useEffect(() => {
     setMounted(true);
     const u = getUser();
     const savedVoice = localStorage.getItem("jackpal_voice");
-    const savedEngine = localStorage.getItem("jackpal_engine");
-    if (savedEngine === "fast" || savedEngine === "premium") setSelectedEngine(savedEngine);
-    if (savedVoice) setSelectedVoice(savedVoice);
-    (async () => {
-      try {
-        const caps = await getTtsCapabilities();
-        setTtsCaps(caps);
-        if (!savedEngine && caps.premium_available) {
-          setSelectedEngine("premium");
-        }
-      } catch {
-        // Ignore capability fetch errors
-      }
-    })();
+    if (savedVoice && VOICE_OPTIONS.find(v => v.value === savedVoice)) setSelectedVoice(savedVoice);
     const savedSubjects = localStorage.getItem("jackpal_subjects");
     if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
     const rawProgress = localStorage.getItem("jackpal_progress");
@@ -263,18 +218,7 @@ export default function Dashboard() {
       return;
     }
     fetchDocuments();
-    fetchStats();
   }, []);
-
-  async function fetchStats() {
-    try {
-      const { getUserStats } = await import("@/lib/api");
-      const stats = await getUserStats();
-      setUserStats(stats);
-    } catch {
-      // ignore
-    }
-  }
 
   function saveSubject(docId: string, subject: string) {
     const updated = { ...subjects, [docId]: subject };
@@ -292,37 +236,6 @@ export default function Dashboard() {
     if (!mounted) return;
     localStorage.setItem("jackpal_voice", selectedVoice);
   }, [mounted, selectedVoice]);
-
-  useEffect(() => {
-    if (!mounted) return;
-    localStorage.setItem("jackpal_engine", selectedEngine);
-  }, [mounted, selectedEngine]);
-
-  useEffect(() => {
-    if (!ttsCaps) return;
-    if (selectedEngine === "premium" && !ttsCaps.premium_available) {
-      setSelectedEngine("fast");
-    }
-  }, [selectedEngine, ttsCaps]);
-
-  const voiceOptions = useMemo(() => {
-    const rawVoices = selectedEngine === "premium"
-      ? (ttsCaps?.premium_voices ?? [])
-      : (ttsCaps?.fast_voices ?? DEFAULT_FAST_VOICES);
-    const voices = rawVoices.length ? rawVoices : DEFAULT_FAST_VOICES;
-    return voices.map((value) => ({
-      value,
-      label: VOICE_META[value]?.label ?? value,
-      desc: VOICE_META[value]?.desc ?? "Nigerian English",
-    }));
-  }, [selectedEngine, ttsCaps]);
-
-  useEffect(() => {
-    if (!voiceOptions.length) return;
-    if (!voiceOptions.find(v => v.value === selectedVoice)) {
-      setSelectedVoice(voiceOptions[0].value);
-    }
-  }, [voiceOptions, selectedVoice]);
 
   useEffect(() => {
     return () => {
@@ -360,7 +273,6 @@ export default function Dashboard() {
                 ready_chunks: s.ready_chunks,
                 total_chunks: s.total_chunks,
                 audio_voice: s.audio_voice ?? doc.audio_voice,
-                audio_engine: s.audio_engine ?? doc.audio_engine,
               };
             }
           } catch { /* ignore */ }
@@ -403,10 +315,7 @@ export default function Dashboard() {
   }
 
   function getVoiceMeta(voice = selectedVoice) {
-    const meta = VOICE_META[voice];
-    return meta
-      ? { value: voice, label: meta.label, desc: meta.desc }
-      : { value: voice, label: voice, desc: "Nigerian English" };
+    return VOICE_OPTIONS.find((option) => option.value === voice) ?? VOICE_OPTIONS[0];
   }
 
   function attachAudio(
@@ -469,7 +378,6 @@ export default function Dashboard() {
     try {
       await uploadDocument(file);
       await fetchDocuments();
-      await fetchStats();
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -508,8 +416,7 @@ export default function Dashboard() {
 
     // If pre-generated chunks exist → instant chunk playlist
     const hasMatchingReadyAudio = ((doc.ready_chunks ?? 0) > 0 || doc.status === "audio_ready")
-      && doc.audio_voice === selectedVoice
-      && doc.audio_engine === selectedEngine;
+      && doc.audio_voice === selectedVoice;
     if (hasMatchingReadyAudio) {
       try {
         const { chunks } = await getAudioChunks(doc.id);
@@ -530,7 +437,7 @@ export default function Dashboard() {
     setIsAudioLoading(true);
     loadDocumentText(doc.id);
     try {
-      const status = await generateAudio(doc.id, selectedVoice, selectedEngine);
+      const status = await generateAudio(doc.id, selectedVoice, "fast");
       setDocuments((prev) => prev.map((item) => (
         item.id === doc.id
           ? {
@@ -539,7 +446,6 @@ export default function Dashboard() {
               ready_chunks: status.ready_chunks,
               total_chunks: status.total_chunks,
               audio_voice: status.audio_voice ?? selectedVoice,
-              audio_engine: status.audio_engine ?? selectedEngine,
             }
           : item
       )));
@@ -747,7 +653,6 @@ export default function Dashboard() {
         localStorage.setItem("jackpal_progress", JSON.stringify(next));
         return next;
       });
-      await fetchStats();
     } catch {
       fetchDocuments(); // Restore if delete failed
     }
@@ -922,32 +827,11 @@ export default function Dashboard() {
     { label: "Video", icon: Video, color: "#2585C7", desc: "Extract audio from videos", action: null },
   ];
 
-  const recentAudios = useMemo(() => {
-    // Combine saved progress with documents to show real "continue learning"
-    const docsWithProgress = documents
-      .filter(doc => savedProgress[doc.id] !== undefined || doc.status === "audio_ready")
-      .map(doc => {
-        const chunkIndex = savedProgress[doc.id] || 0;
-        const totalChunks = doc.total_chunks || 1;
-        const progress = Math.round((chunkIndex / totalChunks) * 100);
-        const colors = ["#2585C7", "#61E3F0", "#02013D", "#0F1774"];
-        // Deterministic color based on id
-        const color = colors[doc.id.length % colors.length];
-        
-        return {
-          id: doc.id,
-          title: doc.filename,
-          chapter: subjects[doc.id] || "Document",
-          progress: progress || 5, // show at least 5% if started
-          duration: `${Math.round(doc.word_count / 150)} min`, // estimated duration
-          color,
-          doc
-        };
-      })
-      .slice(0, 3);
-    
-    return docsWithProgress.length > 0 ? docsWithProgress : [];
-  }, [documents, savedProgress, subjects]);
+  const recentAudios = [
+    { id: 1, title: "Biology 101: Cell Theory", chapter: "Chapter 4", progress: 75, duration: "18:30", color: "#2585C7" },
+    { id: 2, title: "Modern Physics: Quantum Mechanics", chapter: "Chapter 2", progress: 40, duration: "25:15", color: "#61E3F0" },
+    { id: 3, title: "Introduction to Law", chapter: "Lesson 12", progress: 10, duration: "32:00", color: "#02013D" },
+  ];
 
   if (!mounted) return null;
 
@@ -961,7 +845,7 @@ export default function Dashboard() {
     : false;
 
   return (
-    <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden relative">
+    <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
 
       {/* Hidden file input */}
       <input
@@ -972,47 +856,95 @@ export default function Dashboard() {
         onChange={handleFileUpload}
       />
 
-      {/* FLOATING TOP BAR */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl">
-        <div className="bg-white/40 backdrop-blur-2xl rounded-full border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] px-4 py-2 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 pl-2 shrink-0 group">
-            <Image src="/images/logo.svg" alt="JackPal" width={22} height={22} className="group-hover:rotate-12 transition-transform" />
-            <span className="text-sm font-black italic tracking-tighter uppercase text-[#02013D]">JackPal</span>
-          </Link>
-          
-          <div className="h-6 w-[1px] bg-[#02013D]/10" />
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden md:flex flex-col w-60 bg-[#02013D] text-white p-6 border-r-4 border-[#2585C7] h-full relative z-[150]">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#2585C7]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-          <div className="flex-1 relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#02013D]/30 group-focus-within:text-[#2585C7] transition-colors" />
-            <input
-              type="text"
-              placeholder="Search library..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent border-none py-1.5 pl-9 pr-4 text-[11px] font-bold text-[#02013D] focus:outline-none placeholder:text-[#02013D]/20"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/5"
-              >
-                <X className="h-3 w-3 text-[#02013D]/30" />
-              </button>
-            )}
-          </div>
+        <Link href="/" className="flex items-center gap-3 mb-12 group relative z-10">
+          <Image src="/images/logo.svg" alt="JackPal" width={32} height={32} className="brightness-0 invert group-hover:rotate-12 transition-transform" />
+          <span className="text-xl font-black italic tracking-tighter uppercase">JackPal</span>
+        </Link>
+
+        <nav className="flex-1 space-y-1 relative z-10">
+          {[
+            { id: 'home', icon: Home, label: 'Dashboard' },
+            { id: 'library', icon: Library, label: 'Audio Library' },
+            { id: 'files', icon: FolderOpen, label: 'Study Materials' },
+            { id: 'profile', icon: User, label: 'Account Profile' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === item.id
+                  ? 'bg-[#2585C7] text-white shadow-lg shadow-[#2585C7]/20'
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="mt-auto pt-6 border-t border-white/5 relative z-10">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#61E3F0] transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
         </div>
-      </div>
+      </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
 
-        {/* Removed old header */}
+        {/* DESKTOP TOP BAR */}
+        <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
+          <div className="relative w-80 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#02013D]/20 group-focus-within:text-[#2585C7] transition-colors" />
+            <input
+              type="text"
+              placeholder="Search your library..."
+              className="w-full bg-[#F7F7F7] border-2 border-transparent rounded-xl py-2 pl-10 pr-4 font-bold text-[10px] focus:outline-none focus:border-[#2585C7] focus:bg-white transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="relative bg-white p-2 rounded-lg border border-[#EFEFEF] hover:border-[#2585C7] transition-all">
+              <Bell className="h-4 w-4 text-[#02013D]/60" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2585C7] rounded-full border-2 border-white" />
+            </button>
+            <div className="h-8 w-[1px] bg-[#EFEFEF]" />
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-[10px] font-black uppercase tracking-tighter">{user?.full_name || "Student"}</div>
+                <div className="text-[9px] font-bold text-[#2585C7] uppercase">{user?.email || ""}</div>
+              </div>
+              <div className="h-8 w-8 bg-[#2585C7] rounded-lg flex items-center justify-center text-white font-black italic text-xs">
+                {user?.full_name?.slice(0, 2).toUpperCase() || "JP"}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* MOBILE TOP BAR */}
+        <header className="md:hidden flex items-center justify-between px-6 py-3 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
+          <div className="flex items-center gap-2">
+            <Image src="/images/logo.svg" alt="JackPal" width={24} height={24} />
+            <span className="text-base font-black italic tracking-tighter uppercase">JackPal</span>
+          </div>
+          <button className="bg-[#2585C7] p-2 rounded-lg text-white shadow-lg shadow-[#2585C7]/20">
+            <Bell className="h-4 w-4" />
+          </button>
+        </header>
 
         {/* Upload error banner */}
         {uploadError && (
-          <div className="mx-6 mt-24 bg-[#2585C7]/10 border-l-4 border-[#2585C7] p-3 rounded-lg flex items-center justify-between relative z-40">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#2585C7]">{uploadError}</p>
-            <button onClick={() => setUploadError("")}><X className="h-4 w-4 text-[#2585C7]" /></button>
+          <div className="mx-6 mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded-lg flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-red-600">{uploadError}</p>
+            <button onClick={() => setUploadError("")}><X className="h-4 w-4 text-red-400" /></button>
           </div>
         )}
 
@@ -1026,13 +958,13 @@ export default function Dashboard() {
 
         {/* SCROLLABLE VIEWPORT */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6 md:p-8 pt-24 md:pt-28 max-w-5xl mx-auto space-y-8 pb-32 md:pb-8">
+          <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 pb-32 md:pb-8">
 
             {/* HERO */}
-            <section id="home" className="bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] p-6 md:p-10 text-[#02013D] relative overflow-hidden border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_24px_64px_rgba(180,180,200,0.18),0_4px_16px_rgba(180,180,200,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#2585C7]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+            <section className="bg-[#02013D] rounded-3xl md:rounded-[2rem] p-6 md:p-10 text-white relative overflow-hidden border-b-4 border-[#2585C7] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#2585C7]/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
               <div className="space-y-3 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-[#2585C7]/10 text-[#2585C7] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-[#2585C7]/20">
+                <div className="inline-flex items-center gap-2 bg-[#2585C7]/20 text-[#61E3F0] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/10">
                   <AudioLines className="h-3 w-3" />
                   Nigerian AI Study Platform
                 </div>
@@ -1040,26 +972,26 @@ export default function Dashboard() {
                   Welcome back, <br />
                   <span className="text-[#2585C7] underline decoration-[#2585C7]/20 decoration-4 underline-offset-4">{firstName}.</span>
                 </h1>
-                <p className="text-xs md:text-base text-[#02013D]/60 font-bold max-w-md leading-relaxed">
+                <p className="text-xs md:text-base text-white/50 font-bold max-w-md leading-relaxed">
                   {documents.length > 0
                     ? `${documents.length} document${documents.length > 1 ? "s" : ""} in your library. Listen to it or let Ezinne & Abeo discuss it.`
                     : "Upload lecture notes → Listen as Nigerian voices read it or discuss it like a podcast. Works offline."}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40 bg-[#02013D]/5 px-2.5 py-1 rounded-full border border-[#02013D]/10">🎙️ Podcast Mode</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40 bg-[#02013D]/5 px-2.5 py-1 rounded-full border border-[#02013D]/10">📶 Works Offline</span>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#02013D]/40 bg-[#02013D]/5 px-2.5 py-1 rounded-full border border-[#02013D]/10">🇳🇬 Nigerian Voices</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">🎙️ Podcast Mode</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">📶 Works Offline</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">🇳🇬 Nigerian Voices</span>
                 </div>
               </div>
               <div className="flex gap-3 relative z-10">
-                <div className="bg-white/40 backdrop-blur-xl p-4 rounded-2xl border border-[#02013D]/10 text-center min-w-[100px] shadow-sm">
+                <div className="bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 text-center min-w-[100px]">
                   <div className="text-[9px] font-black uppercase text-[#2585C7] mb-1 tracking-widest">Docs</div>
                   <div className="text-3xl font-black italic leading-none">{documents.length}</div>
-                  <div className="text-[9px] font-bold text-[#02013D]/30 uppercase mt-1">Total</div>
+                  <div className="text-[9px] font-bold text-white/30 uppercase mt-1">Total</div>
                 </div>
                 <div className="bg-[#2585C7] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#2585C7]/20 flex flex-col justify-center">
                   <div className="text-[9px] font-black uppercase text-white/60 mb-1 tracking-widest">Audio</div>
-                  <div className="text-xl font-black italic leading-none uppercase text-white">
+                  <div className="text-xl font-black italic leading-none uppercase">
                     {documents.filter(d => d.status === "audio_ready").length}
                   </div>
                   <div className="text-[9px] font-bold text-white/60 uppercase mt-1">Ready</div>
@@ -1067,17 +999,17 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* PREMIUM OVERVIEW */}
+            {/* PREMIUM OVERVIEW (Main branch UI) */}
             <section className="space-y-8 lg:space-y-12">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 {[
-                  { label: "Study Streak", value: `${userStats?.streak || 0} Days`, icon: Flame, color: "#2585C7", gradient: "from-[#2585C7]/10 to-transparent" },
-                  { label: "Hours Listened", value: `${userStats?.hours_listened || 0}h`, icon: Clock, color: "#0F1774", gradient: "from-[#0F1774]/10 to-transparent" },
-                  { label: "Retention", value: userStats?.retention || "0%", icon: TrendingUp, color: "#0A5C3A", gradient: "from-[#0A5C3A]/10 to-transparent" },
-                  { label: "Materials", value: userStats?.materials || "0", icon: Library, color: "#2261B9", gradient: "from-[#2261B9]/10 to-transparent" },
+                  { label: "Study Streak", value: "12 Days", icon: Flame, color: "#2585C7", gradient: "from-[#2585C7]/10 to-transparent" },
+                  { label: "Hours Listened", value: "48.5h", icon: Clock, color: "#61E3F0", gradient: "from-[#61E3F0]/10 to-transparent" },
+                  { label: "Retention", value: "92%", icon: TrendingUp, color: "#0F1774", gradient: "from-[#0F1774]/10 to-transparent" },
+                  { label: "Materials", value: "24", icon: Library, color: "#2261B9", gradient: "from-[#2261B9]/10 to-transparent" },
                 ].map((stat, i) => (
                   <div key={stat.label}
-                       className="bg-white/40 backdrop-blur-[18px] p-4 sm:p-5 lg:p-6 rounded-[2.25rem] border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_12px_32px_rgba(180,180,200,0.12),inset_0_1px_0_rgba(255,255,255,0.6)] hover:shadow-[0_16px_48px_rgba(37,133,199,0.08)] transition-all group overflow-hidden relative flex flex-col justify-between min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]"
+                       className="bg-white/60 backdrop-blur-xl p-4 sm:p-5 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] border border-white shadow-[0_4px_24px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_32px_rgba(37,133,199,0.08)] transition-all group overflow-hidden relative flex flex-col justify-between min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]"
                        style={{ animationDelay: `${i * 100}ms` }}
                   >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${stat.gradient} rounded-full blur-2xl opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500`} />
@@ -1086,6 +1018,9 @@ export default function Dashboard() {
                       <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white border border-white/50 shadow-sm group-hover:-translate-y-1 transition-transform duration-300">
                         <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" style={{ color: stat.color }} />
                       </div>
+                      <span className="bg-white/80 backdrop-blur text-[9px] sm:text-[10px] font-bold text-[#02013D]/60 uppercase tracking-widest px-2 py-1 rounded-lg border border-white/50">
+                        Top 5%
+                      </span>
                     </div>
 
                     <div className="flex flex-col gap-0.5 sm:gap-1 relative z-10 mt-4 sm:mt-6">
@@ -1098,51 +1033,36 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-10">
                 <div className="xl:col-span-2 space-y-8 lg:space-y-10">
-                  <section className="relative overflow-hidden bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] lg:rounded-[3rem] p-6 sm:p-8 lg:p-12 border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_24px_64px_rgba(180,180,200,0.12)] group">
-                    <div className="absolute top-0 right-0 w-full h-full bg-[url('/images/noise.png')] opacity-5 mix-blend-overlay pointer-events-none" />
-                    <div className="absolute -top-[50%] -right-[20%] w-[100%] h-[150%] bg-gradient-to-b from-[#2585C7]/10 to-transparent blur-[100px] rounded-full group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-in-out pointer-events-none" />
-                    <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-[#2585C7]/5 blur-[80px] rounded-full group-hover:translate-x-10 transition-transform duration-1000 ease-in-out pointer-events-none" />
+                  <section className="relative overflow-hidden bg-[#02013D] rounded-[2rem] lg:rounded-[3rem] p-6 sm:p-8 lg:p-12 shadow-[0_20px_40px_rgba(2,1,61,0.2)] group border border-white/10">
+                    <div className="absolute top-0 right-0 w-full h-full bg-[url('/images/noise.png')] opacity-20 mix-blend-overlay pointer-events-none" />
+                    <div className="absolute -top-[50%] -right-[20%] w-[100%] h-[150%] bg-gradient-to-b from-[#2585C7]/40 to-transparent blur-[100px] rounded-full group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-in-out pointer-events-none" />
+                    <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-[#61E3F0]/20 blur-[80px] rounded-full group-hover:translate-x-10 transition-transform duration-1000 ease-in-out pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 lg:gap-12">
                       <div className="space-y-4 sm:space-y-6 text-center md:text-left flex-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2585C7]/10 backdrop-blur-md border border-[#2585C7]/20 w-fit mx-auto md:mx-0">
-                          <span className="w-2 h-2 rounded-full bg-[#2585C7] animate-pulse" />
-                          <span className="text-[10px] font-bold text-[#2585C7] uppercase tracking-widest">Personalized Session</span>
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 w-fit mx-auto md:mx-0">
+                          <span className="w-2 h-2 rounded-full bg-[#61E3F0] animate-pulse" />
+                          <span className="text-[10px] font-bold text-white uppercase tracking-widest">Personalized Session</span>
                         </div>
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic tracking-tighter uppercase leading-[1.1] text-[#02013D]">
-                          Master <br className="hidden md:block" />
-                          <span className="bg-gradient-to-r from-[#2585C7] to-[#61E3F0] bg-clip-text text-transparent">
-                            {recentAudios.length > 0 ? recentAudios[0].title.split('.')[0] : "your next lesson"}
-                          </span>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic tracking-tighter uppercase leading-[1.1] text-white">
+                          Master your <br className="hidden md:block" />
+                          <span className="bg-gradient-to-r from-[#61E3F0] to-[#2585C7] bg-clip-text text-transparent">next lesson</span>
                         </h2>
-                        <p className="text-[#02013D]/70 text-xs sm:text-sm font-medium max-w-sm mx-auto md:mx-0 leading-relaxed">
-                          {recentAudios.length > 0 
-                            ? `Continue your study session on "${recentAudios[0].title}". You've made ${recentAudios[0].progress}% progress.` 
-                            : "Upload your study notes to generate your first personalized AI audio session."}
+                        <p className="text-white/70 text-xs sm:text-sm font-medium max-w-sm mx-auto md:mx-0 leading-relaxed">
+                          We've curated a high-yield audio study session based on your weakness in Cellular Biology.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                          <button 
-                            onClick={() => {
-                              if (recentAudios.length > 0 && recentAudios[0].doc) {
-                                const startChunk = savedProgress[recentAudios[0].doc.id] || 0;
-                                handlePlayChunks(recentAudios[0].doc.id, startChunk, recentAudios[0].doc.filename);
-                              } else {
-                                fileInputRef.current?.click();
-                              }
-                            }}
-                            className="w-full sm:w-auto bg-gradient-to-r from-[#2585C7] to-[#61E3F0] hover:scale-105 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 shadow-[0_10px_20px_rgba(37,133,199,0.2)] flex items-center justify-center gap-2"
-                          >
-                            <Play className="w-4 h-4 fill-white" /> {recentAudios.length > 0 ? "Resume Session" : "Start Listening"}
+                          <button className="w-full sm:w-auto bg-gradient-to-r from-[#2585C7] to-[#2261B9] hover:from-[#61E3F0] hover:to-[#2585C7] text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all duration-300 hover:shadow-[0_10px_20px_rgba(37,133,199,0.3)] hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-2">
+                            <Play className="w-4 h-4 fill-white" /> Start Listening
                           </button>
-                          <span className="text-[#02013D]/50 text-[10px] uppercase font-bold tracking-widest">
-                            {recentAudios.length > 0 ? `Est. ${recentAudios[0].duration} remaining` : "Est. 25 Mins"}
-                          </span>
+                          <span className="text-white/50 text-[10px] uppercase font-bold tracking-widest">Est. 25 Mins</span>
                         </div>
                       </div>
 
                       <div className="hidden sm:flex relative w-48 h-48 lg:w-56 lg:h-56 items-center justify-center">
-                        <div className="absolute inset-0 bg-white/20 backdrop-blur-2xl rounded-[3rem] border border-[#B4B4C8]/30 rotate-12 group-hover:rotate-[15deg] transition-transform duration-700 ease-out" />
-                        <Mic2 className="w-20 h-20 text-[#2585C7] relative z-10 filter drop-shadow-[0_0_15px_rgba(37,133,199,0.2)] group-hover:scale-110 transition-transform duration-500 delay-100" />
+                        <div className="absolute inset-0 bg-white/10 backdrop-blur-2xl rounded-[3rem] border border-white/20 rotate-12 group-hover:rotate-[15deg] transition-transform duration-700 ease-out" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#2585C7] to-transparent opacity-20 rounded-[3rem] -rotate-6 group-hover:-rotate-12 transition-transform duration-700 ease-out" />
+                        <Mic2 className="w-20 h-20 text-[#61E3F0] relative z-10 filter drop-shadow-[0_0_15px_rgba(97,227,240,0.5)] group-hover:scale-110 transition-transform duration-500 delay-100" />
                       </div>
                     </div>
                   </section>
@@ -1161,12 +1081,6 @@ export default function Dashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {recentAudios.map((audio, i) => (
                         <div key={audio.id}
-                             onClick={() => {
-                               if (audio.doc) {
-                                 const startChunk = savedProgress[audio.doc.id] || 0;
-                                 handlePlayChunks(audio.doc.id, startChunk, audio.doc.filename);
-                               }
-                             }}
                              className="bg-white/60 backdrop-blur-xl group p-4 sm:p-5 rounded-[2rem] border border-white shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(37,133,199,0.08)] hover:bg-white transition-all duration-300 flex items-center gap-4 cursor-pointer relative overflow-hidden"
                              style={{ animationDelay: `${(i + 4) * 100}ms` }}
                         >
@@ -1217,9 +1131,9 @@ export default function Dashboard() {
 
                     <div className="space-y-5">
                       {[
-                        { label: "Daily Goal", progress: userStats?.weekly_overview?.daily_goal || 0, color: "#2585C7" },
-                        { label: "Exam Readiness", progress: userStats?.weekly_overview?.exam_readiness || 0, color: "#61E3F0" },
-                        { label: "Memory Retention", progress: userStats?.weekly_overview?.memory_retention || 0, color: "#0F1774" },
+                        { label: "Daily Goal", progress: 65, color: "#2585C7" },
+                        { label: "Exam Readiness", progress: 82, color: "#61E3F0" },
+                        { label: "Memory Retention", progress: 45, color: "#0F1774" },
                       ].map((p, i) => (
                         <div key={p.label} className="space-y-2" style={{ animationDelay: `${i * 150}ms` }}>
                           <div className="flex justify-between items-center px-1">
@@ -1251,6 +1165,7 @@ export default function Dashboard() {
                       {[
                         { text: "New Yorùbá voice model now available", tag: "New" },
                         { text: "Beta: AI Summary for Medical Students", tag: "Beta" },
+                        { text: "Refer a friend and get 1 month Premium", tag: "Promo" },
                       ].map((news, i) => (
                         <div key={i} className="flex gap-3 items-start group cursor-pointer p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-white/80">
                           <div className="h-1.5 w-1.5 bg-[#2585C7] rounded-full mt-1.5 flex-shrink-0 shadow-[0_0_5px_rgba(37,133,199,0.5)] group-hover:scale-150 transition-transform" />
@@ -1321,32 +1236,19 @@ export default function Dashboard() {
                     </div>
                     {!podcastPlayingDocId && (
                       <div className="flex flex-col items-stretch gap-2 md:min-w-[200px]">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60">Voice Engine</label>
-                        <select
-                          value={selectedEngine}
-                          onChange={(e) => setSelectedEngine(e.target.value as "fast" | "premium")}
-                          className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 text-[11px] font-black uppercase tracking-widest text-white outline-none"
-                        >
-                          <option value="fast" className="text-[#02013D]">Standard (Fast)</option>
-                          {ttsCaps?.premium_available && (
-                            <option value="premium" className="text-[#02013D]">YarnGPT Premium</option>
-                          )}
-                        </select>
                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60">Voice</label>
                         <select
                           value={selectedVoice}
                           onChange={(e) => setSelectedVoice(e.target.value)}
                           className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 text-[11px] font-black uppercase tracking-widest text-white outline-none"
                         >
-                          {voiceOptions.map((v) => (
+                          {VOICE_OPTIONS.map((v) => (
                             <option key={v.value} value={v.value} className="text-[#02013D]">
                               {v.label} — {v.desc}
                             </option>
                           ))}
                         </select>
-                        <div className="text-[9px] font-bold text-white/60">
-                          {selectedEngine === "premium" ? "YarnGPT Nigerian voices" : "Standard Nigerian voices"}
-                        </div>
+                        <div className="text-[9px] font-bold text-white/60">Nigerian English · Microsoft Azure</div>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -1530,7 +1432,7 @@ export default function Dashboard() {
             <div className="grid lg:grid-cols-[1fr_280px] gap-8">
               {/* MAIN FEED */}
               <div className="space-y-8">
-                <section id="library" className="space-y-4">
+                <section className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-black uppercase tracking-tighter flex items-center gap-2">
                       <Clock className="h-4 w-4 text-[#2585C7]" />
@@ -1574,31 +1476,14 @@ export default function Dashboard() {
                         Upload Your First Doc
                       </button>
                     </div>
-                  ) : filteredDocuments.length === 0 ? (
-                    <div className="bg-white/40 backdrop-blur-[18px] border-[1.5px] border-dashed border-[#B4B4C8]/45 rounded-2xl p-12 text-center space-y-4">
-                      <div className="bg-[#2585C7]/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
-                        <Search className="h-6 w-6 text-[#2585C7]" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-black uppercase tracking-widest text-[#02013D]">No matches found</p>
-                        <p className="text-[10px] font-bold text-[#02013D]/40">We couldn't find any documents matching "{searchQuery}"</p>
-                      </div>
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="text-[10px] font-black uppercase tracking-widest text-[#2585C7] hover:underline"
-                      >
-                        Clear Search
-                      </button>
-                    </div>
                   ) : (
                     <div className="space-y-4">
-                      {filteredDocuments.map((doc) => {
+                      {documents.map((doc) => {
                         const readyChunks = doc.ready_chunks ?? 0;
                         const totalChunks = doc.total_chunks ?? 0;
                         const pct = totalChunks > 0 ? Math.round((readyChunks / totalChunks) * 100) : 0;
                         const voiceMatches = doc.audio_voice === selectedVoice;
-                        const engineMatches = !doc.audio_engine ? selectedEngine === "fast" : doc.audio_engine === selectedEngine;
-                        const canPlay = (readyChunks > 0 || doc.status === "audio_ready") && voiceMatches && engineMatches;
+                        const canPlay = (readyChunks > 0 || doc.status === "audio_ready") && voiceMatches;
                         const isGenerating = doc.status === "generating" || doc.status === "streaming";
                         const mode = docMode[doc.id] ?? "listen";
                         const isPodcastGenerating = podcastGenerating === doc.id;
@@ -1606,7 +1491,7 @@ export default function Dashboard() {
                         const subject = subjects[doc.id];
 
                         return (
-                          <div key={doc.id} className={`bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] border-[1.5px] border-dashed shadow-sm hover:shadow-lg transition-all overflow-hidden ${isPodcastPlaying ? "border-[#2585C7] shadow-[#2585C7]/10" : playingDocId === doc.id ? "border-[#2585C7]" : "border-[#B4B4C8]/45 hover:border-[#2585C7]"}`}>
+                          <div key={doc.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${isPodcastPlaying ? "border-[#61E3F0] shadow-[#61E3F0]/10" : playingDocId === doc.id ? "border-[#2585C7]" : "border-[#EFEFEF] hover:border-[#2585C7]"}`}>
                             <div className="p-5 flex flex-col gap-3">
 
                               {/* Header: subject tag + filename + action icons */}
@@ -1631,7 +1516,7 @@ export default function Dashboard() {
                                   <div className="flex flex-wrap items-center gap-2 text-[9px] font-bold text-[#02013D]/40 uppercase tracking-widest">
                                     <span>{doc.word_count.toLocaleString()} words</span>
                                     {doc.audio_voice && (
-                                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[8px] text-[#2585C7]">
+                                      <span className="rounded-full bg-[#F7F7F7] px-2 py-0.5 text-[8px] text-[#2585C7]">
                                         {getVoiceMeta(doc.audio_voice).label}
                                       </span>
                                     )}
@@ -1646,28 +1531,28 @@ export default function Dashboard() {
                                   <button
                                     onClick={() => handleDownload(doc.id)}
                                     disabled={readyChunks === 0 || downloadingDocId === doc.id}
-                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-[#F7F7F7] transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                                     title="Download for offline"
                                   >
                                     {downloadingDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                                   </button>
                                   <button
                                     onClick={() => handleSummarize(doc)}
-                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50 transition-colors"
+                                    className="p-2 rounded-xl text-[#02013D]/30 hover:text-[#2585C7] hover:bg-[#F7F7F7] transition-colors"
                                     title="AI Summary"
                                   >
                                     <Sparkles className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleViewChapters(doc)}
-                                    className={`p-2 rounded-xl transition-colors ${chaptersDocId === doc.id ? "bg-[#2585C7] text-white" : "text-[#02013D]/30 hover:text-[#2585C7] hover:bg-white/50"}`}
+                                    className={`p-2 rounded-xl transition-colors ${chaptersDocId === doc.id ? "bg-[#2585C7] text-white" : "text-[#02013D]/30 hover:text-[#2585C7] hover:bg-[#F7F7F7]"}`}
                                     title="Chapters"
                                   >
                                     <Library className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteDoc(doc.id)}
-                                    className="p-2 rounded-xl text-[#02013D]/20 hover:text-[#2585C7] hover:bg-white/50 transition-colors"
+                                    className="p-2 rounded-xl text-[#02013D]/20 hover:text-red-500 hover:bg-red-50 transition-colors"
                                     title="Delete document"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1727,19 +1612,11 @@ export default function Dashboard() {
                                   )}
                                   <div className="flex gap-2 items-center">
                                     <select
-                                      value={selectedEngine}
-                                      onChange={(e) => setSelectedEngine(e.target.value as "fast" | "premium")}
-                                      className="rounded-xl border border-[#EFEFEF] bg-[#F7F7F7] px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#02013D] outline-none"
-                                    >
-                                      <option value="fast">Standard</option>
-                                      {ttsCaps?.premium_available && <option value="premium">YarnGPT</option>}
-                                    </select>
-                                    <select
                                       value={selectedVoice}
                                       onChange={(e) => setSelectedVoice(e.target.value)}
                                       className="rounded-xl border border-[#EFEFEF] bg-[#F7F7F7] px-2.5 py-2 text-[9px] font-black uppercase tracking-widest text-[#02013D] outline-none"
                                     >
-                                      {voiceOptions.map(v => (
+                                      {VOICE_OPTIONS.map(v => (
                                         <option key={v.value} value={v.value}>{v.label}</option>
                                       ))}
                                     </select>
@@ -1903,40 +1780,30 @@ export default function Dashboard() {
                 </section>
               </div>
 
-                <aside className="hidden lg:block space-y-8">
+              {/* RIGHT SIDEBAR */}
+              <aside className="hidden lg:block space-y-8">
                 <section className="space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-[#02013D]/40">Voices</h3>
-                  <div className="bg-white/40 backdrop-blur-[18px] p-5 rounded-[2.25rem] border-[1.5px] border-dashed border-[#B4B4C8]/45 space-y-4 relative overflow-hidden shadow-sm">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#2585C7]/5 rounded-full blur-2xl" />
+                  <div className="bg-white p-5 rounded-2xl border-2 border-[#EFEFEF] space-y-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#61E3F0]/10 rounded-full blur-2xl" />
                     <div className="space-y-1">
-                      <div className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/30">Voice Engine</div>
-                      <select
-                        value={selectedEngine}
-                        onChange={(e) => setSelectedEngine(e.target.value as "fast" | "premium")}
-                        className="w-full rounded-lg border border-[#B4B4C8]/20 bg-white/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#02013D] outline-none"
-                      >
-                        <option value="fast">Standard</option>
-                        {ttsCaps?.premium_available && <option value="premium">YarnGPT</option>}
-                      </select>
                       <div className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/30">Read Aloud Voice</div>
                       <select
                         value={selectedVoice}
                         onChange={(e) => setSelectedVoice(e.target.value)}
-                        className="w-full rounded-lg border border-[#B4B4C8]/20 bg-white/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#02013D] outline-none"
+                        className="w-full rounded-lg border border-[#EFEFEF] bg-[#F7F7F7] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#02013D] outline-none"
                       >
-                        {voiceOptions.map((v) => (
+                        {VOICE_OPTIONS.map((v) => (
                           <option key={v.value} value={v.value}>{v.label} — {v.desc}</option>
                         ))}
                       </select>
-                      <div className="text-[9px] font-bold text-[#02013D]/40">
-                        {selectedEngine === "premium" ? "YarnGPT Nigerian voices" : "Standard Nigerian voices"}
-                      </div>
+                      <div className="text-[9px] font-bold text-[#02013D]/40">Nigerian English · Microsoft Azure Neural</div>
                     </div>
-                    <div className="pt-2 border-t border-[#B4B4C8]/20">
+                    <div className="pt-2 border-t border-[#EFEFEF]">
                       <div className="text-[8px] font-black uppercase tracking-widest text-[#02013D]/30 mb-2">Podcast Hosts</div>
                       {PODCAST_HOSTS.map((host) => (
                         <div key={host.voice} className="flex items-center gap-3 py-1">
-                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-black ${host.voice === "chinenye" ? "bg-[#2585C7]/10 text-[#2585C7]" : "bg-[#2585C7] text-white"}`}>
+                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-black ${host.voice === "chinenye" ? "bg-[#61E3F0] text-[#02013D]" : "bg-[#2585C7] text-white"}`}>
                             {host.name[0]}
                           </div>
                           <div>
@@ -2010,14 +1877,110 @@ export default function Dashboard() {
           </div>
         </div>
 
-      </main>
+        {/* MOBILE DOCK */}
+        <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-[#02013D]/95 backdrop-blur-2xl text-white rounded-[2rem] p-2 shadow-2xl z-[200] flex items-center justify-between border border-white/10">
+          {[
+            { id: 'home', icon: Home, label: 'Home' },
+            { id: 'library', icon: Library, label: 'Library' },
+          ].map((item) => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}>
+              <item.icon className="h-5 w-5" />
+              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
+              {activeTab === item.id && <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />}
+            </button>
+          ))}
 
-      {/* NEW GLASSMORPHIC DOCK */}
-      <Dock 
-        active={activeTab} 
-        setActive={setActiveTab} 
-        onCenterAction={() => fileInputRef.current?.click()} 
-      />
+          <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center -mt-12 group relative">
+            <div className="absolute inset-0 bg-[#2585C7] rounded-full blur-xl opacity-20 animate-pulse" />
+            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-[#F7F7F7] z-[10] relative hover:scale-105 transition-transform">
+              {uploading ? <Loader2 className="h-7 w-7 text-white animate-spin" /> : <CloudUpload className="h-7 w-7 text-white" />}
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter text-[#2585C7] mt-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Upload</span>
+          </button>
+
+          {[
+            { id: 'files', icon: FolderOpen, label: 'Files' },
+            { id: 'profile', icon: User, label: 'Profile' },
+          ].map((item) => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}>
+              <item.icon className="h-5 w-5" />
+              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
+              {activeTab === item.id && <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />}
+            </button>
+          ))}
+        </nav>
+
+        {/* DESKTOP FAB */}
+        <div className="hidden md:block fixed bottom-10 right-10 z-[300]">
+          <div className="relative">
+            <div className={`absolute bottom-20 right-0 space-y-4 transition-all duration-300 origin-bottom ${isAddMenuOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}`}>
+              {mainUploadOptions.map((option, index) => (
+                <button key={option.label} className="flex items-center gap-4 group" style={{ transitionDelay: `${index * 50}ms` }}
+                  onClick={() => option.label === "File" ? (setIsAddMenuOpen(false), fileInputRef.current?.click()) : null}>
+                  <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">{option.label}</span>
+                  <div className="h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-white" style={{ backgroundColor: option.color }}>
+                    <option.icon className="h-6 w-6" />
+                  </div>
+                </button>
+              ))}
+              <button onClick={() => { setIsOthersModalOpen(true); setIsAddMenuOpen(false); }} className="flex items-center gap-4 group" style={{ transitionDelay: `150ms` }}>
+                <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">More Options</span>
+                <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-white text-[#02013D] shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-[#02013D]">
+                  <LayoutGrid className="h-6 w-6" />
+                </div>
+              </button>
+            </div>
+            <button onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+              className={`h-20 w-20 rounded-3xl flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-white transition-all duration-500 ${isAddMenuOpen ? 'bg-[#02013D] rotate-[135deg]' : 'bg-[#2585C7] hover:scale-105 active:scale-95'}`}>
+              <Plus className="h-10 w-10 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* UPLOAD MODAL */}
+        {isOthersModalOpen && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
+            <div className="absolute inset-0 bg-[#02013D]/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsOthersModalOpen(false)} />
+            <div className="bg-[#F7F7F7] w-full max-w-2xl rounded-[3rem] border-8 border-[#02013D] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in duration-500">
+              <div className="p-10 md:p-12 space-y-10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h3 className="text-3xl font-black tracking-tighter uppercase italic">Import Library</h3>
+                    <p className="text-xs font-bold text-[#02013D]/40 uppercase tracking-widest">Select your source to begin learning</p>
+                  </div>
+                  <button onClick={() => setIsOthersModalOpen(false)} className="bg-[#02013D] text-white p-3 rounded-2xl hover:bg-[#2585C7] transition-colors">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {allUploadOptions.map((option) => (
+                    <button key={option.label}
+                      onClick={() => option.action === "file" ? (setIsOthersModalOpen(false), fileInputRef.current?.click()) : null}
+                      className="bg-white p-6 rounded-[2rem] border-2 border-[#EFEFEF] hover:border-[#2585C7] hover:shadow-2xl hover:shadow-[#2585C7]/10 transition-all group text-left space-y-4">
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: option.color }}>
+                        <option.icon className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-black uppercase tracking-tighter group-hover:text-[#2585C7] transition-colors">{option.label}</div>
+                        <p className="text-[9px] font-bold text-[#02013D]/40 uppercase leading-none">{option.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="pt-6 border-t border-[#EFEFEF] flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/20">
+                  <span>JackPal Secure Import</span>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Military-grade Encryption</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
