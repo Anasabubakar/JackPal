@@ -97,9 +97,9 @@ export function Dock({ active, setActive, onCenterAction }: DockProps) {
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            background: "linear-gradient(145deg, #2585C7, #61E3F0)",
+            background: "linear-gradient(145deg, #B1121B, #E10600)",
             boxShadow:
-              "0 8px 28px rgba(37,133,199,0.48), 0 2px 8px rgba(37,133,199,0.28), inset 0 1px 0 rgba(255,255,255,0.4)",
+              "0 8px 28px rgba(177,18,27,0.48), 0 2px 8px rgba(177,18,27,0.28), inset 0 1px 0 rgba(255,200,190,0.4)",
             transition: "transform 0.15s ease",
           }}
           onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}
