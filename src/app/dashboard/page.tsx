@@ -900,46 +900,35 @@ export default function Dashboard() {
         onChange={handleFileUpload}
       />
 
+      {/* FLOATING TOP BAR */}
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl">
+        <div className="bg-white/40 backdrop-blur-2xl rounded-full border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] px-4 py-2 flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2 pl-2 shrink-0 group">
+            <Image src="/images/logo.svg" alt="JackPal" width={22} height={22} className="group-hover:rotate-12 transition-transform" />
+            <span className="text-sm font-black italic tracking-tighter uppercase text-[#02013D]">JackPal</span>
+          </Link>
+          
+          <div className="h-6 w-[1px] bg-[#02013D]/10" />
+
+          <div className="flex-1 relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#02013D]/30 group-focus-within:text-[#2585C7] transition-colors" />
+            <input
+              type="text"
+              placeholder="Search library..."
+              className="w-full bg-transparent border-none py-1.5 pl-9 pr-4 text-[11px] font-bold text-[#02013D] focus:outline-none placeholder:text-[#02013D]/20"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
 
-        {/* TOP BAR */}
-        <header className="flex items-center justify-between px-6 md:px-8 py-4 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Image src="/images/logo.svg" alt="JackPal" width={28} height={28} className="group-hover:rotate-12 transition-transform" />
-            <span className="text-lg font-black italic tracking-tighter uppercase">JackPal</span>
-          </Link>
-          
-          <div className="hidden md:flex relative w-80 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#02013D]/20 group-focus-within:text-[#2585C7] transition-colors" />
-            <input
-              type="text"
-              placeholder="Search your library..."
-              className="w-full bg-[#F7F7F7] border-2 border-transparent rounded-xl py-2 pl-10 pr-4 font-bold text-[10px] focus:outline-none focus:border-[#2585C7] focus:bg-white transition-all"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="relative bg-white p-2 rounded-lg border border-[#EFEFEF] hover:border-[#2585C7] transition-all">
-              <Bell className="h-4 w-4 text-[#02013D]/60" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2585C7] rounded-full border-2 border-white" />
-            </button>
-            <div className="h-8 w-[1px] bg-[#EFEFEF]" />
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:block text-right">
-                <div className="text-[10px] font-black uppercase tracking-tighter">{user?.full_name || "Student"}</div>
-                <div className="text-[9px] font-bold text-[#2585C7] uppercase">{user?.email || ""}</div>
-              </div>
-              <div className="h-8 w-8 bg-[#2585C7] rounded-lg flex items-center justify-center text-white font-black italic text-xs">
-                {user?.full_name?.slice(0, 2).toUpperCase() || "JP"}
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* Removed old header */}
 
         {/* Upload error banner */}
         {uploadError && (
-          <div className="mx-6 mt-4 bg-[#2585C7]/10 border-l-4 border-[#2585C7] p-3 rounded-lg flex items-center justify-between">
+          <div className="mx-6 mt-24 bg-[#2585C7]/10 border-l-4 border-[#2585C7] p-3 rounded-lg flex items-center justify-between relative z-40">
             <p className="text-[10px] font-black uppercase tracking-widest text-[#2585C7]">{uploadError}</p>
             <button onClick={() => setUploadError("")}><X className="h-4 w-4 text-[#2585C7]" /></button>
           </div>
@@ -955,7 +944,7 @@ export default function Dashboard() {
 
         {/* SCROLLABLE VIEWPORT */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 pb-32 md:pb-8">
+          <div className="p-6 md:p-8 pt-24 md:pt-28 max-w-5xl mx-auto space-y-8 pb-32 md:pb-8">
 
             {/* HERO */}
             <section id="home" className="bg-white/40 backdrop-blur-[18px] rounded-[2.25rem] p-6 md:p-10 text-[#02013D] relative overflow-hidden border-[1.5px] border-dashed border-[#B4B4C8]/45 shadow-[0_24px_64px_rgba(180,180,200,0.18),0_4px_16px_rgba(180,180,200,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] flex flex-col md:flex-row md:items-center justify-between gap-6">
