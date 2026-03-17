@@ -23,7 +23,7 @@ def _load_db() -> dict:
             return json.loads(DB_FILE.read_text())
         except Exception:
             pass
-    return {"documents": {}, "audio_tracks": {}, "audio_chunks": {}}
+    return {"documents": {}, "audio_tracks": {}, "audio_chunks": {}, "activity": []}
 
 
 def _save_db():
@@ -36,6 +36,7 @@ def _save_db():
         "audio_chunks": _audio_chunks,
         "podcast_chunks": _podcast_chunks,
         "podcast_scripts": _podcast_scripts,
+        "activity": _activity,
     }
     DB_FILE.write_text(json.dumps(data))
 
@@ -46,6 +47,27 @@ _audio_tracks: dict[str, dict] = _db["audio_tracks"]
 _audio_chunks: dict[str, dict] = _db["audio_chunks"]
 _podcast_chunks: dict[str, dict] = _db.get("podcast_chunks", {})
 _podcast_scripts: dict[str, list] = _db.get("podcast_scripts", {})
+_activity: list[dict] = _db.get("activity", [])
+
+# ... existing code ...
+
+def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds: int = 0):
+    """Record a study event (e.g., 'listen_chunk', 'listen_podcast')."""
+    entry = {
+        "user_id": user_id,
+        "doc_id": doc_id,
+        "type": activity_type,
+        "duration": duration_seconds,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    _activity.append(entry)
+    _save_db()
+
+
+def get_activity(user_id: str) -> list[dict]:
+    if _LOCAL_DEV:
+        return _activity
+    return [a for a in _activity if a["user_id"] == user_id]
 
 # Load extracted text back from disk
 for doc_id, doc in _documents.items():

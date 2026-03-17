@@ -93,6 +93,7 @@ export type TtsCapabilities = {
   premium_available: boolean;
   fast_voices: string[];
   premium_voices: string[];
+  premium_source?: "api" | "local" | "disabled";
 };
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -123,6 +124,25 @@ export async function requestPasswordReset(email: string) {
     method: "POST",
     body: JSON.stringify({ email }),
   });
+}
+
+// ── User / Stats ────────────────────────────────────────────────────────────
+
+export type UserStats = {
+  streak: number;
+  hours_listened: number;
+  retention: string;
+  materials: number;
+  weekly_overview: {
+    daily_goal: number;
+    exam_readiness: number;
+    memory_retention: number;
+  };
+  recent_activity: any[];
+};
+
+export async function getUserStats() {
+  return request<UserStats>("/user/stats");
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────

@@ -1,12 +1,16 @@
 """
 TTS service — YarnGPT (authentic Nigerian voices) with edge-tts fallback.
 
-YarnGPT voices (English): idera, chinenye, jude, emma, umar, joke, zainab, osagie, remi, tayo
-YarnGPT voices (Yoruba):  tayo_yoruba, idera_yoruba, joke_yoruba
-YarnGPT voices (Igbo):    chinenye_igbo, emma_igbo
-YarnGPT voices (Hausa):   umar_hausa, zainab_hausa
+Premium path options:
+1) YarnGPT API (yarngpt.ai) when YARNGPT_API_KEY is set.
+2) Local YarnGPT2b model when JACKPAL_ENABLE_YARNGPT is enabled.
 
-Model files auto-download to ~/.yarngpt/models/ on first run (~2.4GB total).
+Local YarnGPT voices (English): idera, chinenye, jude, emma, umar, joke, zainab, osagie, remi, tayo
+Local YarnGPT voices (Yoruba):  tayo_yoruba, idera_yoruba, joke_yoruba
+Local YarnGPT voices (Igbo):    chinenye_igbo, emma_igbo
+Local YarnGPT voices (Hausa):   umar_hausa, zainab_hausa
+
+Local model files auto-download to ~/.yarngpt/models/ on first run (~2.4GB total).
 """
 import io
 import os
@@ -14,6 +18,7 @@ import asyncio
 from pathlib import Path
 
 import edge_tts
+import httpx
 
 # ── Model paths ──────────────────────────────────────────────────────────────
 
@@ -40,24 +45,56 @@ VOICE_MAP = {
     "osagie":   {"yarn": "osagie",   "edge": "en-NG-AbeoNeural"},
     "remi":     {"yarn": "remi",     "edge": "en-NG-EzinneNeural"},
     "tayo":     {"yarn": "tayo",     "edge": "en-NG-AbeoNeural"},
+    "wura":     {"yarn": "wura",     "edge": "en-NG-EzinneNeural"},
 }
 
 DEFAULT_VOICE = "chinenye"
 ENABLE_YARNGPT = os.environ.get("JACKPAL_ENABLE_YARNGPT", "").lower() in {"1", "true", "yes", "on"}
+YARNGPT_API_KEY = os.environ.get("YARNGPT_API_KEY", "").strip()
+YARNGPT_API_URL = os.environ.get("YARNGPT_API_URL", "https://yarngpt.ai/api/v1/tts").strip()
+USE_YARNGPT_API = bool(YARNGPT_API_KEY)
 DEFAULT_ENGINE = "fast"
-PREMIUM_VOICES = {"idera", "chinenye", "jude", "emma", "umar", "joke", "zainab", "osagie", "remi", "tayo"}
 FAST_VOICES = {"chinenye", "jude"}
+API_VOICE_MAP = {
+    "idera": "Idera",
+    "emma": "Emma",
+    "zainab": "Zainab",
+    "osagie": "Osagie",
+    "wura": "Wura",
+    "jude": "Jude",
+    "chinenye": "Chinenye",
+    "tayo": "Tayo",
+    "regina": "Regina",
+    "femi": "Femi",
+    "adaora": "Adaora",
+    "umar": "Umar",
+    "mary": "Mary",
+    "nonso": "Nonso",
+    "remi": "Remi",
+    "adam": "Adam",
+}
+
+
+def _premium_voice_set() -> set[str]:
+    if USE_YARNGPT_API:
+        return set(API_VOICE_MAP.keys())
+    return {"idera", "chinenye", "jude", "emma", "umar", "joke", "zainab", "osagie", "remi", "tayo"}
 
 
 def normalize_voice(voice: str | None) -> str:
     if not voice:
         return DEFAULT_VOICE
 
-    if voice in VOICE_MAP:
-        return voice
+    voice_key = voice.strip().lower()
+    if voice_key in VOICE_MAP or voice_key in API_VOICE_MAP:
+        return voice_key
 
     for key, config in VOICE_MAP.items():
         if voice == config["edge"] or voice == config["yarn"]:
+            return key
+
+    for key, api_voice in API_VOICE_MAP.items():
+        if voice.lower() == api_voice.lower():
             return key
 
     return DEFAULT_VOICE
@@ -72,7 +109,8 @@ def resolve_voice_for_engine(voice: str | None, engine: str | None) -> str:
     normalized_voice = normalize_voice(voice)
 
     if normalized_engine == "premium":
-        return normalized_voice if normalized_voice in PREMIUM_VOICES else DEFAULT_VOICE
+        premium_voices = _premium_voice_set()
+        return normalized_voice if normalized_voice in premium_voices else DEFAULT_VOICE
 
     if normalized_voice in FAST_VOICES:
         return normalized_voice
@@ -80,18 +118,27 @@ def resolve_voice_for_engine(voice: str | None, engine: str | None) -> str:
 
 
 def get_tts_capabilities() -> dict:
+    premium_voices = sorted(_premium_voice_set())
+    premium_enabled = USE_YARNGPT_API or ENABLE_YARNGPT
+    premium_model_ready = True if USE_YARNGPT_API else _models_on_disk()
+    premium_loaded = True if USE_YARNGPT_API else _yarn_available is True
+    premium_available = True if USE_YARNGPT_API else (ENABLE_YARNGPT and _models_on_disk())
+    premium_source = "api" if USE_YARNGPT_API else ("local" if ENABLE_YARNGPT else "disabled")
     return {
         "fast_available": True,
-        "premium_enabled": ENABLE_YARNGPT,
-        "premium_model_ready": _models_on_disk(),
-        "premium_loaded": _yarn_available is True,
-        "premium_available": ENABLE_YARNGPT and _models_on_disk(),
+        "premium_enabled": premium_enabled,
+        "premium_model_ready": premium_model_ready,
+        "premium_loaded": premium_loaded,
+        "premium_available": premium_available,
         "fast_voices": sorted(FAST_VOICES),
-        "premium_voices": sorted(PREMIUM_VOICES),
+        "premium_voices": premium_voices,
+        "premium_source": premium_source,
     }
 
 
 def ensure_premium_available() -> None:
+    if USE_YARNGPT_API:
+        return
     if not ENABLE_YARNGPT:
         raise RuntimeError("Premium YarnGPT is disabled on this backend.")
     if not _models_on_disk():
@@ -129,6 +176,8 @@ def _download_file(url: str, dest: Path):
 
 def start_background_download():
     """Kick off WavTokenizer model download in a daemon thread (non-blocking)."""
+    if USE_YARNGPT_API:
+        return
     if not ENABLE_YARNGPT:
         print("[TTS] YarnGPT disabled. Using edge-tts fast path.")
         return
@@ -213,6 +262,8 @@ async def synthesize_chunk(text: str, voice: str = DEFAULT_VOICE, engine: str = 
     voice = resolve_voice_for_engine(voice, engine)
     if engine == "premium":
         ensure_premium_available()
+        if USE_YARNGPT_API:
+            return await _api_synthesize(text, voice)
         return await _yarn_synthesize(text, voice)
     return await _edge_synthesize(text, voice)
 
@@ -257,6 +308,24 @@ async def _yarn_synthesize(text: str, voice: str) -> bytes:
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _run)
+
+
+async def _api_synthesize(text: str, voice: str) -> bytes:
+    if not YARNGPT_API_KEY:
+        raise RuntimeError("YarnGPT API key is not configured.")
+    voice = normalize_voice(voice)
+    api_voice = API_VOICE_MAP.get(voice, "Chinenye")
+    payload = {
+        "text": text,
+        "voice": api_voice,
+        "response_format": "mp3",
+    }
+    headers = {"Authorization": f"Bearer {YARNGPT_API_KEY}"}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        res = await client.post(YARNGPT_API_URL, json=payload, headers=headers)
+    if res.status_code != 200:
+        raise RuntimeError(f"YarnGPT API error: {res.status_code} {res.text[:200]}")
+    return res.content
 
 
 async def _edge_synthesize(text: str, voice: str) -> bytes:

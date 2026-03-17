@@ -253,10 +253,14 @@ async def stream_chunk(
     user_id = _get_user_id(auth_header)
 
     if USE_LOCAL:
-        from services.local_storage import get_audio_chunk
+        from services.local_storage import get_audio_chunk, log_activity
         chunk = get_audio_chunk(doc_id, user_id, chunk_index)
         if not chunk:
             raise HTTPException(status_code=404, detail=f"Chunk {chunk_index} not ready yet.")
+        
+        # Log study activity: ~45s per chunk
+        log_activity(user_id, doc_id, "listen_chunk", 45)
+
         mime = "audio/wav" if chunk["storage_path"].endswith(".wav") else "audio/mpeg"
         return FileResponse(chunk["storage_path"], media_type=mime)
 
@@ -319,10 +323,14 @@ async def stream_podcast_chunk(
     user_id = _get_user_id(auth_header)
 
     if USE_LOCAL:
-        from services.local_storage import get_podcast_chunk
+        from services.local_storage import get_podcast_chunk, log_activity
         chunk = get_podcast_chunk(doc_id, user_id, chunk_index)
         if not chunk:
             raise HTTPException(status_code=404, detail=f"Podcast chunk {chunk_index} not ready yet.")
+        
+        # Log podcast activity: ~30s per line
+        log_activity(user_id, doc_id, "listen_podcast", 30)
+
         mime = "audio/wav" if chunk["storage_path"].endswith(".wav") else "audio/mpeg"
         return FileResponse(chunk["storage_path"], media_type=mime)
 
