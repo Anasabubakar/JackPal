@@ -43,6 +43,9 @@ backend/**/*.pyc
 backend/dev_storage/
 backend/test_output.mp3
 backend/test_yarngpt.wav
+backend/.env
+backend/*.wav
+backend/data/
 
 # logs
 *.log
