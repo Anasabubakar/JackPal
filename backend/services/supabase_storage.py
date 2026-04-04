@@ -47,6 +47,11 @@ def list_audio_chunks(user_id: str, doc_id: str, kind: str = "chunk") -> list[di
     return sorted(items, key=lambda x: x["chunk_index"])
 
 
+def signed_url(storage_path: str, expires_in: int = 3600) -> str:
+    result = _bucket().create_signed_url(storage_path, expires_in)
+    return result.get("signedURL") or result.get("signed_url") or ""
+
+
 def download_audio_chunk(storage_path: str) -> bytes:
     return _bucket().download(storage_path)
 
