@@ -107,6 +107,8 @@ export default function Dashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunkQueueRef = useRef<string[]>([]);
   const chunkIndexRef = useRef(0);
+  const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isPreloadingRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Chapters
@@ -242,6 +244,11 @@ export default function Dashboard() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
+      }
+      if (preloadAudioRef.current) {
+        preloadAudioRef.current.pause();
+        preloadAudioRef.current.src = "";
+        preloadAudioRef.current = null;
       }
     };
   }, []);
@@ -391,7 +398,15 @@ export default function Dashboard() {
       audioRef.current.pause();
       audioRef.current.src = "";
       audioRef.current.onended = null;
+      audioRef.current.onerror = null;
     }
+    // Clean up preloaded audio
+    if (preloadAudioRef.current) {
+      preloadAudioRef.current.pause();
+      preloadAudioRef.current.src = "";
+      preloadAudioRef.current = null;
+    }
+    isPreloadingRef.current = false;
     chunkQueueRef.current = [];
     chunkIndexRef.current = 0;
     podcastQueueRef.current = [];
@@ -489,12 +504,48 @@ export default function Dashboard() {
       audioRef.current.pause();
       audioRef.current.src = "";
     }
+    // Cancel any preloading
+    if (preloadAudioRef.current) {
+      preloadAudioRef.current.pause();
+      preloadAudioRef.current.src = "";
+      preloadAudioRef.current = null;
+    }
+    isPreloadingRef.current = false;
+    
     const { chunks } = await getAudioChunks(docId);
     if (!chunks.length || !chunks[startChunk]) return;
     chunkQueueRef.current = chunks.map(c => c.url);
     chunkIndexRef.current = startChunk;
     setPlayingDocId(docId);
+    
+    // Preload the next chunk immediately
+    preloadNextChunk(docId, title);
     playNextChunk(docId, title);
+  }
+
+  function preloadNextChunk(docId: string, title: string) {
+    const nextIndex = chunkIndexRef.current + 1;
+    if (nextIndex >= chunkQueueRef.current.length) return; // No more chunks
+    if (isPreloadingRef.current && preloadAudioRef.current) return; // Already preloading
+    
+    const nextUrl = chunkQueueRef.current[nextIndex];
+    if (!nextUrl) return;
+    
+    isPreloadingRef.current = true;
+    const preloadAudio = new Audio(nextUrl);
+    preloadAudio.preload = "auto";
+    
+    preloadAudio.oncanplaythrough = () => {
+      preloadAudioRef.current = preloadAudio;
+      isPreloadingRef.current = false;
+    };
+    
+    preloadAudio.onerror = () => {
+      isPreloadingRef.current = false;
+    };
+    
+    // Start loading
+    preloadAudio.load();
   }
 
   function playNextChunk(docId: string, title: string) {
@@ -503,10 +554,55 @@ export default function Dashboard() {
     const audio = new Audio(url);
     attachAudio(audio, docId, title, "chunks", chunkIndexRef.current, async () => {
       chunkIndexRef.current += 1;
-      // Refresh chunk list in case more are ready
+      
+      // Use preloaded audio if available
+      if (preloadAudioRef.current && preloadAudioRef.current.src === chunkQueueRef.current[chunkIndexRef.current]) {
+        // Use the preloaded audio - swap refs
+        const preloaded = preloadAudioRef.current;
+        preloadAudioRef.current = null;
+        
+        // Transfer the preloaded audio to audioRef
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        }
+        audioRef.current = preloaded;
+        
+        // Attach the onended handler to the preloaded audio
+        preloaded.onended = async () => {
+          chunkIndexRef.current += 1;
+          const { chunks } = await getAudioChunks(docId);
+          chunkQueueRef.current = chunks.map(c => c.url);
+          if (chunkQueueRef.current[chunkIndexRef.current]) {
+            preloadNextChunk(docId, title);
+            playNextChunk(docId, title);
+            return;
+          }
+          await waitForChunkAndContinue(docId, chunkIndexRef.current, title);
+        };
+        
+        // Update state for preloaded audio
+        setActiveChunk(chunkIndexRef.current);
+        setCurrentTime(0);
+        setIsAudioLoading(false);
+        setPlayingDocId(docId);
+        
+        preloaded.oncanplay = () => setIsAudioLoading(false);
+        preloaded.onplaying = () => { setPlayingDocId(docId); setIsAudioLoading(false); };
+        preloaded.onerror = () => { setPlayingDocId(null); setIsAudioLoading(false); };
+        
+        preloaded.play().catch(() => setPlayingDocId(null));
+        
+        // Preload the next one
+        preloadNextChunk(docId, title);
+        return;
+      }
+      
+      // No preloaded audio - normal path
       const { chunks } = await getAudioChunks(docId);
       chunkQueueRef.current = chunks.map(c => c.url);
       if (chunkQueueRef.current[chunkIndexRef.current]) {
+        preloadNextChunk(docId, title);
         playNextChunk(docId, title);
         return;
       }
