@@ -18,67 +18,107 @@ from services.supabase_storage import (
 
 
 class PodcastRequest(BaseModel):
-    topic: str | None = None  # Optional: specific section text to podcast about
+    topic: str | None = None          # Optional: specific topic/section to focus on
+    ezinne_voice: str = "chinenye"   # YarnGPT voice for Ezinne (female host)
+    abeo_voice: str = "jude"         # YarnGPT voice for Abeo (male host)
 
 from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/ai", tags=["ai"])
 USE_LOCAL = is_local_mode()
 
-# Max concurrent edge-tts calls — edge-tts is network I/O so parallelism helps a lot
+# ElevenLabs Flash is ~75ms/call — 5 concurrent is safe on free tier
 _TTS_CONCURRENCY = 5
 
 
 # Centered auth moved to services.auth_utils
 
 
-async def _podcast_pipeline(doc_id: str, user_id: str, text: str, mode: str = "standard"):
+async def _podcast_pipeline(
+    doc_id: str,
+    user_id: str,
+    text: str,
+    mode: str = "standard",
+    ezinne_voice: str = "chinenye",
+    abeo_voice: str = "jude",
+    topic: str | None = None,
+):
     """
-    True pipeline: Groq streams lines → each line is synthesized immediately.
-    As soon as line 0 audio is ready, signals first_ready so the HTTP response
-    can be sent — the rest continues here in the background.
+    Fast parallel pipeline:
+      1. Collect full script from Groq (~10-15s) — start line 0 TTS immediately
+      2. Synthesize all remaining lines in parallel (batch of 10)
+      3. Signal first_ready as soon as line 0 audio is saved
+      4. Full podcast ready in ~25s vs ~84s sequential
 
-    Returns (script, first_ready_event) so the endpoint can await the signal.
-    Pidgin mode uses YarnGPT (premium engine) when available, falls back to edge-tts.
+    Returns (script, first_ready_event, task).
     """
-    from services.tts import synthesize_chunk, get_tts_capabilities
+    from services.tts import synthesize_chunk, get_tts_capabilities, normalize_voice
     from services.local_storage import save_podcast_chunk, save_podcast_script, update_document
 
-    # Prefer YarnGPT premium Nigerian voices if the model is loaded/available
     caps = get_tts_capabilities()
     engine = "premium" if caps.get("premium_available") else "fast"
-    
-    if engine == "premium":
-        print(f"[Podcast] Using YarnGPT premium engine for {mode} mode")
-    else:
-        print(f"[Podcast] Using edge-tts fast engine for {mode} mode (Premium not available)")
+    tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else "edge-tts")
+    print(f"[Podcast] Using {tts_engine_name} ({engine}) for {mode} mode")
+    print(f"[Podcast] Voices — Ezinne: {ezinne_voice}, Abeo: {abeo_voice}")
+
+    lang = "pcm" if mode == "pidgin" else "en"
+
+    # Map speaker name → voice key
+    host_voices = {
+        "Ezinne": normalize_voice(ezinne_voice),
+        "Abeo": normalize_voice(abeo_voice),
+    }
 
     script: list[dict] = []
     first_ready = asyncio.Event()
 
-    async def _run():
-        idx = 0
-        async for line in stream_podcast_lines(text, mode=mode):
-            script.append(line)
+    async def _synth_line(idx: int, line: dict) -> None:
+        # Apply user-chosen host voice (overrides AI-generated default)
+        voice = host_voices.get(line["speaker"], line["voice"])
+        try:
             try:
-                try:
-                    audio = await synthesize_chunk(line["text"], line["voice"], engine)
-                except Exception as tts_err:
-                    print(f"[Podcast] Line {idx} premium TTS failed ({tts_err}), falling back to edge-tts")
-                    audio = await synthesize_chunk(line["text"], line["voice"], "fast")
-                save_podcast_chunk(user_id, doc_id, idx, audio, line["speaker"])
-                update_document(doc_id, {"podcast_ready": idx + 1})
-                # Save script incrementally so /chunks can return it while still generating
-                save_podcast_script(doc_id, list(script))
-            except Exception as e:
-                print(f"[Podcast] Line {idx} TTS failed: {e}")
-            finally:
-                if idx == 0:
-                    first_ready.set()  # Unblock the HTTP response
-                idx += 1
+                audio = await synthesize_chunk(line["text"], voice, engine, lang=lang)
+            except Exception as tts_err:
+                print(f"[Podcast] Line {idx} premium TTS failed ({tts_err}), falling back")
+                audio = await synthesize_chunk(line["text"], voice, "fast", lang=lang)
+            save_podcast_chunk(user_id, doc_id, idx, audio, line["speaker"])
+            update_document(doc_id, {"podcast_ready": idx + 1})
+            save_podcast_script(doc_id, list(script))
+        except Exception as e:
+            print(f"[Podcast] Line {idx} TTS failed: {e}")
+        finally:
+            if idx == 0:
+                first_ready.set()
+
+    async def _run():
+        # Step 1: collect script from Groq, start line 0 TTS immediately
+        line0_task = None
+        async for line in stream_podcast_lines(text, mode=mode, doc_id=doc_id, topic=topic):
+            script.append(line)
+            if len(script) == 1:
+                line0_task = asyncio.create_task(_synth_line(0, line))
+
+        if not script:
+            first_ready.set()
+            return
+
+        # Wait for line 0 to finish (it was running while Groq streamed the rest)
+        if line0_task:
+            await line0_task
+
+        # Step 2: synthesize lines 1+ in parallel batches
+        sem = asyncio.Semaphore(_TTS_CONCURRENCY)
+
+        async def _bounded(idx: int, line: dict):
+            async with sem:
+                await _synth_line(idx, line)
+
+        await asyncio.gather(*[
+            _bounded(i, line) for i, line in enumerate(script[1:], start=1)
+        ])
 
         update_document(doc_id, {"podcast_status": "ready", "podcast_total": len(script)})
         if not first_ready.is_set():
-            first_ready.set()  # Edge case: Ollama returned nothing
+            first_ready.set()
         print(f"[Podcast] Pipeline complete — {len(script)} lines for {doc_id}")
 
     task = asyncio.create_task(_run())
@@ -96,9 +136,12 @@ async def _podcast_pipeline_supabase(doc_id: str, user_id: str, text: str, mode:
     caps = get_tts_capabilities()
     engine = "premium" if caps.get("premium_available") else "fast"
     if engine == "premium":
-        print(f"[Podcast] Using YarnGPT premium engine for {mode} mode")
+        tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else "YarnGPT")
+        print(f"[Podcast] Using {tts_engine_name} premium engine for {mode} mode")
     else:
         print(f"[Podcast] Using edge-tts fast engine for {mode} mode (Premium not available)")
+
+    lang = "pcm" if mode == "pidgin" else "en"
 
     supabase = get_supabase_admin()
     script: list[dict] = []
@@ -110,10 +153,10 @@ async def _podcast_pipeline_supabase(doc_id: str, user_id: str, text: str, mode:
             script.append(line)
             try:
                 try:
-                    audio = await synthesize_chunk(line["text"], line["voice"], engine)
+                    audio = await synthesize_chunk(line["text"], line["voice"], engine, lang=lang)
                 except Exception as tts_err:
                     print(f"[Podcast] Line {idx} premium TTS failed ({tts_err}), falling back to edge-tts")
-                    audio = await synthesize_chunk(line["text"], line["voice"], "fast")
+                    audio = await synthesize_chunk(line["text"], line["voice"], "fast", lang=lang)
                 upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
                 supabase.table("documents").update({
                     "podcast_ready": idx + 1,
@@ -169,6 +212,9 @@ async def generate_podcast(
             .eq("id", doc_id).eq("user_id", user_id).single().execute()
         if not doc.data:
             raise HTTPException(status_code=404, detail="Document not found.")
+
+        topic_text = body.topic if body.topic and body.topic.strip() else None
+        force_regen = regenerate or bool(topic_text) or chapter is not None
 
         existing_script = doc.data.get("podcast_script") or []
         existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
@@ -295,7 +341,12 @@ async def generate_podcast(
     delete_keys(key_podcast_chunks(user_id, doc_id))
 
     # Start pipeline — script generation + TTS run concurrently
-    script_ref, first_ready, _task = await _podcast_pipeline(doc_id, user_id, text, mode=mode)
+    script_ref, first_ready, _task = await _podcast_pipeline(
+        doc_id, user_id, text, mode=mode,
+        ezinne_voice=body.ezinne_voice,
+        abeo_voice=body.abeo_voice,
+        topic=topic_text,
+    )
 
     # Wait only until the FIRST audio chunk is synthesized (~8-12s)
     try:

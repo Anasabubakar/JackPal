@@ -45,6 +45,28 @@ def seed_dev_user():
 
 
 @app.on_event("startup")
+def reset_stale_generating():
+    """Reset any docs stuck in 'generating'/'streaming' state from a previous run.
+    On restart, in-progress jobs are dead — set status based on actual chunks on disk.
+    """
+    if os.environ.get("SUPABASE_URL", "").startswith("https"):
+        return  # Supabase mode handles this differently
+    from services.local_storage import _documents, _audio_chunks, _podcast_chunks, _save_db
+    changed = False
+    for doc_id, doc in _documents.items():
+        if doc.get("status") in ("generating", "streaming"):
+            ready = doc.get("ready_chunks", 0)
+            doc["status"] = "audio_ready" if ready > 0 else "ready"
+            changed = True
+        if doc.get("podcast_status") == "generating":
+            doc["podcast_status"] = "ready" if doc.get("podcast_ready", 0) > 0 else None
+            changed = True
+    if changed:
+        _save_db()
+        print("[Startup] Reset stale generating statuses.")
+
+
+@app.on_event("startup")
 def prefetch_yarn_models():
     """Kick off WavTokenizer download in background so YarnGPT is ready ASAP."""
     from services.tts import start_background_download

@@ -148,7 +148,10 @@ def get_document_by_filename(user_id: str, filename: str) -> dict | None:
 
 def delete_document(doc_id: str, user_id: str) -> bool:
     doc = _documents.get(doc_id)
-    if not doc or doc["user_id"] != user_id:
+    if not doc:
+        return False
+    # In local dev mode, skip ownership check — user_ids may differ between sessions
+    if not _LOCAL_DEV and doc["user_id"] != user_id:
         return False
     try:
         Path(doc["storage_path"]).unlink(missing_ok=True)

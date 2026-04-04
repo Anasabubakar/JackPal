@@ -1,7 +1,9 @@
 import os
 import asyncio
+import threading
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
 from services.extractor import extract_text
+from services.content_filter import filter_document
 from services.cache import (
     delete_keys,
     get_json,
@@ -26,6 +28,17 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 
 # Centered auth moved to services.auth_utils
+
+
+def _index_document_background(doc_id: str, text: str):
+    """Kick off RAG indexing in a daemon thread — never blocks the upload response."""
+    def _worker():
+        try:
+            from services.rag import index_document
+            index_document(doc_id, text)
+        except Exception as e:
+            print(f"[Upload] RAG indexing failed for {doc_id}: {e}")
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 async def _auto_generate_audio(doc_id: str, user_id: str, text: str):
@@ -77,7 +90,12 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="File too large. Max 20MB.")
 
     try:
-        text = extract_text(file_bytes, file.filename)
+        filter_result = filter_document(file_bytes, file.filename)
+        text = filter_result.text
+        if filter_result.skipped:
+            print(f"[Upload] Filtered out {len(filter_result.skipped)} section(s): "
+                  f"{', '.join(filter_result.skipped[:5])}  "
+                  f"({filter_result.reduction_pct}% reduction)")
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Could not extract text: {str(e)}")
 
@@ -102,6 +120,8 @@ async def upload_document(
             }
         record = save_document(user_id, file.filename, file_bytes, text)
         delete_keys(key_doc_list(user_id), key_user_stats(user_id))
+        # Background: build semantic search index while user sees upload complete
+        _index_document_background(record["id"], text)
         return {
             "id": record["id"],
             "filename": record["filename"],
@@ -224,8 +244,10 @@ async def delete_document(doc_id: str, authorization: str = Header(...)):
 
     if USE_LOCAL:
         from services.local_storage import delete_document
+        from services.rag import clear_index
         if not delete_document(doc_id, user_id):
             raise HTTPException(status_code=404, detail="Document not found.")
+        clear_index(doc_id)
         delete_keys(
             key_doc_list(user_id),
             key_doc_text(user_id, doc_id),

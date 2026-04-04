@@ -4,13 +4,13 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-_TTS_CONCURRENCY = 5  # parallel edge-tts calls for chunk generation
+_TTS_CONCURRENCY = 5  # ElevenLabs Flash ~75ms/call — 5 concurrent is safe on free tier
 
-from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks, Request
+from fastapi import APIRouter, File, HTTPException, Header, Query, BackgroundTasks, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from typing import Optional
 from starlette.background import BackgroundTask
-from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
+from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, MISTRAL_API_KEY, get_tts_capabilities, normalize_engine, register_voice_clone, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
 from services.cache import (
     delete_keys,
     get_json,
@@ -24,6 +24,7 @@ from services.supabase_storage import (
     list_audio_chunks as list_audio_chunks_supabase,
     download_audio_chunk,
     delete_audio_chunks as delete_audio_chunks_supabase,
+    signed_url,
 )
 from services.supabase_activity import log_activity as log_activity_supabase
 
@@ -39,6 +40,44 @@ async def _tts_stream_generator(text: str, voice: str):
     """Pipe edge-tts bytes directly to client as they arrive. Zero disk I/O."""
     async for chunk in stream_edge(text, voice):
         yield chunk
+
+
+@router.post("/voice-clone")
+async def create_voice_clone(
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    voice_key: str = Query(..., description="Name for this clone, e.g. 'my_voice' or override 'doyinsola'"),
+    gender: str = Query("female", description="'male' or 'female'"),
+    file: UploadFile = File(..., description="2-25s audio sample (WAV or MP3)"),
+):
+    """
+    Register a Voxtral voice clone from a short audio sample.
+    Upload 2-25 seconds of a real Nigerian voice → get a custom TTS voice
+    that sounds like that person. Used automatically in premium podcast mode.
+    """
+    auth_header = authorization or (f"Bearer {token}" if token else None)
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing token.")
+    get_user_id(auth_header)  # validates token
+
+    if not MISTRAL_API_KEY:
+        raise HTTPException(status_code=501, detail="MISTRAL_API_KEY not configured — Voxtral unavailable.")
+
+    audio_bytes = await file.read()
+    if len(audio_bytes) < 1000:
+        raise HTTPException(status_code=422, detail="Audio sample too short (minimum ~2 seconds).")
+
+    try:
+        voice_id = await register_voice_clone(
+            voice_key=voice_key,
+            audio_bytes=audio_bytes,
+            gender=gender,
+            filename=file.filename or "sample.wav",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Voxtral clone failed: {e}")
+
+    return {"voice_key": voice_key, "voice_id": voice_id, "message": f"Clone '{voice_key}' registered — it will be used automatically in premium podcast mode."}
 
 
 @router.get("/capabilities")
@@ -78,9 +117,12 @@ async def stream_audio_direct(
         doc = get_document(doc_id, user_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
-        text = doc.get("extracted_text", "")
-        if not text:
+        raw_text = doc.get("extracted_text", "")
+        if not raw_text:
             raise HTTPException(status_code=422, detail="No text extracted.")
+
+        from services.rag import clean_text
+        text = clean_text(raw_text) or raw_text
 
         # If chunks already exist, redirect to chunk playlist (faster)
         existing_chunks = list_audio_chunks(doc_id, user_id)
@@ -115,9 +157,12 @@ async def stream_audio_direct(
         .eq("id", doc_id).eq("user_id", user_id).single().execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found.")
-    text = doc.data.get("extracted_text") or ""
-    if not text:
+    raw_text = doc.data.get("extracted_text") or ""
+    if not raw_text:
         raise HTTPException(status_code=422, detail="No text extracted.")
+
+    from services.rag import clean_text
+    text = clean_text(raw_text) or raw_text
 
     existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
     if existing_chunks and doc.data.get("audio_voice") == voice and doc.data.get("audio_engine", DEFAULT_ENGINE) == engine:
@@ -239,9 +284,14 @@ async def generate_audio(
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
 
-        text = doc.get("extracted_text", "")
-        if not text:
+        raw_text = doc.get("extracted_text", "")
+        if not raw_text:
             raise HTTPException(status_code=422, detail="Document has no extracted text.")
+
+        from services.rag import clean_text
+        text = clean_text(raw_text)
+        if not text.strip():
+            text = raw_text  # fallback if cleaner strips too much
 
         chunks = split_into_chunks(text)
         total_chunks = len(chunks)
@@ -288,16 +338,33 @@ async def generate_audio(
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    text = doc.data.get("extracted_text", "")
-    if not text:
+    raw_text = doc.data.get("extracted_text", "")
+    if not raw_text:
         raise HTTPException(status_code=422, detail="Document has no extracted text.")
+
+    from services.rag import clean_text
+    text = clean_text(raw_text) or raw_text
 
     chunks = split_into_chunks(text)
     total_chunks = len(chunks)
     if total_chunks == 0:
         raise HTTPException(status_code=422, detail="Document has no usable text.")
 
-    if doc.data.get("audio_voice") != voice or doc.data.get("audio_engine", DEFAULT_ENGINE) != engine:
+    same_voice = doc.data.get("audio_voice") == voice and doc.data.get("audio_engine", DEFAULT_ENGINE) == engine
+    existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk") if same_voice else []
+    if same_voice and existing_chunks:
+        ready = len(existing_chunks)
+        total = doc.data.get("total_chunks") or ready
+        return {
+            "status": doc.data.get("status") or "audio_ready",
+            "ready_chunks": ready,
+            "total_chunks": total,
+            "audio_voice": voice,
+            "audio_engine": engine,
+            "message": "Cached.",
+        }
+
+    if not same_voice:
         delete_audio_chunks_supabase(user_id, doc_id, "chunk")
 
     supabase.table("documents").update({
@@ -412,8 +479,6 @@ async def get_audio_chunks(
         raise HTTPException(status_code=404, detail="Document not found.")
 
     chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk")
-    api_token = auth_header.split(" ")[1]
-    base = str(request.base_url).rstrip("/")
     payload = {
         "status": doc.data.get("status") or "ready",
         "ready_chunks": doc.data.get("ready_chunks", len(chunks)),
@@ -423,7 +488,7 @@ async def get_audio_chunks(
         "chunks": [
             {
                 "index": c["chunk_index"],
-                "url": f"{base}/audio/{doc_id}/chunk/{c['chunk_index']}?token={api_token}",
+                "url": signed_url(c["storage_path"], expires_in=3600),
             }
             for c in chunks
         ],
