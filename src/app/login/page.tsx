@@ -53,8 +53,8 @@ function LoginForm() {
   return (
     <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
       {/* Back Button */}
-      <Link 
-        href="/" 
+      <Link
+        href="/"
         className="fixed top-6 left-6 z-50 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#02013D]/60 hover:text-[#2585C7] transition-colors group"
       >
         <div className="bg-white p-2 rounded-full shadow-lg border border-[#EFEFEF] group-hover:-translate-x-1 transition-transform">
@@ -68,14 +68,14 @@ function LoginForm() {
         {/* Background Patterns */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#2585C7]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#61E3F0]/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative z-10">
           <Link href="/" className="flex items-center gap-3 mb-10 group">
-            <Image 
-              src="/images/logo.svg" 
-              alt="JackPal Logo" 
-              width={40} 
-              height={40} 
+            <Image
+              src="/images/logo.svg"
+              alt="JackPal Logo"
+              width={40}
+              height={40}
               className="group-hover:rotate-12 transition-transform"
             />
             <span className="text-2xl font-black tracking-tighter uppercase italic">JackPal</span>
@@ -140,13 +140,13 @@ function LoginForm() {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="h-4 w-4 text-[#02013D]/30 group-focus-within:text-[#2585C7] transition-colors" />
                 </div>
-                <input 
+                <input
                   required
-                  type="email" 
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full bg-white border-2 border-[#EFEFEF] rounded-xl py-3.5 pl-11 pr-4 font-bold text-xs text-[#02013D] placeholder-[#02013D]/20 focus:outline-none focus:border-[#2585C7] transition-all"
-                  placeholder="winner@student.edu.ng" 
+                  placeholder="winner@student.edu.ng"
                 />
               </div>
             </div>
@@ -160,27 +160,27 @@ function LoginForm() {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-4 w-4 text-[#02013D]/30 group-focus-within:text-[#2585C7] transition-colors" />
                 </div>
-                <input 
+                <input
                   required
-                  type="password" 
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full bg-white border-2 border-[#EFEFEF] rounded-xl py-3.5 pl-11 pr-4 font-bold text-xs text-[#02013D] placeholder-[#02013D]/20 focus:outline-none focus:border-[#2585C7] transition-all"
-                  placeholder="••••••••" 
+                  placeholder="••••••••"
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-2.5 px-1">
-              <input 
-                id="remember" 
-                type="checkbox" 
-                className="w-3.5 h-3.5 rounded border-[#EFEFEF] text-[#2585C7] focus:ring-[#2585C7] cursor-pointer" 
+              <input
+                id="remember"
+                type="checkbox"
+                className="w-3.5 h-3.5 rounded border-[#EFEFEF] text-[#2585C7] focus:ring-[#2585C7] cursor-pointer"
               />
               <label htmlFor="remember" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#02013D]/60 cursor-pointer">Remember device</label>
             </div>
 
-            <button 
+            <button
               disabled={loading}
               className="w-full bg-[#02013D] text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#02013D]/10 hover:bg-[#2585C7] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:pointer-events-none"
             >
