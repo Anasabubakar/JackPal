@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 USE_LOCAL = not os.environ.get("SUPABASE_URL", "").startswith("https")
@@ -10,6 +10,18 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+
+    @validator("password")
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters.")
+        return v
+
+    @validator("full_name")
+    def name_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Full name cannot be empty.")
+        return v.strip()
 
 
 class LoginRequest(BaseModel):
