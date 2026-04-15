@@ -14,7 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signUpWithEmail, signInWithEmail, signInWithGoogle } from "@/lib/supabase-browser";
+import { signUpWithEmail, signInWithGoogle } from "@/lib/supabase-browser";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -184,7 +184,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full bg-white border-2 border-[#EFEFEF] rounded-xl py-3.5 pl-11 pr-4 font-bold text-xs text-[#02013D] placeholder-[#02013D]/20 focus:outline-none focus:border-[#2585C7] transition-all"
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                 />
               </div>
             </div>
