@@ -1,13 +1,24 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { saveSession } from "@/lib/api";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let _client: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function getClient(): SupabaseClient {
+  if (!_client) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) throw new Error("Supabase env vars are not set.");
+    _client = createClient(url, key);
+  }
+  return _client;
+}
+
+export function getSupabase() {
+  return getClient();
+}
 
 export async function signUpWithEmail(email: string, password: string, fullName: string) {
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await getClient().auth.signUp({
     email,
     password,
     options: { data: { full_name: fullName } },
@@ -17,7 +28,7 @@ export async function signUpWithEmail(email: string, password: string, fullName:
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await getClient().auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
   if (!data.session) throw new Error("Login failed — check your email to confirm your account.");
   saveSession(data.session.access_token, {
@@ -34,7 +45,7 @@ export async function signInWithGoogle() {
       ? `${window.location.origin}/auth/callback`
       : "/auth/callback";
 
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await getClient().auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
   });

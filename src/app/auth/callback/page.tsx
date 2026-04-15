@@ -2,14 +2,14 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase-browser";
+import { getSupabase } from "@/lib/supabase-browser";
 import { saveSession } from "@/lib/api";
 
 export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSupabase().auth.getSession().then(({ data: { session } }) => {
       if (session) {
         saveSession(session.access_token, {
           id: session.user.id,
