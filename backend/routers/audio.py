@@ -6,11 +6,11 @@ from pathlib import Path
 
 _TTS_CONCURRENCY = 5  # ElevenLabs Flash ~75ms/call — 5 concurrent is safe on free tier
 
-from fastapi import APIRouter, File, HTTPException, Header, Query, BackgroundTasks, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from typing import Optional
 from starlette.background import BackgroundTask
-from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, MISTRAL_API_KEY, get_tts_capabilities, normalize_engine, register_voice_clone, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
+from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
 from services.cache import (
     delete_keys,
     get_json,
@@ -41,43 +41,6 @@ async def _tts_stream_generator(text: str, voice: str):
     async for chunk in stream_edge(text, voice):
         yield chunk
 
-
-@router.post("/voice-clone")
-async def create_voice_clone(
-    authorization: Optional[str] = Header(None),
-    token: Optional[str] = Query(None),
-    voice_key: str = Query(..., description="Name for this clone, e.g. 'my_voice' or override 'doyinsola'"),
-    gender: str = Query("female", description="'male' or 'female'"),
-    file: UploadFile = File(..., description="2-25s audio sample (WAV or MP3)"),
-):
-    """
-    Register a Voxtral voice clone from a short audio sample.
-    Upload 2-25 seconds of a real Nigerian voice → get a custom TTS voice
-    that sounds like that person. Used automatically in premium podcast mode.
-    """
-    auth_header = authorization or (f"Bearer {token}" if token else None)
-    if not auth_header:
-        raise HTTPException(status_code=401, detail="Missing token.")
-    get_user_id(auth_header)  # validates token
-
-    if not MISTRAL_API_KEY:
-        raise HTTPException(status_code=501, detail="MISTRAL_API_KEY not configured — Voxtral unavailable.")
-
-    audio_bytes = await file.read()
-    if len(audio_bytes) < 1000:
-        raise HTTPException(status_code=422, detail="Audio sample too short (minimum ~2 seconds).")
-
-    try:
-        voice_id = await register_voice_clone(
-            voice_key=voice_key,
-            audio_bytes=audio_bytes,
-            gender=gender,
-            filename=file.filename or "sample.wav",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Voxtral clone failed: {e}")
-
-    return {"voice_key": voice_key, "voice_id": voice_id, "message": f"Clone '{voice_key}' registered — it will be used automatically in premium podcast mode."}
 
 
 @router.get("/capabilities")

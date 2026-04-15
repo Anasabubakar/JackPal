@@ -14,29 +14,45 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup, login } from "@/lib/api";
+import { signUpWithEmail, signInWithEmail, signInWithGoogle } from "@/lib/supabase-browser";
 
 export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true);
+    setError("");
+    try {
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed.");
+      setGoogleLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await signup(email, password, fullName);
-      // Auto-login after signup
-      await login(email, password);
-      router.push("/dashboard");
+      const data = await signUpWithEmail(email, password, fullName);
+      // If session exists, email confirmation is off — go straight to dashboard
+      if (data.session) {
+        router.push("/dashboard");
+      } else {
+        // Email confirmation required
+        router.push("/login?confirm=1");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Signup failed. Try again.");
       setLoading(false);
@@ -189,6 +205,26 @@ export default function SignupPage() {
               )}
             </button>
           </form>
+
+          <div className="relative flex items-center py-2">
+            <div className="flex-grow border-t border-[#EFEFEF]"></div>
+            <span className="flex-shrink mx-3 text-[9px] font-black uppercase tracking-[0.2em] text-[#02013D]/20">Or</span>
+            <div className="flex-grow border-t border-[#EFEFEF]"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleSignup}
+            disabled={googleLoading || loading}
+            className="w-full bg-white border-2 border-[#EFEFEF] text-[#02013D] py-3.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#F7F7F7] hover:border-[#02013D]/10 transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:pointer-events-none"
+          >
+            {googleLoading ? (
+              <div className="w-3.5 h-3.5 border-2 border-[#02013D]/20 border-t-[#02013D] rounded-full animate-spin" />
+            ) : (
+              <Image src="https://www.google.com/favicon.ico" alt="Google" width={14} height={14} unoptimized />
+            )}
+            {googleLoading ? "Redirecting..." : "Continue with Google"}
+          </button>
 
           <div className="text-center pt-4">
             <p className="text-[10px] font-bold text-[#02013D]/40 uppercase tracking-[0.2em]">
