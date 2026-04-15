@@ -14,8 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup, login } from "@/lib/api";
-import { signInWithGoogle } from "@/lib/supabase-browser";
+import { signUpWithEmail, signInWithEmail, signInWithGoogle } from "@/lib/supabase-browser";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -46,13 +45,12 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
     try {
-      await signup(email, password, fullName);
-      // Attempt auto-login — works in local mode and when Supabase email confirmation is disabled
-      try {
-        await login(email, password);
+      const data = await signUpWithEmail(email, password, fullName);
+      // If session exists, email confirmation is off — go straight to dashboard
+      if (data.session) {
         router.push("/dashboard");
-      } catch {
-        // Supabase requires email confirmation — redirect to login with a hint
+      } else {
+        // Email confirmation required
         router.push("/login?confirm=1");
       }
     } catch (err: unknown) {

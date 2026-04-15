@@ -13,8 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { login } from "@/lib/api";
-import { signInWithGoogle } from "@/lib/supabase-browser";
+import { signInWithEmail, signInWithGoogle } from "@/lib/supabase-browser";
 
 function LoginForm() {
   const router = useRouter();
@@ -43,7 +42,7 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
+      await signInWithEmail(email, password);
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
