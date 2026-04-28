@@ -1,6 +1,26 @@
 @import "tailwindcss";
 
 :root {
+  /* Studio dark palette */
+  --ink: #0B0B0F;
+  --surface: #111115;
+  --surface-2: #18181E;
+  --surface-3: #1E1E28;
+  --border: #1E1E28;
+  --border-dim: #141419;
+
+  /* Text */
+  --text-1: #F0F0F6;
+  --text-2: #8888A0;
+  --text-3: #44445A;
+
+  /* Accents */
+  --blue: #2585C7;
+  --blue-dim: rgba(37, 133, 199, 0.12);
+  --teal: #00C9A7;
+  --teal-dim: rgba(0, 201, 167, 0.12);
+
+  /* Legacy landing-page vars (keep for compatibility) */
   --background: #f7f7f7;
   --foreground: #02013D;
   --primary: #2585C7;
@@ -11,61 +31,101 @@
   --muted-foreground: #444444;
 }
 
-html {
-  scroll-behavior: smooth !important;
-}
+html { scroll-behavior: smooth !important; }
 
 body {
-  scroll-behavior: smooth;
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-syne), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   min-height: 100vh;
 }
 
+/* Landing page headings still get Fraunces */
 h1, h2, h3, h4 {
   font-family: var(--font-display), Georgia, serif;
   letter-spacing: -0.01em;
   font-weight: 700;
 }
 
+/* Dashboard overrides headings to Syne */
+.studio h1,
+.studio h2,
+.studio h3,
+.studio h4 {
+  font-family: var(--font-syne), -apple-system, sans-serif;
+}
+
+/* ── Animations ── */
 @keyframes wave {
-  0% { transform: scaleY(0.4); }
-  50% { transform: scaleY(1); }
-  100% { transform: scaleY(0.4); }
+  0%   { transform: scaleY(0.35); }
+  50%  { transform: scaleY(1); }
+  100% { transform: scaleY(0.35); }
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
+  0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
 
 @keyframes loading-bar {
-  0% { width: 0%; }
-  50% { width: 85%; }
+  0%   { width: 0%; }
+  50%  { width: 85%; }
   100% { width: 80%; }
 }
 
-.animate-shimmer {
-  animation: shimmer 2s infinite linear;
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-loading-bar {
-  animation: loading-bar 4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 133, 199, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(37, 133, 199, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 133, 199, 0); }
 }
 
-.animate-wave {
-  animation: wave 1.2s ease-in-out infinite;
+.animate-shimmer      { animation: shimmer 2s infinite linear; }
+.animate-loading-bar  { animation: loading-bar 4s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+.animate-wave         { animation: wave 1.2s ease-in-out infinite; }
+.animate-fade-up      { animation: fade-up 0.25s ease both; }
+.animate-pulse-ring   { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+
+.wave-delay-1 { animation-delay: 0.08s; }
+.wave-delay-2 { animation-delay: 0.16s; }
+.wave-delay-3 { animation-delay: 0.24s; }
+.wave-delay-4 { animation-delay: 0.32s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
 }
 
-.wave-delay-1 { animation-delay: 0.1s; }
-.wave-delay-2 { animation-delay: 0.2s; }
-.wave-delay-3 { animation-delay: 0.3s; }
-.wave-delay-4 { animation-delay: 0.4s; }
-
-.audio-card-shadow {
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
+
+.animate-float      { animation: float 3s ease-in-out infinite; }
+.animate-float-slow { animation: float 4.5s ease-in-out infinite; }
+.animate-blink      { animation: blink 1s step-end infinite; }
+
+.float-delay-1 { animation-delay: 0.6s; }
+.float-delay-2 { animation-delay: 1.2s; }
+
+/* ── Scrollbars ── */
+.studio-scroll::-webkit-scrollbar              { width: 4px; height: 4px; }
+.studio-scroll::-webkit-scrollbar-track        { background: transparent; }
+.studio-scroll::-webkit-scrollbar-thumb        { background: var(--surface-3); border-radius: 2px; }
+.studio-scroll::-webkit-scrollbar-thumb:hover  { background: var(--blue); }
+
+/* Legacy scrollbar */
+.custom-scrollbar::-webkit-scrollbar              { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track        { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb        { background: #EFEFEF; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover  { background: #2585C7; }
+
+/* ── Legacy layout helpers ── */
+.audio-card-shadow { box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15); }
 
 .section-container {
   max-width: 1200px;
@@ -74,13 +134,43 @@ h1, h2, h3, h4 {
   padding-right: 1.5rem;
 }
 
-/* Custom button styles for better visibility */
-.btn-primary {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-  transition: background-color 0.2s ease;
+.btn-primary { background-color: var(--primary); color: var(--primary-foreground); transition: background-color 0.2s ease; }
+.btn-primary:hover { background-color: var(--accent); }
+
+/* ── Studio range input ── */
+.studio-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+.studio-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.studio-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+  border: 2px solid var(--ink);
 }
 
-.btn-primary:hover {
-  background-color: var(--accent);
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
