@@ -1,93 +1,98 @@
-"use client";
-
-import { Reveal } from "./Reveal";
 import { featureCards } from "./data";
 
 export function FeatureGrid() {
   return (
-    <section
-      style={{
-        background: "var(--lp-surface)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "80px 0",
-      }}
-    >
-      <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <p
-            className="uppercase"
+    <section style={{ background: "#FFFFFF", padding: "96px 0" }}>
+      <div className="section-container">
+        {/* Badge */}
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <span
             style={{
-              fontFamily: "var(--font-syne)",
-              fontSize: "10px",
-              fontWeight: 700,
-              letterSpacing: "0.22em",
-              color: "var(--lp-amber)",
-              marginBottom: "16px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "5px 16px",
+              borderRadius: "999px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "rgba(0,0,0,0.04)",
             }}
           >
-            Real Action
-          </p>
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(2rem, 4.2vw, 3.2rem)",
-              fontWeight: 800,
-              lineHeight: "1.02",
-              letterSpacing: "-0.02em",
-              color: "var(--lp-text-1)",
-              maxWidth: "18ch",
-              marginBottom: "40px",
-            }}
-          >
-            Everything you need. Nothing you don't.
-          </h2>
-        </Reveal>
+            <span style={{ color: "#F5A623", fontSize: "12px" }}>★</span>
+            <span
+              style={{
+                fontFamily: "var(--font-syne)",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "#6B7280",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Real Action
+            </span>
+          </span>
+        </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {featureCards.map((feature, index) => (
-            <Reveal key={feature.title} delay={index * 0.05}>
-              <article
+        {/* Title */}
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(24px, 3vw, 36px)",
+            fontWeight: 700,
+            color: "#0A1628",
+            textAlign: "center",
+            marginBottom: "56px",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Everything you need. Nothing you don&apos;t.
+        </h2>
+
+        {/* Grid */}
+        <div className="lp-feature-grid" style={{ display: "grid" }}>
+          {featureCards.map((card, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E5E7EB",
+                borderRadius: "16px",
+                padding: "28px 24px",
+                transition: "box-shadow 0.2s, border-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "#D1D5DB";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "#E5E7EB";
+              }}
+            >
+              <div style={{ fontSize: "28px", marginBottom: "16px" }}>{card.icon}</div>
+              <h3
                 style={{
-                  border: "1px solid var(--lp-border)",
-                  borderRadius: "14px",
-                  background: "var(--lp-surface-2)",
-                  padding: "24px",
-                  height: "100%",
-                  transition: "border-color 0.2s ease, transform 0.2s ease",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212, 148, 10, 0.4)";
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--lp-border)";
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  fontFamily: "var(--font-display)",
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  color: "#0A1628",
+                  marginBottom: "10px",
+                  letterSpacing: "-0.01em",
                 }}
               >
-                <h3
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    lineHeight: "1.15",
-                    color: "var(--lp-text-1)",
-                    marginBottom: "12px",
-                  }}
-                >
-                  {feature.title}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    fontSize: "13px",
-                    lineHeight: "1.7",
-                    color: "var(--lp-text-2)",
-                  }}
-                >
-                  {feature.description}
-                </p>
-              </article>
-            </Reveal>
+                {card.title}
+              </h3>
+              <p
+                style={{
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "14px",
+                  color: "#6B7280",
+                  lineHeight: 1.7,
+                }}
+              >
+                {card.description}
+              </p>
+            </div>
           ))}
         </div>
       </div>

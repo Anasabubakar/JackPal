@@ -333,8 +333,7 @@ h1, h2, h3, h4 {
 
 .jp-hero-bg,
 .jp-dark-bg,
-.jp-feature-sketch,
-.jp-final-bg {
+.jp-feature-sketch {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1387,7 +1386,7 @@ h1, h2, h3, h4 {
 
 .jp-pricing {
   padding: 0 0 105px;
-  background: var(--jp-navy);
+  background: linear-gradient(180deg, var(--jp-navy) 0 61%, #fff 61% 100%);
 }
 
 .jp-pricing .jp-centered h2 {
@@ -1404,20 +1403,27 @@ h1, h2, h3, h4 {
 
 .jp-pricing-grid {
   position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, 426px);
+  grid-template-columns: repeat(2, minmax(280px, 426px));
   justify-content: center;
-  gap: 57px;
+  gap: clamp(24px, 5vw, 57px);
+  width: min(909px, calc(100% - 48px));
+  margin-inline: auto;
   margin-top: 80px;
 }
 
 .jp-price-card {
   position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 664px;
   padding: 40px 41px 47px;
   border: 1px solid #205dc4;
   border-radius: 40px;
   background: #0a173e;
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.22);
 }
 
 .jp-price-card h3 {
@@ -1448,6 +1454,10 @@ h1, h2, h3, h4 {
   margin: 0 0 29px;
 }
 
+.jp-price-card ul {
+  margin-bottom: 32px;
+}
+
 .jp-price-card li {
   gap: 11px;
   font-size: 16px;
@@ -1467,14 +1477,12 @@ h1, h2, h3, h4 {
 }
 
 .jp-price-card a {
-  position: absolute;
-  left: 41px;
-  right: 41px;
-  bottom: 47px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 60px;
+  margin-top: auto;
   border: 0.8px solid #2876f4;
   border-radius: 40px;
   color: #fff;
@@ -1489,18 +1497,19 @@ h1, h2, h3, h4 {
 
 .jp-ribbon {
   position: absolute;
-  top: -32px;
-  right: -30px;
-  width: 172px;
-  height: 27px;
-  transform: rotate(42deg);
+  top: 30px;
+  right: -50px;
+  width: 188px;
+  height: 30px;
+  transform: rotate(45deg);
   background: linear-gradient(90deg, #2d6bff, #26c4f6);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
 }
 
@@ -1611,15 +1620,32 @@ h1, h2, h3, h4 {
   overflow: hidden;
 }
 
+.jp-final-scene {
+  /* Figma: Group 2037 — full artboard background (canvas top is ~6998px; on web we anchor to section) */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1758px;
+  height: 1011px;
+  max-width: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .jp-final-bg {
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
-  object-position: center;
+  object-fit: cover;
+  object-position: left bottom;
 }
 
 .jp-final-shade {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background:
     linear-gradient(90deg, #01082a 0%, #01082a 40%, rgba(1, 8, 42, 0) 70%),
     linear-gradient(0deg, #000a28 0%, rgba(0, 10, 40, 0) 45%);
@@ -1627,11 +1653,17 @@ h1, h2, h3, h4 {
 
 .jp-final-grid {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
-  grid-template-columns: 420px 1fr;
-  align-items: center;
-  gap: 140px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(40px, 8vw, 100px);
+}
+
+.jp-final-copy {
+  min-width: 0;
+  max-width: 36rem;
+  justify-self: start;
 }
 
 .jp-final h2 {
@@ -1651,21 +1683,44 @@ h1, h2, h3, h4 {
 
 .jp-final small {
   display: block;
-  margin-top: 86px;
-  color: #1d397b;
+  margin-top: clamp(40px, 8vw, 86px);
+  color: rgba(255, 255, 255, 0.42);
   font-size: 11px;
   line-height: 30px;
 }
 
-.jp-final-logo {
-  display: flex;
-  justify-content: center;
-  filter: drop-shadow(0 0 60px rgba(0, 149, 255, 0.95));
+.jp-final .jp-button-ghost {
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
-.jp-final-logo img {
-  width: 226px;
+.jp-final-rail {
+  min-width: 0;
+  min-height: 1px;
+}
+
+.jp-final-logo-mark {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(14.5%, 240px);
+  filter: drop-shadow(0 0 48px rgba(0, 149, 255, 0.85));
+}
+
+.jp-final-logo-mark img {
+  width: 100%;
   height: auto;
+}
+
+@media (max-width: 1758px) {
+  .jp-final-scene {
+    width: 100%;
+    height: calc(100vw * 1011 / 1758);
+    max-height: 1011px;
+  }
 }
 
 .jp-footer {
@@ -1796,23 +1851,33 @@ h1, h2, h3, h4 {
   .jp-step-grid,
   .jp-feature-grid,
   .jp-testimonials,
-  .jp-pricing-grid,
   .jp-footer-grid {
     grid-template-columns: 1fr;
-  }
-
-  .jp-pricing-grid {
-    width: min(426px, calc(100% - 48px));
-    margin-inline: auto;
   }
 
   .jp-voice-copy {
     padding-top: 0;
   }
 
-  .jp-orb,
-  .jp-final-logo {
+  .jp-orb {
     justify-self: center;
+  }
+
+  .jp-final-rail {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .jp-pricing {
+    background: linear-gradient(180deg, var(--jp-navy) 0 47%, #fff 47% 100%);
+  }
+
+  .jp-pricing-grid {
+    grid-template-columns: 1fr;
+    width: min(426px, calc(100% - 32px));
+    gap: 32px;
+    margin-top: 56px;
   }
 }
 

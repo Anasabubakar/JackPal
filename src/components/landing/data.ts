@@ -1,26 +1,23 @@
-﻿export const navLinks = [
+export const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
-  { href: "#voices", label: "Voices" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQs" },
+  { href: "#pricing",      label: "Pricing" },
+  { href: "#voices",       label: "Voices" },
+  { href: "#faq",          label: "Help" },
 ];
 
 export const testimonials = [
   {
-    quote:
-      "I didn't think I'd retain anything listening to it but I remembered more from a 20 minutes walk than from an hour reading.",
+    quote: "I didn't think I'd retain anything listening to it but I remembered more from a 20 minutes walk than from an hour reading.",
     name: "Favour A.",
     meta: "300L · Mass Communication",
   },
   {
-    quote:
-      "NotebookLM is fine but the accent is completely foreign. This one actually sounds like someone explaining it to me.",
+    quote: "NotebookLM is fine but the accent is completely foreign. This one actually sounds like someone explaining it to me.",
     name: "Tolu M.",
     meta: "200L · Computer Science",
   },
   {
-    quote:
-      "If this was available during my exams, my life would have looked different.",
+    quote: "If this was available during my exams, my life would have looked different.",
     name: "Chiamaka O.",
     meta: "Final Year · Pharmacy",
   },
@@ -28,82 +25,79 @@ export const testimonials = [
 
 export const realityStats = [
   { value: "67%", text: "of Nigerian undergrads commute over 1 hour daily" },
-  { value: "3x", text: "faster retention with audio vs passive reading" },
-  { value: "?0", text: "tools built specifically for this context until now" },
+  { value: "3x",  text: "faster retention with audio vs passive reading" },
+  { value: "No",  text: "tools built specifically for this context — until now" },
 ];
 
 export const steps = [
   {
     id: "01",
     title: "Upload Anything",
-    description:
-      "Drop a PDF, paste a link, or type your notes directly. Jackpals handles the rest and no formatting is needed.",
+    description: "Drop a PDF, paste a link, or type your notes directly. Jackpals handles the rest — no formatting needed.",
   },
   {
     id: "02",
     title: "Choose Your Voice",
-    description:
-      "Pick from Adaora, Zainab, Nonso, or Jude. Nigerian AI voices that sound natural, warm, and familiar.",
+    description: "Pick from Adaora, Zainab, Nonso, or Jude. Nigerian AI voices that sound natural, warm, and familiar.",
   },
   {
     id: "03",
     title: "Listen Anywhere",
-    description:
-      "On the bus, at the market, before bed. Offline support means your studies never depend on your data.",
+    description: "On the bus, at the market, before bed. Offline support means your studies never depend on your data.",
   },
 ];
 
 export const voiceBullets = [
-  "Trained on authentic Nigerian speech patterns and not generic TTS engines",
-  "Speed control from 0.75x to 2.5x so you can learn at the pace your brain works best",
+  "Trained on authentic Nigerian speech patterns — not generic TTS engines",
+  "Speed control from 0.75x to 2.5x — hear it at the pace your brain works best",
   "Handles technical jargon, equations, and complex academic language",
   "More voices and regional accents coming with every release",
 ];
 
 export const featureCards = [
   {
+    icon: "🎙️",
     title: "Nigerian Voices",
-    description:
-      "Four distinct AI voices with authentic Nigerian accents. Adaora, Zainab, Nonso, and Jude are familiar, warm, and built for extended listening.",
+    description: "Four distinct AI voices with authentic Nigerian accents. Adaora, Zainab, Nonso, and Jude — familiar, warm, and built for extended listening.",
   },
   {
+    icon: "📄",
     title: "Upload Anything",
-    description:
-      "PDFs, Word docs, links, plain text, lecture slides. Paste it or upload it and Jackpals converts it to audio. No formatting required.",
+    description: "PDFs, Word docs, links, plain text, lecture slides. Paste it or upload it and Jackpals converts it to audio. No formatting required.",
   },
   {
+    icon: "📶",
     title: "Offline Access",
-    description:
-      "Downloads are optimized for low storage and slow connections. Once it is on your device, listen anywhere with no data.",
+    description: "Downloads are optimised for low storage and slow connections. Once it's on your device, listen anywhere — no data needed.",
   },
   {
+    icon: "🎓",
     title: "Private Seminar",
-    description:
-      "Studying a hard topic? Switch to Private Seminar mode. Jackpals reads, pauses, and explains concepts the way a patient tutor would.",
+    description: "Studying a hard topic? Switch to Private Seminar mode. Jackpals reads, pauses, and explains concepts the way a patient tutor would.",
   },
   {
+    icon: "📷",
     title: "Vision Scan",
-    description:
-      "Point your camera at a handwritten note, textbook page, or whiteboard. Jackpals reads it out loud in under 3 seconds.",
+    description: "Point your camera at a handwritten note, textbook page, or whiteboard. Jackpals reads it out loud in under 3 seconds.",
   },
   {
+    icon: "⚡",
     title: "Study Faster",
-    description:
-      "Speed controls, bookmarks, and chapter skipping let you move through material at 2x speed once you have found your rhythm.",
+    description: "Speed controls, bookmarks, and chapter skipping let you move through material at 2x speed once you've found your rhythm.",
   },
 ];
 
 export const conditionBullets = [
-  "Encrypted local storage and your notes never leave your device without permission",
-  "Optimized for budget Android and runs smoothly on 2GB RAM devices",
-  "Background downloads let you queue your lectures while you sleep",
-  "Web app availability with no app store required",
+  "Encrypted local storage — your notes never leave your device without permission",
+  "Optimised for budget Android — runs smoothly on 2GB RAM devices",
+  "Background downloads — queue your lectures and download while you sleep",
+  "Web app availability — no app store required, works in any browser",
 ];
 
 export const freePlan = {
-  name: "Free Plan",
-  price: "?0",
-  meta: "Forever free, no card needed",
+  name: "FREE PLAN",
+  price: "₦0",
+  meta: "Forever free. No card needed.",
   includes: [
     "5 documents per month",
     "Up to 10 pages per document",
@@ -120,8 +114,8 @@ export const freePlan = {
 };
 
 export const proPlan = {
-  name: "Pro Plan",
-  price: "?1,000",
+  name: "PRO PLAN",
+  price: "₦1,000",
   meta: "Per month · Cancel anytime",
   badge: "MOST POPULAR",
   includes: [
@@ -130,7 +124,7 @@ export const proPlan = {
     "All 4 Nigerian voices",
     "Offline downloads",
     "Speed control up to 2.5x",
-    "Background audio and lockscreen player",
+    "Background audio & lockscreen player",
     "Private Seminar mode when live",
     "Priority access to new features",
   ],
@@ -140,27 +134,22 @@ export const proPlan = {
 export const faqs = [
   {
     question: "What exactly is Jackpals?",
-    answer:
-      "Jackpals is an AI study audio platform that turns documents, notes, PDFs, links, and eventually scanned pages into listenable audio using Nigerian voices.",
+    answer: "Jackpals is an AI study audio platform that turns documents, notes, PDFs, links, and eventually scanned pages into listenable audio using Nigerian voices.",
   },
   {
     question: "Why Nigerian voice specifically?",
-    answer:
-      "Because familiarity affects focus. When a voice sounds close to home, students are more likely to stay engaged, especially during long listening sessions.",
+    answer: "Because familiarity affects focus. When a voice sounds close to home, students are more likely to stay engaged — especially during long listening sessions.",
   },
   {
     question: "Does it work offline?",
-    answer:
-      "Offline listening is planned for launch. The goal is to let students download study audio once and replay it anywhere without burning data.",
+    answer: "Offline listening is planned for launch. The goal is to let students download study audio once and replay it anywhere without burning data.",
   },
   {
-    question: "What file type does Jackpals support?",
-    answer:
-      "The first version supports PDFs, plain text, typed notes, and links. Support for Word documents, slides, and camera scans can be added as the product expands.",
+    question: "What file types does Jackpals support?",
+    answer: "The first version supports PDFs, plain text, typed notes, and links. Support for Word documents, slides, and camera scans will be added as the product expands.",
   },
   {
     question: "When is Jackpals launching?",
     answer: "Jackpals is planned for Q2 2026. Students can join the waitlist now for early access.",
   },
 ];
-

@@ -1,144 +1,134 @@
-import { ShieldCheck } from "lucide-react";
-import { Reveal } from "./Reveal";
+import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 import { conditionBullets } from "./data";
 
 export function ConditionsSection() {
   return (
-    <section
-      style={{
-        background: "var(--lp-surface)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "80px 0",
-      }}
-    >
-      <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <article
-            className="p-6 sm:p-10"
-            style={{
-              overflow: "hidden",
-              borderRadius: "20px",
-              border: "1px solid var(--lp-border)",
-              background: "var(--lp-surface-2)",
-              position: "relative",
-            }}
-          >
-            {/* Amber accent line at top */}
-            <div
-              className="pointer-events-none absolute top-0 left-0 right-0 h-[2px]"
-              style={{ background: "var(--lp-amber)", opacity: 0.5 }}
-              aria-hidden
-            />
-
-            <div className="relative grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-              <div>
-                <p
-                  className="uppercase"
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    letterSpacing: "0.22em",
-                    color: "var(--lp-amber)",
-                    marginBottom: "16px",
-                  }}
-                >
-                  Privacy & Performance
-                </p>
-                <h2
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "clamp(1.8rem, 4vw, 3rem)",
-                    fontWeight: 800,
-                    lineHeight: "1.02",
-                    letterSpacing: "-0.02em",
-                    color: "var(--lp-text-1)",
-                    maxWidth: "22ch",
-                    marginBottom: "16px",
-                  }}
-                >
-                  Built for real-world{" "}
-                  <em style={{ fontStyle: "italic", color: "var(--lp-amber)" }}>Nigerian conditions.</em>
-                </h2>
-                <p
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    fontSize: "14px",
-                    lineHeight: "1.75",
-                    color: "var(--lp-text-2)",
-                    maxWidth: "60ch",
-                    marginBottom: "24px",
-                  }}
-                >
-                  JackPal does not assume you have fast WiFi, unlimited data, or a 2024 flagship phone. It is engineered for the actual constraints of student life.
-                </p>
-
-                <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {conditionBullets.map((item) => (
-                    <li
-                      key={item}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "12px",
-                      }}
-                    >
-                      <ShieldCheck
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          flexShrink: 0,
-                          marginTop: "1px",
-                          color: "var(--lp-amber)",
-                        }}
-                        strokeWidth={1.75}
-                      />
-                      <span
-                        style={{
-                          fontFamily: "var(--font-syne)",
-                          fontSize: "13px",
-                          lineHeight: "1.6",
-                          color: "var(--lp-text-2)",
-                        }}
-                      >
-                        {item}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Editorial waveform decoration */}
-              <div
-                className="relative hidden items-center justify-center lg:flex"
-                style={{ height: "220px" }}
-                aria-hidden
+    <section style={{ background: "#060C22", padding: "96px 0" }}>
+      <div className="section-container">
+        <div className="lp-two-col" style={{ display: "grid" }}>
+          {/* Left — copy */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            {/* Badge */}
+            <div style={{ marginBottom: "24px" }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "5px 16px",
+                  borderRadius: "999px",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.06)",
+                }}
               >
-                <div
+                <span style={{ color: "#F5A623", fontSize: "12px" }}>★</span>
+                <span
                   style={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    gap: "4px",
-                    opacity: 0.2,
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.6)",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
                   }}
                 >
-                  {[20, 34, 52, 40, 28, 44, 60, 36, 22, 48, 64, 32, 20, 38, 56, 30, 22, 44, 68, 38, 24, 50, 58, 34].map((h, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        width: "5px",
-                        height: `${h}px`,
-                        borderRadius: "3px",
-                        background: "var(--lp-amber)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
+                  Privacy &amp; Performance
+                </span>
+              </span>
             </div>
-          </article>
-        </Reveal>
+
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(26px, 3.5vw, 40px)",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                lineHeight: 1.2,
+                letterSpacing: "-0.025em",
+                marginBottom: "36px",
+              }}
+            >
+              Built for real-world{" "}
+              <span style={{ color: "#1B6EF3" }}>Nigerian conditions.</span>
+            </h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {conditionBullets.map((bullet, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                  <CheckCircle2
+                    size={20}
+                    color="#1B6EF3"
+                    strokeWidth={2}
+                    style={{ flexShrink: 0, marginTop: "2px" }}
+                  />
+                  <p style={{ fontFamily: "var(--font-syne)", fontSize: "15px", color: "#8B9BB4", lineHeight: 1.65 }}>
+                    {bullet}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: "40px" }}>
+              <a
+                href="#pricing"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  height: "50px",
+                  padding: "0 28px",
+                  borderRadius: "10px",
+                  background: "rgba(27,110,243,0.15)",
+                  border: "1px solid rgba(27,110,243,0.3)",
+                  color: "#6BAAFF",
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(27,110,243,0.25)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(27,110,243,0.15)")}
+              >
+                Try It Free →
+              </a>
+            </div>
+          </div>
+
+          {/* Right — image */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                maxWidth: "380px",
+                aspectRatio: "1",
+                borderRadius: "24px",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {/* Glow */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "radial-gradient(circle at center, rgba(27,110,243,0.2) 0%, transparent 70%)",
+                  borderRadius: "24px",
+                }}
+              />
+              <Image
+                src="/images/,.m., 1.png"
+                alt="Built for Nigerian conditions"
+                width={400}
+                height={400}
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "24px" }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

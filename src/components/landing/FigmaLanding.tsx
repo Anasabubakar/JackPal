@@ -630,10 +630,24 @@ function ReferralAndFaq() {
 function FinalCta() {
   return (
     <section className="jp-final" id="final-cta">
-      <img className="jp-final-bg" src="/images/,.m., 1.png" alt="" aria-hidden="true" />
+      <div className="jp-final-scene">
+        <img
+          className="jp-final-bg"
+          src="/images/,.m., 1.png"
+          alt=""
+          width={1758}
+          height={1011}
+          decoding="async"
+          draggable={false}
+          aria-hidden="true"
+        />
+        <div className="jp-final-logo-mark">
+          <Image src="/images/Jackpals Logo 2 1(1).png" alt="Jackpals" width={226} height={164} />
+        </div>
+      </div>
       <div className="jp-final-shade" />
       <div className="jp-container jp-final-grid">
-        <div>
+        <div className="jp-final-copy">
           <h2>Your next exam deserves better than <span>all-night reading sessions.</span></h2>
           <p>Join thousands of Nigerian students already on the waitlist.</p>
           <div className="jp-actions">
@@ -642,9 +656,7 @@ function FinalCta() {
           </div>
           <small>Launching Q2 2026 · ₦1,000/month after launch · No credit card required</small>
         </div>
-        <div className="jp-final-logo">
-          <Image src="/images/Jackpals Logo 2 1(1).png" alt="Jackpals" width={226} height={164} />
-        </div>
+        <div className="jp-final-rail" />
       </div>
     </section>
   );
