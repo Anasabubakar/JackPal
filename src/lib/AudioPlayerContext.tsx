@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
 
 interface AudioPlayerContextType {
