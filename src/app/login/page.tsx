@@ -224,10 +224,7 @@ function LoginForm() {
             {googleLoading ? "Redirecting..." : "Continue with Google"}
           </button>
 
-          <div className="text-center pt-4 space-y-2">
-            <p className="text-[10px] font-bold text-[#02013D]/40 uppercase tracking-[0.2em]">
-              New to JackPal? <Link href="/signup" className="text-[#2585C7] font-black hover:underline">Create Account</Link>
-            </p>
+          <div className="text-center pt-4">
             <p className="text-[10px] font-bold text-[#02013D]/40 uppercase tracking-[0.2em]">
               <Link href="/forgot-password" className="text-[#02013D]/40 hover:text-[#2585C7] font-black hover:underline">Forgot password?</Link>
             </p>
