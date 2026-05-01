@@ -215,32 +215,21 @@ function PremiumProgress({
   progress: number;
   label: string;
 }) {
-  const gradientId = `jp-progress-gradient-${label.toLowerCase().replace(/\s+/g, "-")}`;
-
   return (
-    <div className="jp-audio-progress">
-      <div className="jp-audio-wave-rail">
-        <svg viewBox="0 0 520 48" aria-hidden="true" preserveAspectRatio="none">
-          <path d={progressPath} pathLength={100} />
-        </svg>
-        <div className="jp-audio-wave-fill" style={{ width: `${progress}%` }}>
-          <svg viewBox="0 0 520 48" aria-hidden="true" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="#2d6bff" />
-                <stop offset="38%" stopColor="#0095ff" />
-                <stop offset="72%" stopColor="#24d4f5" />
-                <stop offset="100%" stopColor="#9dfbff" />
-              </linearGradient>
-            </defs>
-            <path d={progressPath} pathLength={100} stroke={`url(#${gradientId})`} />
-          </svg>
-        </div>
-        <span className="jp-audio-wave-thumb" style={{ left: `${progress}%` }} />
+    <div className="jp-progress-container">
+      <div className="jp-progress-meta">
+        <span className="font-medium">{label}</span>
+        <span className="font-bold">{Math.round(progress)}%</span>
       </div>
-      <div className="jp-audio-progress-meta">
-        <span>{label}</span>
-        <span>{Math.round(progress)}%</span>
+      <div className="jp-progress-bar">
+        <div className="jp-progress-track" />
+        <div className="jp-progress-fill" style={{ width: `${progress}%` }}>
+          <div className="jp-progress-glow" />
+        </div>
+        <div className="jp-progress-handle" style={{ left: `${progress}%` }}>
+          <div className="handle-inner" />
+          <div className="handle-ripple" />
+        </div>
       </div>
     </div>
   );

@@ -519,85 +519,93 @@ h1, h2, h3, h4 {
   font-weight: 500;
 }
 
-.jp-audio-progress {
-  margin: 28px 0 22px;
+/* ── Redesigned Progress Bar ── */
+.jp-progress-container {
+  margin: 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.jp-audio-wave-rail {
+.jp-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.02em;
+}
+
+.jp-progress-bar {
   position: relative;
-  height: 48px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 18% 50%, rgba(0, 149, 255, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.01)),
-    rgba(4, 19, 63, 0.72);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -18px 32px rgba(0, 0, 0, 0.18),
-    0 18px 34px rgba(0, 0, 0, 0.22);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.jp-audio-wave-rail::before,
-.jp-audio-wave-rail::after {
-  content: "";
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 50%;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(45, 107, 255, 0.1), rgba(157, 251, 255, 0.22), rgba(45, 107, 255, 0.1));
-  transform: translateY(-50%);
-}
-
-.jp-audio-wave-rail::after {
-  height: 26px;
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 18px);
-  opacity: 0.16;
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-}
-
-.jp-audio-wave-rail svg {
+.jp-progress-track {
   position: absolute;
   inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.08));
+}
+
+.jp-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+}
+
+.jp-progress-glow {
+  position: absolute;
+  right: 0;
+  top: -4px;
+  width: 20px;
+  height: 16px;
+  background: white;
+  filter: blur(8px);
+  opacity: 0.6;
+}
+
+.jp-progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.handle-inner {
   width: 100%;
   height: 100%;
-  overflow: visible;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
 }
 
-.jp-audio-wave-rail path {
-  fill: none;
-  stroke: rgba(175, 194, 230, 0.26);
-  stroke-width: 4.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.jp-audio-wave-fill {
+.handle-ripple {
   position: absolute;
-  inset: 0 auto 0 0;
-  display: block;
-  overflow: hidden;
-  border-radius: inherit;
-  filter:
-    drop-shadow(0 0 6px rgba(36, 212, 245, 0.58))
-    drop-shadow(0 0 18px rgba(0, 149, 255, 0.32));
-  transition: width 540ms cubic-bezier(0.16, 1, 0.3, 1);
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: ripple-anim 2s infinite ease-out;
 }
 
-.jp-audio-wave-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 90px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 2.4s linear infinite;
-}
-
-.jp-audio-wave-fill path {
-  stroke-width: 5.25;
+@keyframes ripple-anim {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
 .jp-audio-wave-thumb {
