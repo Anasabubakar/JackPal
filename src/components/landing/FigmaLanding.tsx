@@ -4,11 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { AudioProgress } from "@/components/AudioProgress";
 import {
+  ArrowRight,
   Camera,
   Check,
   ChevronDown,
   FileAudio,
   FolderOpen,
+  Github,
+  Globe,
+  Linkedin,
   Medal,
   MessageSquareText,
   Mic2,
@@ -16,12 +20,15 @@ import {
   Play,
   SkipBack,
   SkipForward,
+  Twitter,
   X,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
+import { SOCIAL_LINKS } from "@/lib/socialLinks";
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -191,11 +198,20 @@ function CtaButton({
   children,
   href = "#pricing",
   variant = "primary",
+  openWaitlist,
 }: {
   children: React.ReactNode;
   href?: string;
   variant?: "primary" | "ghost" | "dark";
+  openWaitlist?: () => void;
 }) {
+  if (openWaitlist) {
+    return (
+      <button type="button" className={`jp-button jp-button-${variant}`} onClick={openWaitlist}>
+        <span>{children}</span>
+      </button>
+    );
+  }
   return (
     <a className={`jp-button jp-button-${variant}`} href={href}>
       <span>{children}</span>
@@ -303,7 +319,7 @@ function AudioCard({ large = false }: { large?: boolean }) {
   );
 }
 
-function Navbar() {
+function Navbar({ openWaitlist }: { openWaitlist: () => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -321,7 +337,9 @@ function Navbar() {
         </nav>
         <div className="jp-nav-actions">
           <Link href="/login">Login</Link>
-          <a href="#pricing">Join The Waitlist</a>
+          <button type="button" className="jp-nav-cta" onClick={openWaitlist}>
+            Join The Waitlist
+          </button>
         </div>
         <button className="jp-menu" type="button" onClick={() => setOpen((value) => !value)} aria-label="Toggle navigation">
           {open ? <X /> : <ChevronDown />}
@@ -334,14 +352,26 @@ function Navbar() {
               {item.label}
             </a>
           ))}
-          <Link href="/login">Login</Link>
+          <Link href="/login" onClick={() => setOpen(false)}>
+            Login
+          </Link>
+          <button
+            type="button"
+            className="jp-mobile-waitlist"
+            onClick={() => {
+              setOpen(false);
+              openWaitlist();
+            }}
+          >
+            Join The Waitlist
+          </button>
         </div>
       )}
     </header>
   );
 }
 
-function Hero() {
+function Hero({ openWaitlist }: { openWaitlist: () => void }) {
   return (
     <section className="jp-hero">
       <img className="jp-hero-bg" src="/images/Whisk_c70ae977c0feb5492014aa58127a071fdr 1.png" alt="" aria-hidden="true" />
@@ -361,7 +391,7 @@ function Hero() {
             Study on a commute, between classes, or anywhere your life takes you — without staring at a screen.
           </p>
           <div className="jp-actions">
-            <CtaButton>Join the Waitlist</CtaButton>
+            <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
             <CtaButton href="#how-it-works" variant="ghost">
               See How It Works
             </CtaButton>
@@ -539,7 +569,7 @@ function Conditions() {
   );
 }
 
-function Pricing() {
+function Pricing({ openWaitlist }: { openWaitlist: () => void }) {
   return (
     <section className="jp-pricing" id="pricing">
       <div className="jp-centered">
@@ -561,7 +591,9 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <a href="#final-cta">Join Free Waitlist</a>
+          <button type="button" className="jp-price-card-cta" onClick={openWaitlist}>
+            Join Free Waitlist
+          </button>
         </article>
 
         <article className="jp-price-card featured">
@@ -578,22 +610,26 @@ function Pricing() {
               </li>
             ))}
           </ul>
-          <a href="#final-cta">Get Early Access</a>
+          <button type="button" className="jp-price-card-cta" onClick={openWaitlist}>
+            Get Early Access
+          </button>
         </article>
       </div>
     </section>
   );
 }
 
-function ReferralAndFaq() {
+function ReferralAndFaq({ openWaitlist }: { openWaitlist: () => void }) {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
     <section className="jp-faq-band" id="faq">
       <div className="jp-referral">
         <div className="jp-referral-actions">
-          <CtaButton href="#final-cta" variant="dark">Spread the word</CtaButton>
-          <CtaButton href="#final-cta">Share Jackpals</CtaButton>
+          <CtaButton openWaitlist={openWaitlist} variant="dark">
+            Spread the word
+          </CtaButton>
+          <CtaButton openWaitlist={openWaitlist}>Share Jackpals</CtaButton>
         </div>
         <h2>Know a student who needs this?</h2>
         <p>
@@ -627,24 +663,40 @@ function ReferralAndFaq() {
   );
 }
 
-function FinalCta() {
+function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
   return (
     <section className="jp-final" id="final-cta">
-      <img className="jp-final-bg" src="/images/,.m., 1.png" alt="" aria-hidden="true" />
+      <div className="jp-final-scene" aria-hidden="true">
+        <img
+          className="jp-final-bg"
+          src="/images/Group%202042.png"
+          alt=""
+          width={1758}
+          height={1011}
+          decoding="async"
+          draggable={false}
+        />
+      </div>
       <div className="jp-final-shade" />
       <div className="jp-container jp-final-grid">
-        <div>
-          <h2>Your next exam deserves better than <span>all-night reading sessions.</span></h2>
-          <p>Join thousands of Nigerian students already on the waitlist.</p>
-          <div className="jp-actions">
-            <CtaButton>Join the Waitlist</CtaButton>
-            <CtaButton href="#how-it-works" variant="ghost">Learn More</CtaButton>
+        <div className="jp-final-copy">
+          <h2 className="jp-final-headline">
+            <span className="jp-final-line">Your next exam</span>
+            <span className="jp-final-line">deserves better than</span>
+            <span className="jp-final-line jp-final-accent">all-night reading</span>
+            <span className="jp-final-line jp-final-accent">sessions.</span>
+          </h2>
+          <p className="jp-final-lead">Join thousands of Nigerian students already on the waitlist.</p>
+          <div className="jp-actions jp-final-actions">
+            <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
+            <CtaButton href="#how-it-works" variant="ghost">
+              Learn More
+              <ArrowRight size={18} strokeWidth={2} className="jp-final-cta-arrow" aria-hidden />
+            </CtaButton>
           </div>
           <small>Launching Q2 2026 · ₦1,000/month after launch · No credit card required</small>
         </div>
-        <div className="jp-final-logo">
-          <Image src="/images/Jackpals Logo 2 1(1).png" alt="Jackpals" width={226} height={164} />
-        </div>
+        <div className="jp-final-rail" />
       </div>
     </section>
   );
@@ -675,33 +727,75 @@ function Footer() {
       </div>
       <div className="jp-container jp-footer-bottom">
         <p>© 2026 JackPals. All rights reserved. Built with for Nigerian students.</p>
-        <div>
-          <span />
-          <span />
-          <span />
-          <span />
+        <div className="jp-footer-social-row" aria-label="Social links">
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.x}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals on X"
+          >
+            <Twitter size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TeenovateX Labs on LinkedIn"
+          >
+            <Linkedin size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.site}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals website"
+          >
+            <Globe size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals source on GitHub"
+          >
+            <Github size={16} strokeWidth={2} aria-hidden />
+          </a>
         </div>
       </div>
     </footer>
   );
 }
 
-export function FigmaLanding() {
+function FigmaLandingInner() {
+  const { openWaitlist } = useWaitlist();
+
   return (
     <div className="jp-landing">
-      <Navbar />
+      <Navbar openWaitlist={openWaitlist} />
       <main>
-        <Hero />
+        <Hero openWaitlist={openWaitlist} />
         <SocialProof />
         <Reality />
         <HowItWorks />
         <Features />
         <Conditions />
-        <Pricing />
-        <ReferralAndFaq />
-        <FinalCta />
+        <Pricing openWaitlist={openWaitlist} />
+        <ReferralAndFaq openWaitlist={openWaitlist} />
+        <FinalCta openWaitlist={openWaitlist} />
       </main>
       <Footer />
     </div>
+  );
+}
+
+export function FigmaLanding() {
+  return (
+    <WaitlistProvider>
+      <FigmaLandingInner />
+    </WaitlistProvider>
   );
 }

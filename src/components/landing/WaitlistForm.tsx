@@ -8,13 +8,13 @@ type Status = "idle" | "loading" | "success" | "error";
 
 const INPUT_STYLE: React.CSSProperties = {
   width: "100%",
-  height: "48px",
+  height: "50px",
   borderRadius: "10px",
-  border: "1px solid var(--lp-border)",
-  background: "var(--lp-surface-2)",
-  color: "var(--lp-text-1)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.03)",
+  color: "#FFFFFF",
   fontFamily: "var(--font-syne)",
-  fontSize: "13px",
+  fontSize: "14px",
   padding: "0 16px",
   outline: "none",
   transition: "border-color 0.15s ease",
@@ -22,8 +22,8 @@ const INPUT_STYLE: React.CSSProperties = {
 
 export function WaitlistForm({ compact = false }: { compact?: boolean }) {
   const id = useId();
-  const [email, setEmail]   = useState("");
-  const [name,  setName]    = useState("");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setError] = useState("");
 
@@ -66,21 +66,21 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
           flexDirection: "column",
           gap: "10px",
           padding: compact ? "20px 24px" : "24px 28px",
-          border: "1px solid var(--lp-amber)",
+          border: "1px solid rgba(27,110,243,0.4)",
           borderRadius: "14px",
-          background: "var(--lp-amber-dim)",
+          background: "rgba(27,110,243,0.1)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <CheckCircle2
-            style={{ width: "22px", height: "22px", color: "var(--lp-amber)", flexShrink: 0 }}
+            style={{ width: "22px", height: "22px", color: "#1B6EF3", flexShrink: 0 }}
             strokeWidth={2}
           />
-          <p style={{ fontFamily: "var(--font-display)", fontSize: "18px", fontWeight: 700, color: "var(--lp-text-1)", lineHeight: 1.2 }}>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: "18px", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2 }}>
             You&apos;re on the list.
           </p>
         </div>
-        <p style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-2)", lineHeight: 1.7, paddingLeft: "32px" }}>
+        <p style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "#8B9BB4", lineHeight: 1.7, paddingLeft: "32px" }}>
           We&apos;ll reach out to {email} as soon as we launch. Tell a classmate.
         </p>
       </motion.div>
@@ -88,8 +88,8 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {/* Name */}
         <div>
           <label htmlFor={`${id}-name`} style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)" }}>
@@ -100,11 +100,11 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
             type="text"
             placeholder="Your name (optional)"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             autoComplete="name"
             style={INPUT_STYLE}
-            onFocus={e  => (e.currentTarget.style.borderColor = "var(--lp-amber)")}
-            onBlur={e   => (e.currentTarget.style.borderColor = "var(--lp-border)")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "#1B6EF3")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
           />
         </div>
 
@@ -118,12 +118,12 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
             type="email"
             placeholder="Your email address"
             value={email}
-            onChange={e => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
             style={INPUT_STYLE}
-            onFocus={e  => (e.currentTarget.style.borderColor = "var(--lp-amber)")}
-            onBlur={e   => (e.currentTarget.style.borderColor = "var(--lp-border)")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "#1B6EF3")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
           />
         </div>
       </div>
@@ -139,7 +139,7 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
             style={{
               fontFamily: "var(--font-syne)",
               fontSize: "12px",
-              color: "#E05252",
+              color: "#EF4444",
               paddingLeft: "4px",
             }}
           >
@@ -154,39 +154,39 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
         disabled={status === "loading"}
         style={{
           display: "inline-flex",
-          height: "50px",
+          height: "52px",
           width: "100%",
           alignItems: "center",
           justifyContent: "center",
           gap: "8px",
           borderRadius: "10px",
-          background: status === "loading" ? "var(--lp-surface-2)" : "var(--lp-amber)",
-          border: status === "loading" ? "1px solid var(--lp-border)" : "none",
-          color: status === "loading" ? "var(--lp-text-3)" : "#fff",
+          background: status === "loading" ? "rgba(255,255,255,0.06)" : "#F5A623",
+          border: "none",
+          color: status === "loading" ? "#3A4D6B" : "#FFFFFF",
           fontFamily: "var(--font-syne)",
-          fontSize: "13px",
+          fontSize: "14px",
           fontWeight: 700,
           letterSpacing: "0.06em",
           cursor: status === "loading" ? "not-allowed" : "pointer",
           transition: "filter 0.15s ease, background 0.15s ease",
         }}
-        onMouseEnter={e => { if (status !== "loading") e.currentTarget.style.filter = "brightness(1.1)"; }}
-        onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+        onMouseEnter={(e) => { if (status !== "loading") e.currentTarget.style.filter = "brightness(1.08)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
       >
         {status === "loading" ? (
           <>
-            <Loader2 style={{ width: "15px", height: "15px", animation: "spin 1s linear infinite" }} />
+            <Loader2 style={{ width: "16px", height: "16px", animation: "spin 1s linear infinite" }} />
             Joining…
           </>
         ) : (
           <>
             Join the Waitlist
-            <ArrowRight style={{ width: "15px", height: "15px" }} strokeWidth={2.5} />
+            <ArrowRight style={{ width: "16px", height: "16px" }} strokeWidth={2.5} />
           </>
         )}
       </button>
 
-      <p style={{ fontFamily: "var(--font-syne)", fontSize: "11px", color: "var(--lp-text-3)", letterSpacing: "0.03em", textAlign: "center" }}>
+      <p style={{ fontFamily: "var(--font-syne)", fontSize: "11px", color: "#3A4D6B", letterSpacing: "0.03em", textAlign: "center" }}>
         Free during beta · No credit card · Launching Q2 2026
       </p>
     </form>

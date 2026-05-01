@@ -1,125 +1,115 @@
-"use client";
-
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
-import { useRef } from "react";
-import { Reveal } from "./Reveal";
 import { testimonials } from "./data";
 
-export function SocialProof() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 24, mass: 0.2 });
-  const headingY = useTransform(smooth, [0, 1], [24, -18]);
-
+function Stars() {
   return (
-    <section
-      ref={sectionRef}
-      style={{
-        background: "var(--lp-bg)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "80px 0",
-      }}
-    >
-      <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
-        <motion.div style={{ y: headingY }}>
-          <Reveal>
-            <p
-              className="uppercase"
+    <div style={{ display: "flex", gap: "3px", marginBottom: "14px" }}>
+      {[...Array(5)].map((_, i) => (
+        <svg key={i} width="16" height="16" viewBox="0 0 16 16" fill="#F5A623">
+          <path d="M8 1l1.854 3.753L14 5.44l-3 2.923.708 4.137L8 10.347l-3.708 2.153L5 8.363 2 5.44l4.146-.687z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+export function SocialProof() {
+  return (
+    <section style={{ background: "#FFFFFF", padding: "96px 0" }}>
+      <div className="section-container">
+        {/* Badge */}
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "5px 16px",
+              borderRadius: "999px",
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: "rgba(0,0,0,0.04)",
+            }}
+          >
+            <span style={{ color: "#F5A623", fontSize: "12px" }}>★</span>
+            <span
               style={{
                 fontFamily: "var(--font-syne)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.22em",
-                color: "var(--lp-amber)",
-                marginBottom: "16px",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "#6B7280",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
               }}
             >
-              First Reactions
-            </p>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(2rem, 4.4vw, 3.2rem)",
-                fontWeight: 800,
-                lineHeight: "1.02",
-                letterSpacing: "-0.02em",
-                color: "var(--lp-text-1)",
-                maxWidth: "26ch",
-                marginBottom: "48px",
-              }}
-            >
-              What students said when we showed them a demo
-            </h2>
-          </Reveal>
-        </motion.div>
+              Real Action
+            </span>
+          </span>
+        </div>
 
-        <div className="grid gap-0 lg:grid-cols-3">
-          {testimonials.map((item, index) => (
-            <Reveal key={item.name} delay={index * 0.09}>
-              <article
+        {/* Title */}
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(24px, 3vw, 36px)",
+            fontWeight: 700,
+            color: "#0A1628",
+            textAlign: "center",
+            marginBottom: "56px",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          What students said when we showed them a demo
+        </h2>
+
+        {/* Cards */}
+        <div className="lp-three-col" style={{ display: "grid" }}>
+          {testimonials.map((t, i) => (
+            <div
+              key={i}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E5E7EB",
+                borderRadius: "16px",
+                padding: "28px",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Stars />
+              <p
                 style={{
-                  padding: "28px 0",
-                  paddingRight: "32px",
-                  borderTop: `2px solid ${index === 0 ? "var(--lp-amber)" : "var(--lp-border)"}`,
-                  height: "100%",
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "15px",
+                  color: "#374151",
+                  lineHeight: 1.7,
+                  flex: 1,
+                  marginBottom: "24px",
                 }}
               >
-                {/* Decorative quote mark */}
-                <p
-                  aria-hidden
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div>
+                <div
                   style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "72px",
-                    lineHeight: 0.8,
-                    letterSpacing: "-0.04em",
-                    color: "var(--lp-amber)",
-                    opacity: index === 0 ? 0.55 : 0.18,
-                    marginBottom: "14px",
-                    userSelect: "none",
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#0A1628",
                   }}
                 >
-                  &ldquo;
-                </p>
-
-                {/* Quote text */}
-                <p
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "clamp(15px, 1.8vw, 17px)",
-                    lineHeight: "1.6",
-                    color: "var(--lp-text-1)",
-                    marginBottom: "24px",
-                  }}
-                >
-                  {item.quote}
-                </p>
-
-                {/* Attribution */}
-                <div style={{ marginTop: "auto" }}>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-syne)",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: index === 0 ? "var(--lp-amber)" : "var(--lp-text-1)",
-                    }}
-                  >
-                    {item.name}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-syne)",
-                      fontSize: "11px",
-                      color: "var(--lp-text-3)",
-                      marginTop: "3px",
-                      letterSpacing: "0.03em",
-                    }}
-                  >
-                    {item.meta}
-                  </p>
+                  {t.name}
                 </div>
-              </article>
-            </Reveal>
+                <div
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "12px",
+                    color: "#9CA3AF",
+                    marginTop: "2px",
+                  }}
+                >
+                  {t.meta}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

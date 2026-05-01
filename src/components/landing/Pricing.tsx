@@ -1,331 +1,230 @@
-"use client";
-
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
-import { useRef } from "react";
 import { Check, X } from "lucide-react";
-import { Reveal } from "./Reveal";
 import { freePlan, proPlan } from "./data";
 
 export function Pricing() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 130, damping: 28, mass: 0.25 });
-
-  const headingY = useTransform(smooth, [0, 1], [30, -20]);
-  const cardsY = useTransform(smooth, [0, 1], [40, -35]);
-
   return (
-    <section
-      ref={sectionRef}
-      id="pricing"
-      style={{
-        background: "var(--lp-surface)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "80px 0",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      <div className="relative mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
-        <motion.div style={{ y: headingY }}>
-          <Reveal>
-            <p
-              className="text-center uppercase"
+    <section id="pricing" style={{ background: "#FFFFFF", padding: "96px 0" }}>
+      <div className="section-container">
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: "56px" }}>
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(26px, 3.5vw, 40px)",
+              fontWeight: 700,
+              color: "#0A1628",
+              letterSpacing: "-0.025em",
+              marginBottom: "12px",
+            }}
+          >
+            Start free. Upgrade when you&apos;re ready.
+          </h2>
+          <p style={{ fontFamily: "var(--font-syne)", fontSize: "15px", color: "#6B7280" }}>
+            No hidden fees. No pressure. Built for the Nigerian student.
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="lp-pricing-grid" style={{ display: "grid" }}>
+          {/* Free */}
+          <div
+            style={{
+              border: "1px solid #E5E7EB",
+              borderRadius: "20px",
+              padding: "36px 32px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
               style={{
                 fontFamily: "var(--font-syne)",
-                fontSize: "10px",
+                fontSize: "11px",
                 fontWeight: 700,
-                letterSpacing: "0.22em",
-                color: "var(--lp-amber)",
+                letterSpacing: "0.1em",
+                color: "#9CA3AF",
                 marginBottom: "16px",
               }}
             >
-              Transparent Pricing
-            </p>
-            <h2
-              className="mx-auto text-center"
+              {freePlan.name}
+            </div>
+            <div
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: "clamp(2rem, 4.2vw, 3.2rem)",
-                fontWeight: 800,
-                lineHeight: "1.02",
-                letterSpacing: "-0.02em",
-                color: "var(--lp-text-1)",
-                maxWidth: "18ch",
-                marginBottom: "12px",
+                fontSize: "48px",
+                fontWeight: 700,
+                color: "#0A1628",
+                letterSpacing: "-0.03em",
+                lineHeight: 1,
+                marginBottom: "6px",
               }}
             >
-              Start free. Upgrade when you're ready.
-            </h2>
-            <p
-              className="mx-auto text-center"
+              {freePlan.price}
+            </div>
+            <div
               style={{
                 fontFamily: "var(--font-syne)",
+                fontSize: "13px",
+                color: "#9CA3AF",
+                marginBottom: "32px",
+              }}
+            >
+              {freePlan.meta}
+            </div>
+
+            {/* Included */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
+              {freePlan.includes.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                  <Check size={16} color="#1B6EF3" strokeWidth={2.5} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span style={{ fontFamily: "var(--font-syne)", fontSize: "14px", color: "#374151" }}>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Limited */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "36px" }}>
+              {freePlan.limited.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                  <X size={16} color="#D1D5DB" strokeWidth={2.5} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span style={{ fontFamily: "var(--font-syne)", fontSize: "14px", color: "#9CA3AF" }}>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href="#final-cta"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "50px",
+                borderRadius: "10px",
+                border: "1px solid #D1D5DB",
+                background: "transparent",
+                color: "#374151",
+                fontFamily: "var(--font-syne)",
                 fontSize: "14px",
-                color: "var(--lp-text-2)",
-                maxWidth: "50ch",
-                marginBottom: "40px",
+                fontWeight: 700,
+                textDecoration: "none",
+                transition: "border-color 0.15s, color 0.15s",
+                marginTop: "auto",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#9CA3AF";
+                e.currentTarget.style.color = "#0A1628";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#D1D5DB";
+                e.currentTarget.style.color = "#374151";
               }}
             >
-              No hidden fees. No foreign currency. Priced for the Nigerian student.
-            </p>
-          </Reveal>
-        </motion.div>
+              {freePlan.cta}
+            </a>
+          </div>
 
-        <motion.div style={{ y: cardsY }} className="mx-auto grid max-w-4xl gap-4 lg:grid-cols-2">
-          <Reveal>
-            <article
+          {/* Pro */}
+          <div
+            style={{
+              border: "2px solid #1B6EF3",
+              borderRadius: "20px",
+              padding: "36px 32px",
+              background: "#F0F6FF",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+            }}
+          >
+            {/* Most popular badge */}
+            <div
               style={{
-                height: "100%",
-                border: "1px solid var(--lp-border)",
-                borderRadius: "16px",
-                background: "var(--lp-surface-2)",
-                padding: "28px",
+                position: "absolute",
+                top: "-14px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "#1B6EF3",
+                color: "white",
+                fontFamily: "var(--font-syne)",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                padding: "4px 14px",
+                borderRadius: "999px",
+                whiteSpace: "nowrap",
               }}
             >
-              <p
-                style={{
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "var(--lp-text-2)",
-                  marginBottom: "12px",
-                }}
-              >
-                {freePlan.name}
-              </p>
-              <p
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "48px",
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  color: "var(--lp-text-1)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {freePlan.price}
-              </p>
-              <p
-                style={{
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "12px",
-                  color: "var(--lp-text-3)",
-                  marginTop: "6px",
-                  marginBottom: "24px",
-                }}
-              >
-                {freePlan.meta}
-              </p>
+              {proPlan.badge}
+            </div>
 
-              <ul style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-                {freePlan.includes.map((item) => (
-                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        background: "var(--lp-amber-dim)",
-                        border: "1px solid rgba(212, 148, 10, 0.3)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "2px",
-                        color: "var(--lp-amber)",
-                      }}
-                    >
-                      <Check className="h-3 w-3" strokeWidth={2.5} />
-                    </span>
-                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-2)" }}>
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <ul
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  borderTop: "1px solid var(--lp-border)",
-                  paddingTop: "20px",
-                  marginBottom: "28px",
-                }}
-              >
-                {freePlan.limited.map((item) => (
-                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        border: "1px solid var(--lp-border)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "2px",
-                        color: "var(--lp-text-3)",
-                      }}
-                    >
-                      <X className="h-3 w-3" strokeWidth={2} />
-                    </span>
-                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-3)" }}>
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href="#final-cta"
-                style={{
-                  display: "inline-flex",
-                  height: "46px",
-                  width: "100%",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "10px",
-                  border: "1px solid var(--lp-border)",
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--lp-text-1)",
-                  transition: "border-color 0.15s ease, color 0.15s ease",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = "var(--lp-amber)";
-                  e.currentTarget.style.color = "var(--lp-amber)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = "var(--lp-border)";
-                  e.currentTarget.style.color = "var(--lp-text-1)";
-                }}
-              >
-                {freePlan.cta}
-              </a>
-            </article>
-          </Reveal>
-
-          <Reveal delay={0.08}>
-            <article
+            <div
               style={{
-                height: "100%",
-                border: "1px solid var(--lp-amber)",
-                borderRadius: "16px",
-                background: "var(--lp-surface-2)",
-                padding: "28px",
-                position: "relative",
-                boxShadow: "0 0 0 1px rgba(212, 148, 10, 0.2), 0 24px 48px rgba(0,0,0,0.4)",
+                fontFamily: "var(--font-syne)",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                color: "#1B6EF3",
+                marginBottom: "16px",
               }}
             >
-              <span
-                style={{
-                  position: "absolute",
-                  top: "20px",
-                  right: "20px",
-                  background: "var(--lp-amber)",
-                  color: "var(--lp-bg)",
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  borderRadius: "6px",
-                  padding: "3px 10px",
-                }}
-              >
-                {proPlan.badge}
-              </span>
+              {proPlan.name}
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "48px",
+                fontWeight: 700,
+                color: "#0A1628",
+                letterSpacing: "-0.03em",
+                lineHeight: 1,
+                marginBottom: "6px",
+              }}
+            >
+              {proPlan.price}
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--font-syne)",
+                fontSize: "13px",
+                color: "#6B7280",
+                marginBottom: "32px",
+              }}
+            >
+              {proPlan.meta}
+            </div>
 
-              <p
-                style={{
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "var(--lp-amber)",
-                  marginBottom: "12px",
-                }}
-              >
-                {proPlan.name}
-              </p>
-              <p
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "48px",
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  color: "var(--lp-text-1)",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {proPlan.price}
-              </p>
-              <p
-                style={{
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "12px",
-                  color: "var(--lp-text-2)",
-                  marginTop: "6px",
-                  marginBottom: "24px",
-                }}
-              >
-                {proPlan.meta}
-              </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "36px" }}>
+              {proPlan.includes.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                  <Check size={16} color="#1B6EF3" strokeWidth={2.5} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span style={{ fontFamily: "var(--font-syne)", fontSize: "14px", color: "#374151" }}>{item}</span>
+                </div>
+              ))}
+            </div>
 
-              <ul style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "40px" }}>
-                {proPlan.includes.map((item) => (
-                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "50%",
-                        background: "var(--lp-amber)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "2px",
-                        color: "var(--lp-bg)",
-                      }}
-                    >
-                      <Check className="h-3 w-3" strokeWidth={2.5} />
-                    </span>
-                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-1)" }}>
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href="#final-cta"
-                style={{
-                  display: "inline-flex",
-                  height: "46px",
-                  width: "100%",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "10px",
-                  background: "var(--lp-amber)",
-                  color: "var(--lp-bg)",
-                  fontFamily: "var(--font-syne)",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  transition: "filter 0.15s ease",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.1)")}
-                onMouseLeave={e => (e.currentTarget.style.filter = "brightness(1)")}
-              >
-                {proPlan.cta}
-              </a>
-            </article>
-          </Reveal>
-        </motion.div>
+            <a
+              href="#final-cta"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "50px",
+                borderRadius: "10px",
+                background: "#F5A623",
+                color: "white",
+                fontFamily: "var(--font-syne)",
+                fontSize: "14px",
+                fontWeight: 700,
+                textDecoration: "none",
+                transition: "filter 0.15s",
+                marginTop: "auto",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+            >
+              {proPlan.cta}
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );

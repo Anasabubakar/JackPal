@@ -1,99 +1,113 @@
-"use client";
-
 import { Share2 } from "lucide-react";
-import { Reveal } from "./Reveal";
 
 export function ReferralCTA() {
   return (
-    <section
-      style={{
-        background: "var(--lp-bg)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "64px 0",
-      }}
-    >
-      <div className="mx-auto w-full max-w-[940px] px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <article
-            className="p-6 sm:p-10"
+    <section style={{ background: "#F5F7FA", padding: "80px 0" }}>
+      <div className="section-container">
+        <div
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E5E7EB",
+            borderRadius: "20px",
+            padding: "48px 40px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          <div
             style={{
-              border: "1px solid var(--lp-border)",
-              borderRadius: "16px",
-              background: "var(--lp-surface)",
-              textAlign: "center",
+              width: "56px",
+              height: "56px",
+              borderRadius: "14px",
+              background: "rgba(27,110,243,0.12)",
+              border: "1px solid rgba(27,110,243,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "24px",
             }}
           >
-            <span
-              style={{
-                display: "inline-block",
-                border: "1px solid rgba(212, 148, 10, 0.3)",
-                borderRadius: "6px",
-                padding: "4px 12px",
-                fontFamily: "var(--font-syne)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.18em",
-                color: "var(--lp-amber)",
-                textTransform: "uppercase",
-                marginBottom: "16px",
-              }}
-            >
-              Spread the word
-            </span>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(1.8rem, 3.6vw, 2.6rem)",
-                fontWeight: 800,
-                lineHeight: "1.05",
-                letterSpacing: "-0.02em",
-                color: "var(--lp-text-1)",
-                marginBottom: "12px",
-              }}
-            >
-              Know a student who needs this?
-            </h2>
-            <p
-              className="mx-auto"
-              style={{
-                fontFamily: "var(--font-syne)",
-                fontSize: "14px",
-                lineHeight: "1.75",
-                color: "var(--lp-text-2)",
-                maxWidth: "54ch",
-                marginBottom: "28px",
-              }}
-            >
-              JackPal is better when your study group uses it. Share it with one person and help them reclaim hours of wasted commute time.
-            </p>
+            <Share2 size={24} color="#1B6EF3" strokeWidth={1.75} />
+          </div>
+
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(24px, 3vw, 36px)",
+              fontWeight: 700,
+              color: "#0A1628",
+              letterSpacing: "-0.025em",
+              marginBottom: "12px",
+            }}
+          >
+            Know a student who needs this?
+          </h2>
+          <p
+            style={{
+              fontFamily: "var(--font-syne)",
+              fontSize: "15px",
+              color: "#6B7280",
+              lineHeight: 1.7,
+              maxWidth: "520px",
+              marginBottom: "28px",
+            }}
+          >
+            JackPals is better when your study group uses it. Share it with one person and help them ace their next exam.
+          </p>
+
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
             <button
-              type="button"
               style={{
                 display: "inline-flex",
-                height: "46px",
                 alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
+                height: "46px",
+                padding: "0 24px",
                 borderRadius: "10px",
-                background: "var(--lp-amber)",
-                color: "var(--lp-bg)",
+                background: "#1B6EF3",
+                color: "white",
                 fontFamily: "var(--font-syne)",
-                fontSize: "13px",
+                fontSize: "14px",
                 fontWeight: 700,
-                letterSpacing: "0.06em",
-                padding: "0 28px",
                 border: "none",
                 cursor: "pointer",
-                transition: "filter 0.15s ease",
+                transition: "filter 0.15s",
               }}
-              onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.1)")}
-              onMouseLeave={e => (e.currentTarget.style.filter = "brightness(1)")}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
             >
-              <Share2 style={{ width: "15px", height: "15px" }} strokeWidth={2} />
-              Share JackPal
+              Spread the word
             </button>
-          </article>
-        </Reveal>
+            <button
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                height: "46px",
+                padding: "0 24px",
+                borderRadius: "10px",
+                background: "transparent",
+                color: "#374151",
+                fontFamily: "var(--font-syne)",
+                fontSize: "14px",
+                fontWeight: 600,
+                border: "1px solid #D1D5DB",
+                cursor: "pointer",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#9CA3AF";
+                e.currentTarget.style.color = "#0A1628";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#D1D5DB";
+                e.currentTarget.style.color = "#374151";
+              }}
+            >
+              Share feedback
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

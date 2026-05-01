@@ -1,25 +1,23 @@
-﻿'use client';
+"use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ease, dur } from '@/lib/motion';
+import { motion } from "framer-motion";
+import type { ReactNode } from "react";
+import { ease, dur } from "@/lib/motion";
 
 export function FadeUp({
   children,
-  delay = 0,
-  className = '',
+  className,
 }: {
-  children: React.ReactNode;
-  delay?: number;
+  children: ReactNode;
   className?: string;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: dur.smooth, ease: ease.out, delay }}
       className={className}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6 }}
+      transition={{ duration: dur.smooth, ease: ease.out }}
     >
       {children}
     </motion.div>
@@ -28,42 +26,26 @@ export function FadeUp({
 
 export function SlideIn({
   children,
-  direction = 'right',
-  className = '',
+  className,
 }: {
-  children: React.ReactNode;
-  direction?: 'left' | 'right';
+  children: ReactNode;
   className?: string;
 }) {
-  const x = direction === 'right' ? 16 : -16;
   return (
     <motion.div
-      initial={{ opacity: 0, x }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x }}
-      transition={ease.spring}
       className={className}
+      initial={{ opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: dur.expressive, ease: ease.out }}
     >
       {children}
     </motion.div>
   );
 }
 
-export function SpringScale({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function SpringScale({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={ease.spring}
-      className={className}
-    >
+    <motion.div initial={{ scale: 0.94 }} animate={{ scale: 1 }} transition={ease.spring}>
       {children}
     </motion.div>
   );
