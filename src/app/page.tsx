@@ -1,40 +1,12 @@
-﻿import { ConditionsSection } from "@/components/landing/ConditionsSection";
-import { FAQ } from "@/components/landing/FAQ";
-import { FeatureAnimation } from "@/components/landing/FeatureAnimation";
-import { FeatureGrid } from "@/components/landing/FeatureGrid";
-import { FinalCTA } from "@/components/landing/FinalCTA";
-import { Footer } from "@/components/landing/Footer";
-import { Hero } from "@/components/landing/Hero";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Navbar } from "@/components/landing/Navbar";
-import { Pricing } from "@/components/landing/Pricing";
-import { ProblemReality } from "@/components/landing/ProblemReality";
-import { ReferralCTA } from "@/components/landing/ReferralCTA";
-import { ScrollProgress } from "@/components/landing/ScrollProgress";
-import { SocialProof } from "@/components/landing/SocialProof";
-import { VoiceFeature } from "@/components/landing/VoiceFeature";
+"use client";
+
+import dynamic from "next/dynamic";
+
+const FigmaLanding = dynamic(
+  () => import("@/components/landing/FigmaLanding").then((mod) => mod.FigmaLanding),
+  { ssr: false },
+);
 
 export default function Home() {
-  return (
-    <div className="overflow-x-clip" style={{ background: "var(--lp-bg)", color: "var(--lp-text-1)" }}>
-      <ScrollProgress />
-      <Navbar />
-      <main>
-        <Hero />
-        <FeatureAnimation />
-        <SocialProof />
-        <ProblemReality />
-        <HowItWorks />
-        <VoiceFeature />
-        <FeatureGrid />
-        <ConditionsSection />
-        <Pricing />
-        <ReferralCTA />
-        <FAQ />
-        <FinalCTA />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <FigmaLanding />;
 }
-

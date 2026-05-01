@@ -29,7 +29,6 @@ import {
   LayoutGrid,
   Loader2,
   Pause,
-  Sparkles,
   Download,
   SkipBack,
   SkipForward,
@@ -1259,18 +1258,16 @@ export default function Dashboard() {
                     style={{ background: "var(--surface-2)" }}
                   >
                     {(playingDocId === doc.id || podcastPlayingDocId === doc.id) ? (
-                      <div className="flex items-end gap-0.5 h-4">
-                        {[0.6, 1, 0.7, 0.9, 0.5].map((h, i) => (
-                          <div
-                            key={i}
-                            className="w-0.5 rounded-full animate-wave"
-                            style={{
-                              height: `${h * 100}%`,
-                              animationDelay: `${i * 0.1}s`,
-                              background: "var(--teal)",
-                            }}
-                          />
-                        ))}
+                      <div className="w-5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${(currentDocId === doc.id || podcastPlayingDocId === doc.id) ? playerProgress : 100}%`,
+                            background: "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)",
+                            boxShadow: "0 0 10px rgba(97, 227, 240, 0.45)",
+                            transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+                          }}
+                        />
                       </div>
                     ) : (
                       <FileText size={14} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
@@ -1367,14 +1364,24 @@ export default function Dashboard() {
         <div className="w-full max-w-lg mx-auto mt-10 px-4">
           <FadeUp>
             <div className="rounded-2xl p-8 flex flex-col items-center gap-6" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
-              <div className="flex items-end gap-1 h-12">
-                {[0.4, 0.7, 1, 0.8, 0.5, 1, 0.6, 0.9, 0.4, 0.75, 1, 0.55].map((h, i) => (
+              <div className="w-full max-w-xs">
+                <div className="relative h-3 rounded-full overflow-hidden" style={{ background: "var(--surface-3)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
                   <div
-                    key={i}
-                    className={`w-1 rounded-full animate-wave wave-delay-${(i % 4) + 1}`}
-                    style={{ height: `${h * 100}%`, background: "var(--teal)" }}
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: "78%",
+                      background: "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)",
+                      boxShadow: "0 0 18px rgba(97, 227, 240, 0.45)",
+                    }}
                   />
-                ))}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.28) 48%, transparent 68%)",
+                      animation: "shimmer 2.2s linear infinite",
+                    }}
+                  />
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2" style={{ color: "var(--teal)", fontFamily: "var(--font-syne)" }}>
@@ -1440,7 +1447,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>AI Study Summary</span>
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleSummarize(selectedDoc)} disabled={summaryLoadingId === selectedDocId} className="p-1.5 rounded-lg transition-colors" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
-                  {summaryLoadingId === selectedDocId ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} strokeWidth={1.75} />}
+                  {summaryLoadingId === selectedDocId ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} strokeWidth={1.75} />}
                 </motion.button>
               </div>
               <AnimatePresence>
@@ -1464,7 +1471,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="flex items-center gap-1.5 mb-3" style={{ color: "var(--text-3)" }}>
-                <Sparkles size={10} strokeWidth={1.75} />
+                <Search size={10} strokeWidth={1.75} />
                 <span className="text-[9px] font-bold uppercase tracking-widest">Ask JackPal</span>
               </div>
               <form onSubmit={(e) => handleAsk(selectedDocId, e)} className="flex gap-2">
@@ -1513,8 +1520,11 @@ export default function Dashboard() {
             {formatTime(currentTime)}
           </span>
           <div
-            className="relative flex-1 h-1 rounded-full cursor-pointer group"
-            style={{ background: "var(--surface-3)" }}
+            className="relative flex-1 h-2.5 rounded-full cursor-pointer group overflow-hidden"
+            style={{
+              background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.015)), var(--surface-3)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -8px 18px rgba(0,0,0,0.28)",
+            }}
             onClick={e => {
               const rect = e.currentTarget.getBoundingClientRect();
               const pct = (e.clientX - rect.left) / rect.width;
@@ -1522,15 +1532,34 @@ export default function Dashboard() {
             }}
           >
             <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${playerProgress}%`, background: isPodcast ? "var(--teal)" : "var(--blue)" }}
+              className="h-full rounded-full"
+              style={{
+                width: `${playerProgress}%`,
+                background: isPodcast
+                  ? "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)"
+                  : "linear-gradient(90deg, var(--blue) 0%, #61E3F0 100%)",
+                boxShadow: isPodcast
+                  ? "0 0 16px rgba(42, 154, 120, 0.45)"
+                  : "0 0 16px rgba(44, 123, 229, 0.45)",
+                transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
             />
             <div
-              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute inset-0 pointer-events-none opacity-30"
               style={{
-                left: `calc(${playerProgress}% - 6px)`,
-                background: isPodcast ? "var(--teal)" : "var(--blue)",
-                borderColor: "var(--ink)",
+                background: "linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.28) 48%, transparent 68%)",
+                animation: "shimmer 2.6s linear infinite",
+              }}
+            />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 opacity-100 transition-transform group-hover:scale-110"
+              style={{
+                left: `calc(${playerProgress}% - 8px)`,
+                background: isPodcast
+                  ? "radial-gradient(circle at 35% 30%, #fff 0 10%, #61E3F0 24%, var(--teal) 72%)"
+                  : "radial-gradient(circle at 35% 30%, #fff 0 10%, #61E3F0 24%, var(--blue) 72%)",
+                borderColor: "rgba(255,255,255,0.88)",
+                boxShadow: "0 0 0 4px rgba(97,227,240,0.11), 0 0 18px rgba(97,227,240,0.6)",
               }}
             />
           </div>
