@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 import { navLinks } from "./data";
 
 const DARK = "#060C22";
@@ -45,14 +45,7 @@ export function Navbar() {
       >
         {/* Logo */}
         <Link href="/" style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
-          <Image
-            src="/images/Jackpals Logo 4 1.png"
-            alt="Jackpals"
-            width={130}
-            height={36}
-            style={{ height: "30px", width: "auto" }}
-            priority
-          />
+          <JackpalsLogo variant="wordmark" priority className="h-[30px] w-auto" />
         </Link>
 
         {/* Desktop nav */}

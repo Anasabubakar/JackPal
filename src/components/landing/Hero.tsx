@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Play, SkipBack, SkipForward } from "lucide-react";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 
 const VOICES = ["Adaora", "Zainab", "Nonso", "Jude"];
 const PROGRESS_PATH =
@@ -37,13 +37,7 @@ function AppMockup() {
     >
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "22px" }}>
-        <Image
-          src="/images/JackPal 1.png"
-          alt="Jackpals mascot"
-          width={36}
-          height={36}
-          style={{ width: "36px", height: "36px", objectFit: "contain" }}
-        />
+        <JackpalsLogo variant="mark" className="h-9 w-9 shrink-0 object-contain" alt="" />
         <div>
           <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", fontFamily: "var(--font-syne)" }}>
             Ecology 101 — Chapter 4

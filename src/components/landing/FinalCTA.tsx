@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 import { WaitlistForm } from "./WaitlistForm";
 
 export function FinalCTA() {
@@ -160,13 +160,11 @@ export function FinalCTA() {
                   }}
                 />
 
-                <Image
-                  src="/images/JackPal 1.png"
-                  alt="Jackpals mascot"
-                  width={100}
-                  height={100}
-                  style={{ position: "relative", zIndex: 1, filter: "drop-shadow(0 4px 16px rgba(27,110,243,0.4))" }}
+                <JackpalsLogo
+                  variant="mark"
                   priority
+                  alt=""
+                  className="relative z-[1] h-[100px] w-[100px] object-contain [filter:drop-shadow(0_4px_16px_rgba(27,110,243,0.4))]"
                 />
                 <p
                   style={{
