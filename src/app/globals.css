@@ -307,15 +307,21 @@ h1, h2, h3, h4 {
   gap: 28px;
 }
 
-.jp-nav-actions a:last-child {
+.jp-nav-actions a:last-child,
+.jp-nav-actions button.jp-nav-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 40px;
   padding: 0 24px;
+  border: none;
   border-radius: 10px;
   background: #0f8ce9;
   color: #f8f8fa;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .jp-menu,
@@ -423,6 +429,12 @@ h1, h2, h3, h4 {
   text-decoration: none;
   white-space: nowrap;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+button.jp-button {
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
 }
 
 .jp-button:hover {
@@ -1476,7 +1488,8 @@ h1, h2, h3, h4 {
   color: #6f7899;
 }
 
-.jp-price-card a {
+.jp-price-card a,
+.jp-price-card button.jp-price-card-cta {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1489,9 +1502,14 @@ h1, h2, h3, h4 {
   font-size: 18px;
   font-weight: 600;
   text-decoration: none;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  box-sizing: border-box;
 }
 
-.jp-price-card.featured a {
+.jp-price-card.featured a,
+.jp-price-card.featured button.jp-price-card-cta {
   background: var(--jp-blue-2);
 }
 
@@ -1613,114 +1631,152 @@ h1, h2, h3, h4 {
 }
 
 .jp-final {
+  --jp-final-bg: #00050f;
+  --jp-final-accent: #2d6bff;
+
   position: relative;
-  min-height: 730px;
-  padding: 170px 0 112px;
-  background: var(--jp-navy);
+  min-height: min(1011px, 92vh);
+  padding: clamp(96px, 12vw, 160px) 0 clamp(72px, 8vw, 112px);
+  background: var(--jp-final-bg);
   overflow: hidden;
 }
 
 .jp-final-scene {
-  /* Figma: Group 2037 — full artboard background (canvas top is ~6998px; on web we anchor to section) */
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 1758px;
-  height: 1011px;
-  max-width: 100%;
-  pointer-events: none;
+  inset: 0;
   z-index: 0;
+  pointer-events: none;
 }
 
 .jp-final-bg {
   position: absolute;
   inset: 0;
-  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: left bottom;
+  object-fit: contain;
+  object-position: right center;
 }
 
 .jp-final-shade {
   position: absolute;
   inset: 0;
   z-index: 1;
+  pointer-events: none;
   background:
-    linear-gradient(90deg, #01082a 0%, #01082a 40%, rgba(1, 8, 42, 0) 70%),
-    linear-gradient(0deg, #000a28 0%, rgba(0, 10, 40, 0) 45%);
+    linear-gradient(
+      90deg,
+      var(--jp-final-bg) 0%,
+      var(--jp-final-bg) 34%,
+      rgba(0, 5, 15, 0.82) 52%,
+      rgba(0, 5, 15, 0) 72%
+    ),
+    linear-gradient(180deg, rgba(0, 5, 15, 0.55) 0%, transparent 42%, transparent 100%);
 }
 
 .jp-final-grid {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(40px, 8vw, 100px);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 80px);
 }
 
 .jp-final-copy {
   min-width: 0;
   max-width: 36rem;
   justify-self: start;
+  padding-right: clamp(12px, 3vw, 32px);
 }
 
-.jp-final h2 {
+.jp-final-headline {
   margin: 0;
   color: #fff;
-  font-size: 40px;
+  font-size: clamp(32px, 3.65vw, 44px);
   font-weight: 800;
-  line-height: 1.16;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
 }
 
-.jp-final p {
-  margin: 42px 0 0;
+.jp-final-headline .jp-final-line {
+  display: block;
   color: #fff;
-  font-size: 18px;
-  line-height: 30px;
+}
+
+.jp-final-headline .jp-final-line.jp-final-accent {
+  color: var(--jp-final-accent);
+}
+
+.jp-final-lead {
+  margin: clamp(28px, 4vw, 40px) 0 0;
+  max-width: 28rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(16px, 1.35vw, 18px);
+  font-weight: 400;
+  line-height: 1.67;
+}
+
+.jp-final-actions {
+  margin-top: clamp(28px, 4vw, 40px);
+}
+
+.jp-final-actions.jp-actions {
+  gap: 16px;
+}
+
+.jp-final .jp-button {
+  min-height: 50px;
+  padding: 0 clamp(26px, 3vw, 34px);
+  font-size: 17px;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
+.jp-final .jp-button-primary {
+  background: var(--jp-final-accent);
+  box-shadow:
+    0 4px 14px rgba(45, 107, 255, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+.jp-final .jp-button-primary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.jp-final .jp-button-ghost {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.jp-final .jp-button-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.jp-final-cta-arrow {
+  flex-shrink: 0;
+  opacity: 0.95;
 }
 
 .jp-final small {
   display: block;
-  margin-top: clamp(40px, 8vw, 86px);
-  color: rgba(255, 255, 255, 0.42);
+  margin-top: clamp(36px, 6vw, 72px);
+  color: rgba(255, 255, 255, 0.38);
   font-size: 11px;
-  line-height: 30px;
-}
-
-.jp-final .jp-button-ghost {
-  border-color: rgba(255, 255, 255, 0.35);
+  line-height: 1.55;
+  max-width: 26rem;
 }
 
 .jp-final-rail {
   min-width: 0;
   min-height: 1px;
-}
-
-.jp-final-logo-mark {
-  position: absolute;
-  left: 50%;
-  top: 36%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: min(14.5%, 240px);
-  filter: drop-shadow(0 0 48px rgba(0, 149, 255, 0.85));
-}
-
-.jp-final-logo-mark img {
-  width: 100%;
-  height: auto;
-}
-
-@media (max-width: 1758px) {
-  .jp-final-scene {
-    width: 100%;
-    height: calc(100vw * 1011 / 1758);
-    max-height: 1011px;
-  }
 }
 
 .jp-footer {
@@ -1913,7 +1969,7 @@ h1, h2, h3, h4 {
   .jp-voice-copy h2,
   .jp-condition-panel h2,
   .jp-referral h2,
-  .jp-final h2 {
+  .jp-final-headline {
     font-size: 34px;
   }
 
@@ -1963,5 +2019,355 @@ h1, h2, h3, h4 {
 
   .jp-footer-grid {
     gap: 36px;
+  }
+}
+
+/* ── Waitlist modal ─────────────────────────────────────────────────────── */
+.jp-wl-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.jp-wl-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 5, 15, 0.76);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.jp-wl-panel {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 520px;
+  margin: auto 0;
+  max-height: none;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: visible;
+  border-radius: 22px;
+  border: 1px solid rgba(45, 107, 255, 0.35);
+  background: linear-gradient(160deg, rgba(12, 22, 48, 0.97) 0%, rgba(0, 8, 35, 0.98) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 28px 80px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(45, 107, 255, 0.12);
+  padding: 26px 20px 22px;
+}
+
+@media (min-height: 560px) {
+  .jp-wl-root {
+    align-items: center;
+  }
+
+  .jp-wl-panel {
+    max-height: min(92vh, 880px);
+    overflow-y: auto;
+  }
+}
+
+.jp-wl-glow {
+  pointer-events: none;
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 107, 255, 0.28) 0%, transparent 68%);
+  opacity: 0.9;
+}
+
+.jp-wl-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.jp-wl-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.jp-wl-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  padding-right: 44px;
+}
+
+.jp-wl-header h2 {
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: clamp(22px, 4.2vw, 26px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.jp-wl-header p {
+  margin: 0;
+  color: rgba(184, 204, 255, 0.82);
+  font-size: clamp(13px, 3.5vw, 14px);
+  line-height: 1.55;
+  max-width: none;
+}
+
+.jp-wl-form {
+  position: relative;
+  z-index: 1;
+}
+
+.jp-wl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 14px;
+}
+
+.jp-wl-span2 {
+  grid-column: span 2;
+}
+
+.jp-wl-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.jp-wl-opt {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.jp-wl-field input,
+.jp-wl-field select,
+.jp-wl-field textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 12, 40, 0.55);
+  color: #fff;
+  font-size: 16px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.jp-wl-field input::placeholder,
+.jp-wl-field textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.jp-wl-field input:focus,
+.jp-wl-field select:focus,
+.jp-wl-field textarea:focus {
+  border-color: rgba(45, 107, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(45, 107, 255, 0.18);
+}
+
+.jp-wl-field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238fb4ff' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.jp-wl-field textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.5;
+}
+
+.jp-wl-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(45, 107, 255, 0.08);
+  border: 1px solid rgba(45, 107, 255, 0.2);
+  color: rgba(220, 230, 255, 0.9);
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.jp-wl-check input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #2d6bff;
+  cursor: pointer;
+}
+
+.jp-wl-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+  font-size: 13px;
+}
+
+.jp-wl-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 20px;
+  min-height: 52px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2d6bff, #1b6ef3);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(45, 107, 255, 0.4);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.jp-wl-submit:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.jp-wl-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.jp-wl-spin {
+  animation: jp-spin 0.9s linear infinite;
+}
+
+@keyframes jp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.jp-wl-trust {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.jp-wl-success {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 20px 8px 16px;
+}
+
+.jp-wl-success-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: #4ade80;
+  filter: drop-shadow(0 0 16px rgba(74, 222, 128, 0.35));
+}
+
+.jp-wl-success h2 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.jp-wl-success p {
+  margin: 0 auto;
+  max-width: 36ch;
+  color: rgba(200, 215, 255, 0.88);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.jp-wl-success p strong {
+  color: #fff;
+}
+
+.jp-wl-done {
+  margin-top: 24px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.jp-wl-done:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.jp-mobile-waitlist {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #0f8ce9;
+  color: #f8f8fa;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .jp-wl-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jp-wl-span2 {
+    grid-column: span 1;
   }
 }
