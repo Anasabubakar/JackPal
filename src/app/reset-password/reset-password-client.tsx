@@ -12,28 +12,84 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { saveSession } from "@/lib/api";
+import { getSupabase } from "@/lib/supabase-browser";
 
 export default function ResetPasswordClient() {
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [token, setToken] = useState("");
+  const [linkStatus, setLinkStatus] = useState<"checking" | "ready" | "error">("checking");
+  const [linkError, setLinkError] = useState("");
 
   useEffect(() => {
-    // Supabase puts the token in the URL hash or as query param
-    const t =
-      searchParams.get("access_token") || searchParams.get("token") || "";
-    setToken(t);
-  }, [searchParams]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const supabase = getSupabase();
+        const { error: initError } = await supabase.auth.initialize();
+        if (cancelled) return;
+        if (initError) {
+          setLinkStatus("error");
+          setLinkError(initError.message);
+          return;
+        }
+
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (cancelled) return;
+        if (sessionError) {
+          setLinkStatus("error");
+          setLinkError(sessionError.message);
+          return;
+        }
+        if (!session) {
+          setLinkStatus("error");
+          setLinkError(
+            "This reset link is invalid or has expired. Request a new one from the login page.",
+          );
+          return;
+        }
+
+        setLinkStatus("ready");
+
+        if (typeof window !== "undefined") {
+          const { hash, search } = window.location;
+          if (
+            hash ||
+            (search &&
+              (search.includes("code=") ||
+                search.includes("access_token=") ||
+                search.includes("type=")))
+          ) {
+            window.history.replaceState(null, "", "/reset-password");
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setLinkStatus("error");
+          setLinkError(e instanceof Error ? e.message : "Could not verify reset link.");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -41,15 +97,22 @@ export default function ResetPasswordClient() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/auth/update-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token: token, new_password: password }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Request failed" }));
-        throw new Error(err.detail || "Reset failed.");
+      const supabase = getSupabase();
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw new Error(updateError.message);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        saveSession(session.access_token, {
+          id: session.user.id,
+          email: session.user.email!,
+          full_name:
+            (session.user.user_metadata?.full_name as string | undefined) ?? "",
+        });
       }
+
       setSubmitted(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Reset failed. Try again.");
@@ -60,7 +123,6 @@ export default function ResetPasswordClient() {
 
   return (
     <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
-      {/* Back Button */}
       <Link
         href="/login"
         className="fixed top-6 left-6 z-50 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#02013D]/60 hover:text-[#2585C7] transition-colors group"
@@ -71,23 +133,20 @@ export default function ResetPasswordClient() {
         <span>Back to Login</span>
       </Link>
 
-      {/* Left Column: Brand & Visual (Desktop Only) */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#02013D] relative overflow-hidden flex-col justify-between p-16 text-white border-r-8 border-[#2585C7] h-full">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#2585C7]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#61E3F0]/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 mb-10 group">
+          <Link href="/" className="inline-block mb-10 group">
             <Image
-              src="/images/logo.svg"
-              alt="JackPal Logo"
-              width={40}
-              height={40}
-              className="group-hover:rotate-12 transition-transform"
+              src="/images/Jackpals Logo 4 1.png"
+              alt="Jackpals"
+              width={164}
+              height={36}
+              className="h-9 w-auto drop-shadow-sm group-hover:opacity-95 transition-opacity"
+              priority
             />
-            <span className="text-2xl font-black tracking-tighter uppercase italic">
-              JackPal
-            </span>
           </Link>
 
           <div className="space-y-4 max-w-lg">
@@ -99,8 +158,8 @@ export default function ResetPasswordClient() {
               </span>
             </h1>
             <p className="text-lg text-white/60 font-medium leading-relaxed">
-              Create a strong new password to protect your library. Remember:
-              winners take security seriously.
+              Create a strong new password to protect your library. Remember: winners take security
+              seriously.
             </p>
           </div>
         </div>
@@ -109,18 +168,14 @@ export default function ResetPasswordClient() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 space-y-2">
               <ShieldCheck className="h-5 w-5 text-[#2585C7]" />
-              <div className="text-xs font-black uppercase tracking-widest">
-                DRM Secured
-              </div>
+              <div className="text-xs font-black uppercase tracking-widest">DRM Secured</div>
               <p className="text-[9px] text-white/40 font-bold uppercase tracking-tighter leading-relaxed">
                 Encrypted local storage for your studies.
               </p>
             </div>
             <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 space-y-2">
               <Mic2 className="h-5 w-5 text-[#61E3F0]" />
-              <div className="text-xs font-black uppercase tracking-widest">
-                Local Voices
-              </div>
+              <div className="text-xs font-black uppercase tracking-widest">Local Voices</div>
               <p className="text-[9px] text-white/40 font-bold uppercase tracking-tighter leading-relaxed">
                 AI tuned for Nigerian students.
               </p>
@@ -133,7 +188,6 @@ export default function ResetPasswordClient() {
         </div>
       </div>
 
-      {/* Right Column: Reset Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-12 lg:p-20 relative h-full overflow-y-auto">
         <div className="w-full max-w-md space-y-8 py-10">
           {submitted ? (
@@ -146,15 +200,43 @@ export default function ResetPasswordClient() {
                   Password Updated
                 </h2>
                 <p className="text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em] leading-relaxed max-w-xs mx-auto">
-                  Your password has been reset successfully. You can now use your
-                  new credentials to log in.
+                  Your password has been reset successfully. You can go to the dashboard or log in
+                  again anytime.
                 </p>
               </div>
               <Link
-                href="/login"
+                href="/dashboard"
                 className="bg-[#02013D] text-white px-10 py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-[#02013D]/10 hover:bg-[#2585C7] transition-all inline-block"
               >
-                Go to Login
+                Continue to Dashboard
+              </Link>
+            </div>
+          ) : linkStatus === "checking" ? (
+            <div className="text-center space-y-6 py-16">
+              <Loader2 className="h-10 w-10 text-[#2585C7] animate-spin mx-auto" aria-hidden />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/50">
+                Verifying your reset link…
+              </p>
+            </div>
+          ) : linkStatus === "error" ? (
+            <div className="text-center space-y-6">
+              <div className="lg:hidden flex justify-center mb-6">
+                <Image
+                  src="/images/Jackpals Logo 4 1.png"
+                  alt="Jackpals"
+                  width={164}
+                  height={36}
+                  className="h-10 w-auto"
+                  priority
+                />
+              </div>
+              <h2 className="text-2xl font-black tracking-tighter uppercase">Link problem</h2>
+              <p className="text-xs text-[#02013D]/60 font-medium leading-relaxed">{linkError}</p>
+              <Link
+                href="/forgot-password"
+                className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#2585C7] hover:underline"
+              >
+                Request a new link <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           ) : (
@@ -162,10 +244,12 @@ export default function ResetPasswordClient() {
               <div className="text-center lg:text-left space-y-2">
                 <div className="lg:hidden flex justify-center mb-6">
                   <Image
-                    src="/images/logo.svg"
-                    alt="JackPal Logo"
-                    width={48}
-                    height={48}
+                    src="/images/Jackpals Logo 4 1.png"
+                    alt="Jackpals"
+                    width={164}
+                    height={36}
+                    className="h-10 w-auto"
+                    priority
                   />
                 </div>
                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">
@@ -195,6 +279,7 @@ export default function ResetPasswordClient() {
                     </div>
                     <input
                       required
+                      minLength={8}
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -214,6 +299,7 @@ export default function ResetPasswordClient() {
                     </div>
                     <input
                       required
+                      minLength={8}
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}

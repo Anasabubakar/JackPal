@@ -12,7 +12,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { requestPasswordReset } from "@/lib/api";
+import { sendPasswordResetEmail } from "@/lib/supabase-browser";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError("");
     try {
-      await requestPasswordReset(email);
+      await sendPasswordResetEmail(email);
       setSubmitted(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Request failed. Try again.");

@@ -111,13 +111,6 @@ export async function logout() {
   clearSession();
 }
 
-export async function requestPasswordReset(email: string) {
-  return request("/auth/reset", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
-}
-
 // ── Documents ────────────────────────────────────────────────────────────────
 
 export async function listDocuments(): Promise<Document[]> {
