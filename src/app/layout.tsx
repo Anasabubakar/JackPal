@@ -1,5 +1,6 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Fraunces, Inter, Syne } from "next/font/google";
+import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
 import "./globals.css";
 
 const display = Fraunces({
@@ -32,8 +33,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
-...
 export default function RootLayout({
   children,
 }: Readonly<{
