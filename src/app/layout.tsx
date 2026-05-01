@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
+...
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,7 +49,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AudioPlayerProvider>
+          {children}
+        </AudioPlayerProvider>
+      </body>
     </html>
   );
 }

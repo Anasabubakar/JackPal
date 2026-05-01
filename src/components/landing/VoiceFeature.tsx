@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Play, Pause, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Play, Pause } from "lucide-react";
 import { voiceBullets } from "./data";
 import { AudioProgress } from "@/components/AudioProgress";
+import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 const VOICE_LIST = [
   { name: "Adaora", gender: "Female", src: "/audio/adaora_yarngpt.mp3" },
@@ -73,58 +73,8 @@ function VoiceCard({
 }
 
 export function VoiceFeature() {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    // Robust audio instance creation
-    const audio = new Audio(VOICE_LIST[activeIdx].src);
-    audioRef.current = audio;
-
-    const onTimeUpdate = () => {
-      if (audio.duration && audio.duration > 0) {
-        setProgress((audio.currentTime / audio.duration) * 100);
-      }
-    };
-
-    const onEnded = () => {
-      setPlaying(false);
-      setProgress(0);
-    };
-
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("ended", onEnded);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("ended", onEnded);
-      audio.src = "";
-    };
-  }, [activeIdx]);
-
-  function selectVoice(i: number) {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    setPlaying(false);
-    setProgress(0);
-    setActiveIdx(i);
-  }
-
-  function togglePlay() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-    } else {
-      audio.play().catch((err) => console.error("Playback failed", err));
-      setPlaying(true);
-    }
-  }
+  const { playVoice, togglePlay, isPlaying, activeVoice } = useAudioPlayer();
+  const activeIdx = VOICE_LIST.findIndex(v => v.name === activeVoice) === -1 ? 0 : VOICE_LIST.findIndex(v => v.name === activeVoice);
 
   return (
     <section id="voices" style={{ background: "#060C22", padding: "96px 0" }}>
@@ -139,7 +89,7 @@ export function VoiceFeature() {
                 padding: "28px",
               }}
             >
-              <AudioProgress progress={progress} label={VOICE_LIST[activeIdx].name} />
+              <AudioProgress label={activeVoice || VOICE_LIST[0].name} />
 
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
                 <button
@@ -151,24 +101,23 @@ export function VoiceFeature() {
                     boxShadow: "0 6px 20px rgba(27,110,243,0.45)",
                   }}
                 >
-                  {playing ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" style={{ marginLeft: "2px" }} />}
+                  {isPlaying ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" style={{ marginLeft: "2px" }} />}
                 </button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {VOICE_LIST.map((v, i) => (
+                {VOICE_LIST.map((v) => (
                   <VoiceCard
                     key={v.name}
                     voice={v}
-                    active={i === activeIdx}
-                    playing={playing && i === activeIdx}
-                    onSelect={() => selectVoice(i)}
+                    active={v.name === activeVoice}
+                    playing={isPlaying && v.name === activeVoice}
+                    onSelect={() => playVoice(v.name, v.src)}
                   />
                 ))}
               </div>
             </div>
           </div>
-          {/* ... right side remains same ... */}
         </div>
       </div>
     </section>
