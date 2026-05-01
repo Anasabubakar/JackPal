@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { AudioProgress } from '@/components/AudioProgress';
 import {
   Camera,
   Check,
@@ -208,34 +209,9 @@ function CtaButton({
 const progressPath =
   "M4 24 C10 24 12 17 18 24 S28 31 34 24 S44 17 50 24 S60 31 66 24 S76 17 82 24 S92 31 98 24 S108 17 114 24 S124 31 130 24 S140 17 146 24 S156 31 162 24 S172 17 178 24 S188 31 194 24 S204 17 210 24 S220 31 226 24 L516 24";
 
-function PremiumProgress({
-  progress,
-  label,
-}: {
-  progress: number;
-  label: string;
-}) {
-  return (
-    <div className="jp-progress-container">
-      <div className="jp-progress-meta">
-        <span className="font-medium">{label}</span>
-        <span className="font-bold">{Math.round(progress)}%</span>
-      </div>
-      <div className="jp-progress-bar">
-        <div className="jp-progress-track" />
-        <div className="jp-progress-fill" style={{ width: `${progress}%` }}>
-          <div className="jp-progress-glow" />
-        </div>
-        <div className="jp-progress-handle" style={{ left: `${progress}%` }}>
-          <div className="handle-inner" />
-          <div className="handle-ripple" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// ... (rest of code)
 function AudioCard({ large = false }: { large?: boolean }) {
+// ... (rest of code)
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(38);
 
@@ -260,7 +236,7 @@ function AudioCard({ large = false }: { large?: boolean }) {
         </div>
       </div>
 
-      <PremiumProgress progress={progress} label={large ? "Study session" : "Chapter progress"} />
+      <AudioProgress progress={progress} label={large ? "Study session" : "Chapter progress"} />
 
       <div className="jp-player-row">
         <div className="jp-time">{large ? "00:00" : "17:55"} / {large ? "14:32" : "18:06"}</div>
