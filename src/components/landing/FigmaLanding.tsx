@@ -10,6 +10,9 @@ import {
   ChevronDown,
   FileAudio,
   FolderOpen,
+  Github,
+  Globe,
+  Linkedin,
   Medal,
   MessageSquareText,
   Mic2,
@@ -17,6 +20,7 @@ import {
   Play,
   SkipBack,
   SkipForward,
+  Twitter,
   X,
   Zap,
 } from "lucide-react";
@@ -24,6 +28,7 @@ import { useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
+import { SOCIAL_LINKS } from "@/lib/socialLinks";
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -722,11 +727,43 @@ function Footer() {
       </div>
       <div className="jp-container jp-footer-bottom">
         <p>© 2026 JackPals. All rights reserved. Built with for Nigerian students.</p>
-        <div>
-          <span />
-          <span />
-          <span />
-          <span />
+        <div className="jp-footer-social-row" aria-label="Social links">
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.x}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals on X"
+          >
+            <Twitter size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TeenovateX Labs on LinkedIn"
+          >
+            <Linkedin size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.site}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals website"
+          >
+            <Globe size={16} strokeWidth={2} aria-hidden />
+          </a>
+          <a
+            className="jp-footer-social"
+            href={SOCIAL_LINKS.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="JackPals source on GitHub"
+          >
+            <Github size={16} strokeWidth={2} aria-hidden />
+          </a>
         </div>
       </div>
     </footer>

@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { Github, Globe, Linkedin, Twitter } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/socialLinks";
 
 const productLinks = ["How It Works", "Voices", "Features", "Pricing"];
 const companyLinks = ["About", "Blog", "Career", "Contact"];
@@ -168,11 +172,12 @@ export function Footer() {
           <p style={{ fontFamily: "var(--font-syne)", fontSize: "12px", color: "#3A4D6B" }}>
             © 2026 Jackpals. All rights reserved. Built with ❤️ for Nigerian students.
           </p>
-          <div style={{ display: "flex", gap: "16px" }}>
-            {/* Twitter */}
+          <div style={{ display: "flex", gap: "16px" }} aria-label="Social links">
             <a
-              href="#"
-              aria-label="Follow us on Twitter"
+              href={SOCIAL_LINKS.x}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="JackPals on X"
               style={{
                 display: "flex",
                 width: "36px",
@@ -183,6 +188,7 @@ export function Footer() {
                 border: "1px solid rgba(255,255,255,0.1)",
                 background: "rgba(255,255,255,0.02)",
                 transition: "all 0.15s",
+                color: "#8B9BB4",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
@@ -193,14 +199,13 @@ export function Footer() {
                 e.currentTarget.style.background = "rgba(255,255,255,0.02)";
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B9BB4" strokeWidth="2">
-                <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
-              </svg>
+              <Twitter size={16} strokeWidth={2} aria-hidden />
             </a>
-            {/* Instagram */}
             <a
-              href="#"
-              aria-label="Follow us on Instagram"
+              href={SOCIAL_LINKS.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TeenovateX Labs on LinkedIn"
               style={{
                 display: "flex",
                 width: "36px",
@@ -211,6 +216,7 @@ export function Footer() {
                 border: "1px solid rgba(255,255,255,0.1)",
                 background: "rgba(255,255,255,0.02)",
                 transition: "all 0.15s",
+                color: "#8B9BB4",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
@@ -221,16 +227,13 @@ export function Footer() {
                 e.currentTarget.style.background = "rgba(255,255,255,0.02)";
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B9BB4" strokeWidth="2">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg>
+              <Linkedin size={16} strokeWidth={2} aria-hidden />
             </a>
-            {/* LinkedIn */}
             <a
-              href="#"
-              aria-label="Connect on LinkedIn"
+              href={SOCIAL_LINKS.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="JackPals website"
               style={{
                 display: "flex",
                 width: "36px",
@@ -241,6 +244,7 @@ export function Footer() {
                 border: "1px solid rgba(255,255,255,0.1)",
                 background: "rgba(255,255,255,0.02)",
                 transition: "all 0.15s",
+                color: "#8B9BB4",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
@@ -251,11 +255,35 @@ export function Footer() {
                 e.currentTarget.style.background = "rgba(255,255,255,0.02)";
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B9BB4" strokeWidth="2">
-                <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
-                <rect x="2" y="9" width="4" height="12" />
-                <circle cx="4" cy="4" r="2" />
-              </svg>
+              <Globe size={16} strokeWidth={2} aria-hidden />
+            </a>
+            <a
+              href={SOCIAL_LINKS.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="JackPals on GitHub"
+              style={{
+                display: "flex",
+                width: "36px",
+                height: "36px",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "8px",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.02)",
+                transition: "all 0.15s",
+                color: "#8B9BB4",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+              }}
+            >
+              <Github size={16} strokeWidth={2} aria-hidden />
             </a>
           </div>
         </div>

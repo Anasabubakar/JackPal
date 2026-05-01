@@ -1846,12 +1846,28 @@ button.jp-button {
   gap: 24px;
 }
 
-.jp-footer-bottom span {
+.jp-footer-bottom a.jp-footer-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background: #fff;
   opacity: 0.9;
+  color: #0c1328;
+  text-decoration: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.jp-footer-bottom a.jp-footer-social:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.jp-footer-bottom a.jp-footer-social svg {
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 1100px) {
