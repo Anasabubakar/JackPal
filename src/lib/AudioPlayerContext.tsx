@@ -40,8 +40,12 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const togglePlay = () => {
     if (!audioRef.current) return;
-    if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play();
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch((e) => console.error("Playback error:", e));
+    }
   };
 
   return (
