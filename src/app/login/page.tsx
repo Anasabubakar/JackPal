@@ -70,15 +70,15 @@ function LoginForm() {
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#61E3F0]/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 mb-10 group">
+          <Link href="/" className="inline-block mb-10 group">
             <Image
-              src="/images/logo.svg"
-              alt="JackPal Logo"
-              width={40}
-              height={40}
-              className="group-hover:rotate-12 transition-transform"
+              src="/images/Jackpals Logo 4 1.png"
+              alt="Jackpals"
+              width={164}
+              height={36}
+              className="h-9 w-auto drop-shadow-sm group-hover:opacity-95 transition-opacity"
+              priority
             />
-            <span className="text-2xl font-black tracking-tighter uppercase italic">JackPal</span>
           </Link>
 
           <div className="space-y-4 max-w-lg">
@@ -117,7 +117,14 @@ function LoginForm() {
         <div className="w-full max-w-md space-y-8 py-10">
           <div className="text-center lg:text-left space-y-2">
             <div className="lg:hidden flex justify-center mb-6">
-               <Image src="/images/logo.svg" alt="JackPal Logo" width={48} height={48} />
+              <Image
+                src="/images/Jackpals Logo 4 1.png"
+                alt="Jackpals"
+                width={164}
+                height={36}
+                className="h-10 w-auto"
+                priority
+              />
             </div>
             <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Account Login</h2>
             <p className="text-[10px] md:text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em]">Enter your credentials to proceed</p>
