@@ -1,11 +1,12 @@
 """
 AI service — Groq (Llama 3.3 70B) for podcast scripts, Ollama local for summaries.
-Falls back to local Ollama fact-extraction if GROQ_API_KEY is not set.
+Gemini 2.0 Flash handles long documents (1M context window, no chunking needed).
 
-Long document strategy (>4000 words):
-  - Map-reduce condensation: detect chapters → parallel Groq extraction per chapter
-    → merge into rich study notes → podcast generation
-  - Topic-specific: RAG retrieval of most relevant chunks → focused podcast
+Priority:
+  Short docs (≤4000 words): Groq (fast, free)
+  Long docs (>4000 words):  Gemini (full context) → map-reduce+Groq if no Gemini key
+  Groq 429 rate-limit:      Gemini fallback
+  No API keys:              Ollama local
 """
 import asyncio
 import json
@@ -18,10 +19,16 @@ GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL    = "llama-3.3-70b-versatile"
 
+GOOGLE_AI_API_KEY = os.environ.get("GOOGLE_AI_API_KEY", "")
+GEMINI_URL    = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+GEMINI_MODEL  = "gemini-2.0-flash"
+GEMINI_MAX_WORDS = 80_000  # ~104k tokens, well within 1M context
+
 OLLAMA_URL    = "http://localhost:11434/api/generate"
 OLLAMA_MODEL  = "gemma3:1b"
 
-USE_GROQ = bool(GROQ_API_KEY)
+USE_GROQ   = bool(GROQ_API_KEY)
+USE_GEMINI = bool(GOOGLE_AI_API_KEY)
 
 
 # ── Ollama helpers ────────────────────────────────────────────────────────────
@@ -66,19 +73,140 @@ async def _groq_complete(prompt: str, max_tokens: int = 800, timeout: int = 30) 
         return r.json()["choices"][0]["message"]["content"].strip()
 
 
+# ── Gemini helpers ────────────────────────────────────────────────────────────
+
+async def _gemini_complete(prompt: str, max_tokens: int = 800, timeout: int = 60) -> str:
+    headers = {
+        "Authorization": f"Bearer {GOOGLE_AI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GEMINI_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": max_tokens,
+    }
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        r = await client.post(GEMINI_URL, headers=headers, json=payload)
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
+
+
+async def _gemini_stream_podcast(content: str, mode: str = "standard"):
+    """Stream podcast lines from Gemini 2.0 Flash. Same format as _groq_stream_podcast."""
+    template = _PIDGIN_PODCAST_PROMPT if mode == "pidgin" else _STANDARD_PODCAST_PROMPT
+    prompt = template.format(content=content)
+    headers = {
+        "Authorization": f"Bearer {GOOGLE_AI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GEMINI_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "temperature": 0.88,
+        "max_tokens": 1600,
+    }
+
+    current_speaker = "Ezinne"
+    current_parts: list[str] = []
+    line_buf = ""
+
+    def _flush(speaker: str, parts: list[str]):
+        text = " ".join(parts).strip()
+        lo = text.lower()
+        if lo.startswith("ezinne:"):
+            text = text[7:].strip()
+        elif lo.startswith("abeo:"):
+            text = text[5:].strip()
+        if not text:
+            return None
+        voice = "chinenye" if speaker == "Ezinne" else "jude"
+        return {"speaker": speaker, "voice": voice, "text": text}
+
+    async with httpx.AsyncClient(timeout=90) as client:
+        async with client.stream("POST", GEMINI_URL, headers=headers, json=payload) as response:
+            response.raise_for_status()
+            async for raw_line in response.aiter_lines():
+                if not raw_line or raw_line == "data: [DONE]":
+                    continue
+                if not raw_line.startswith("data: "):
+                    continue
+                try:
+                    chunk = json.loads(raw_line[6:])
+                    token = chunk["choices"][0].get("delta", {}).get("content", "")
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+
+                if not token:
+                    continue
+
+                line_buf += token
+
+                while "\n" in line_buf:
+                    completed, line_buf = line_buf.split("\n", 1)
+                    completed = completed.strip()
+                    if not completed:
+                        continue
+
+                    lo = completed.lower()
+                    if lo.startswith("ezinne:"):
+                        if current_speaker and current_parts:
+                            line = _flush(current_speaker, current_parts)
+                            if line:
+                                yield line
+                        current_speaker = "Ezinne"
+                        current_parts = [completed[7:].strip()]
+                    elif lo.startswith("abeo:"):
+                        if current_speaker and current_parts:
+                            line = _flush(current_speaker, current_parts)
+                            if line:
+                                yield line
+                        current_speaker = "Abeo"
+                        current_parts = [completed[5:].strip()]
+                    elif current_speaker:
+                        current_parts.append(completed)
+
+    if line_buf.strip() and current_speaker:
+        current_parts.append(line_buf.strip())
+    if current_speaker and current_parts:
+        line = _flush(current_speaker, current_parts)
+        if line:
+            yield line
+
+
 # ── Summarize ─────────────────────────────────────────────────────────────────
 
 async def summarize_document(text: str) -> str:
-    truncated = " ".join(text.split()[:4000])
-    prompt = (
-        "You are an academic study assistant helping Nigerian students. "
-        "Summarize the following document clearly and concisely. "
-        "Focus on key concepts, definitions, and important points. "
-        "Use bullet points. Keep it under 300 words.\n\n"
-        f"Document:\n{truncated}\n\nSummary:"
+    prompt_body = (
+        "You are an expert academic tutor for Nigerian university students.\n"
+        "Write a study guide for the document below using EXACTLY this format:\n\n"
+        "TOPIC: <one sentence>\n\n"
+        "KEY CONCEPTS:\n"
+        "• <concept>: <plain-English explanation>\n"
+        "• <concept>: <explanation>\n"
+        "• <concept>: <explanation>\n"
+        "(4-5 concepts total)\n\n"
+        "IMPORTANT TERMS:\n"
+        "• <term>: <definition>\n"
+        "• <term>: <definition>\n"
+        "(3-4 terms)\n\n"
+        "EXAM FOCUS:\n"
+        "• <specific exam-relevant point from this document>\n"
+        "• <another point>\n"
+        "• <another point>\n\n"
+        "QUICK SUMMARY:\n"
+        "<2-3 sentences on the main argument or flow>\n\n"
+        "Be specific to THIS document. No filler. Plain English.\n\n"
+        "Document:\n{content}\n\nStudy Guide:"
     )
+    if USE_GEMINI:
+        capped = " ".join(text.split()[:GEMINI_MAX_WORDS])
+        return await _gemini_complete(prompt_body.format(content=capped), max_tokens=600, timeout=30)
+    truncated = " ".join(text.split()[:10_000])
+    prompt = prompt_body.format(content=truncated)
     if USE_GROQ:
-        return await _groq_complete(prompt, timeout=30)
+        return await _groq_complete(prompt, max_tokens=600, timeout=30)
     return await _ollama_generate(prompt, timeout=120)
 
 
@@ -272,17 +400,17 @@ async def _map_reduce_condense(text: str) -> str:
             print("[AI] Map-reduce: too few chapters detected, using simple condensation")
             return await _condense_long_doc(text)
 
-        # Sample up to 10 chapters spread evenly across the document
-        if len(content_chapters) <= 10:
+        # Sample up to 5 chapters spread evenly — faster and enough for a 14-turn podcast
+        if len(content_chapters) <= 5:
             selected = content_chapters
         else:
-            step = len(content_chapters) / 10
-            selected = [content_chapters[int(i * step)] for i in range(10)]
+            step = len(content_chapters) / 5
+            selected = [content_chapters[int(i * step)] for i in range(5)]
 
         print(f"[AI] Map-reduce: extracting concepts from {len(selected)}/{len(content_chapters)} chapters in parallel...")
 
         words = cleaned.split()
-        sem = asyncio.Semaphore(3)   # 3 concurrent Groq calls — avoids rate limit
+        sem = asyncio.Semaphore(5)   # 5 concurrent Groq calls
 
         async def _extract_one(ch: dict) -> tuple[str, str]:
             chapter_words = words[ch["start_word"]: ch["start_word"] + ch["word_count"]]
@@ -494,47 +622,83 @@ async def stream_podcast_lines(
 ):
     """
     Async generator — yields {speaker, voice, text} dicts one at a time.
-    Uses Groq if GROQ_API_KEY is set, else falls back to Ollama + template.
-    TTS synthesis starts on line 0 while remaining lines are still generating.
 
-    Document routing:
-      - Short doc (≤4000 words):  use directly — full fidelity
-      - Topic query + RAG indexed: retrieve relevant chunks — hyper-focused podcast
-      - Long doc (>4000 words):   map-reduce condensation — full coverage podcast
+    Routing:
+      Short (≤4000 words):  Groq → Gemini on 429
+      Long + Gemini key:    Gemini full-context (no map-reduce)
+      Long + topic + RAG:   RAG retrieval → Groq → Gemini on 429
+      Long, no Gemini:      map-reduce → Groq
+      No API keys:          Ollama template
     """
-    if USE_GROQ:
-        words = text.split()
-        word_count = len(words)
-
-        if word_count <= 4000:
-            content = " ".join(words)
-
-        elif topic and doc_id:
-            # Topic-focused: use RAG to retrieve the most relevant chunks
-            from services.rag import retrieve_relevant, is_indexed
-            if is_indexed(doc_id):
-                rag_chunks = retrieve_relevant(doc_id, topic, top_k=15, text=text)
-                if rag_chunks:
-                    content = " ".join(rag_chunks)
-                    print(f"[AI] RAG retrieval: {len(rag_chunks)} chunks ({len(content.split())} words) for topic: '{topic[:60]}'")
-                else:
-                    content = await _map_reduce_condense(text)
-            else:
-                # Index on-the-fly in background, use map-reduce for this request
-                import threading
-                threading.Thread(target=__import__('services.rag', fromlist=['index_document']).index_document, args=(doc_id, text), daemon=True).start()
-                content = await _map_reduce_condense(text)
-
-        else:
-            # Long doc, no specific topic → intelligent map-reduce condensation
-            # Covers the WHOLE document, not just the first pages
-            content = await _map_reduce_condense(text)
-
-        async for line in _groq_stream_podcast(content, mode=mode):
-            yield line
-    else:
+    if not USE_GROQ and not USE_GEMINI:
         async for line in _ollama_stream_podcast(text):
             yield line
+        return
+
+    words = text.split()
+    word_count = len(words)
+
+    # ── Short/medium doc: try Groq first, Gemini on rate-limit ─────────────────
+    if word_count <= 8000:
+        content = " ".join(words)
+        if USE_GROQ:
+            try:
+                async for line in _groq_stream_podcast(content, mode=mode):
+                    yield line
+                return
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code != 429 or not USE_GEMINI:
+                    raise
+                print("[AI] Groq 429 — falling back to Gemini for short doc")
+        async for line in _gemini_stream_podcast(content, mode=mode):
+            yield line
+        return
+
+    # ── Long doc: map-reduce + Groq (Gemini bypassed — rate-limited on free tier) ─
+    if topic and doc_id:
+        from services.rag import retrieve_relevant, is_indexed
+        if is_indexed(doc_id):
+            rag_chunks = retrieve_relevant(doc_id, topic, top_k=15, text=text)
+            if rag_chunks:
+                content = " ".join(rag_chunks)
+                print(f"[AI] RAG retrieval: {len(rag_chunks)} chunks ({len(content.split())} words) for topic: '{topic[:60]}'")
+                async for line in _groq_stream_podcast(content, mode=mode):
+                    yield line
+                return
+        import threading
+        threading.Thread(
+            target=__import__('services.rag', fromlist=['index_document']).index_document,
+            args=(doc_id, text), daemon=True
+        ).start()
+
+    content = await _map_reduce_condense(text)
+    async for line in _groq_stream_podcast(content, mode=mode):
+        yield line
+
+
+async def answer_question(context: str, question: str) -> str:
+    """Answer a student's question about a document using retrieved context."""
+    prompt = (
+        "You are a knowledgeable academic tutor for Nigerian university students.\n\n"
+        "A student is asking a question about a document they are studying. "
+        "Use the document excerpts below to give a thorough, educational answer.\n\n"
+        "Instructions:\n"
+        "- Answer the question directly — no preamble like 'Based on the document...'\n"
+        "- Explain the concept clearly, as a good teacher would\n"
+        "- If the answer is in the text, use it; if it only partially covers the question, say so\n"
+        "- If the content doesn't cover the question at all, say: "
+        "'This specific topic is not covered in the document. Generally speaking, ...' "
+        "and give a brief general answer\n"
+        "- 150-300 words. Be thorough but focused.\n\n"
+        f"Document excerpts:\n{context}\n\n"
+        f"Student's question: {question}\n\n"
+        "Answer:"
+    )
+    if USE_GEMINI:
+        return await _gemini_complete(prompt, max_tokens=450, timeout=30)
+    if USE_GROQ:
+        return await _groq_complete(prompt, max_tokens=450, timeout=30)
+    return "No AI available — please set GOOGLE_AI_API_KEY or GROQ_API_KEY."
 
 
 async def generate_podcast_script(text: str, mode: str = "standard") -> list[dict]:

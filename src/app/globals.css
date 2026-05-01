@@ -1,34 +1,96 @@
 @import "tailwindcss";
 
 :root {
-  /* Studio dark palette */
-  --ink: #0B0B0F;
-  --surface: #111115;
-  --surface-2: #18181E;
-  --surface-3: #1E1E28;
-  --border: #1E1E28;
-  --border-dim: #141419;
+  /* Studio dark palette (dashboard) */
+  --ink: #0C0A07;
+  --surface: #141210;
+  --surface-2: #1C1915;
+  --surface-3: #231F1B;
+  --border: #2C2520;
+  --border-dim: #1E1B17;
 
   /* Text */
-  --text-1: #F0F0F6;
-  --text-2: #8888A0;
-  --text-3: #44445A;
+  --text-1: #EDE8DE;
+  --text-2: #9A9080;
+  --text-3: #524840;
 
-  /* Accents */
-  --blue: #2585C7;
-  --blue-dim: rgba(37, 133, 199, 0.12);
-  --teal: #00C9A7;
-  --teal-dim: rgba(0, 201, 167, 0.12);
+  /* Primary accent: brand blue */
+  --blue: #2C7BE5;
+  --blue-dim: rgba(44, 123, 229, 0.14);
 
-  /* Legacy landing-page vars (keep for compatibility) */
-  --background: #f7f7f7;
-  --foreground: #02013D;
-  --primary: #2585C7;
+  /* Secondary accent: deep teal (keep for success/active states) */
+  --teal: #2A9A78;
+  --teal-dim: rgba(42, 154, 120, 0.12);
+
+  /* Landing page editorial dark palette */
+  --lp-bg: #0D0B0F;
+  --lp-surface: #141218;
+  --lp-surface-2: #1C1921;
+  --lp-border: #28232E;
+  --lp-text-1: #F0EDF8;
+  --lp-text-2: #9490A8;
+  --lp-text-3: #524E62;
+  /* Brand blue accent — matches the logo */
+  --lp-amber: #2C7BE5;
+  --lp-amber-bright: #5AA3F5;
+  --lp-amber-dim: rgba(44, 123, 229, 0.14);
+  --lp-green: #2A6844;
+
+  /* Legacy compat */
+  --background: #0D0B0F;
+  --foreground: #F0EDF8;
+  --primary: #2C7BE5;
   --primary-foreground: #ffffff;
-  --secondary: #2261B9;
-  --accent: #61E3F0;
-  --muted: #0F1774;
-  --muted-foreground: #444444;
+  --secondary: #2A6844;
+  --accent: #5AA3F5;
+  --muted: #1C1921;
+  --muted-foreground: #9490A8;
+}
+
+/* ── Shared shadow vars ── */
+:root {
+  --lp-shadow-card: 0 24px 48px rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.25);
+  --lp-shadow-sm: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+/* ── Light mode overrides ── */
+[data-theme="light"] {
+  /* Landing page — clean paper white */
+  --lp-bg: #F9F8F6;
+  --lp-surface: #FFFFFF;
+  --lp-surface-2: #F2F0EC;
+  --lp-border: #E0DDD8;
+  --lp-text-1: #1A1714;
+  --lp-text-2: #5C5850;
+  --lp-text-3: #9C9890;
+  --lp-amber: #1A6DD4;
+  --lp-amber-bright: #2C7BE5;
+  --lp-amber-dim: rgba(26, 109, 212, 0.1);
+
+  /* Dashboard */
+  --ink: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-2: #F5F3EF;
+  --surface-3: #EEECEA;
+  --border: #E0DDD8;
+  --border-dim: #EDEBE8;
+  --text-1: #1A1714;
+  --text-2: #5C5850;
+  --text-3: #9C9890;
+  --blue: #1A6DD4;
+  --blue-dim: rgba(26, 109, 212, 0.1);
+  --teal: #187A5E;
+  --teal-dim: rgba(24, 122, 94, 0.1);
+
+  /* Legacy */
+  --background: #F9F8F6;
+  --foreground: #1A1714;
+  --muted: #F2F0EC;
+  --muted-foreground: #5C5850;
+
+  /* Lighter shadows for light mode */
+  --lp-shadow-card: 0 16px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.07);
+  --lp-shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 html { scroll-behavior: smooth !important; }
@@ -79,9 +141,9 @@ h1, h2, h3, h4 {
 }
 
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(37, 133, 199, 0.4); }
-  70%  { box-shadow: 0 0 0 8px rgba(37, 133, 199, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 133, 199, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(44, 123, 229, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(44, 123, 229, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(44, 123, 229, 0); }
 }
 
 .animate-shimmer      { animation: shimmer 2s infinite linear; }

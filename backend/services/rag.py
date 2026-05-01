@@ -1,23 +1,22 @@
 """
 RAG (Retrieval-Augmented Generation) service for JackPal.
 
-Embeds document chunks with sentence-transformers (all-MiniLM-L6-v2).
-Runs entirely locally — no API keys, no external calls.
-Model: 22MB, CPU-fast, ~50ms per query after first load.
+Two retrieval modes:
+  1. Vector RAG  — sentence-transformers all-MiniLM-L6-v2, local, instant
+  2. LightRAG    — knowledge graph + vector, uses Gemini/Groq for entity extraction
+                   Better cross-chapter reasoning; slower to index (background)
 
 Pipeline:
-  1. clean_text()       — strip noise (page numbers, headers, bibliography, etc.)
-  2. index_document()   — chunk + embed + persist to disk as .npz
-  3. retrieve_relevant() — cosine similarity retrieval, returns doc-order chunks
+  1. clean_text()        — strip noise (page numbers, headers, bibliography, etc.)
+  2. index_document()    — vector embed + kick off LightRAG indexing in background
+  3. retrieve_relevant() — LightRAG hybrid query if ready, else vector RAG fallback
 
 Usage:
-  # Background indexing after upload
   threading.Thread(target=index_document, args=(doc_id, text), daemon=True).start()
-
-  # Topic-focused podcast / summarization
   chunks = retrieve_relevant(doc_id, "photosynthesis and chloroplasts", top_k=15)
-  text_for_podcast = " ".join(chunks)
 """
+import asyncio
+import os
 import re
 import numpy as np
 from pathlib import Path
@@ -28,11 +27,18 @@ EMBED_MODEL   = "all-MiniLM-L6-v2"   # 22MB, multilingual-friendly, fast CPU
 CHUNK_WORDS   = 150                    # ~45s of TTS audio per chunk
 CHUNK_OVERLAP = 25                     # overlap prevents concept splitting at boundaries
 
-RAG_DIR = Path(__file__).parent.parent / "dev_storage" / "rag"
+RAG_DIR       = Path(__file__).parent.parent / "dev_storage" / "rag"
+LIGHTRAG_DIR  = Path(__file__).parent.parent / "dev_storage" / "lightrag"
 RAG_DIR.mkdir(parents=True, exist_ok=True)
+LIGHTRAG_DIR.mkdir(parents=True, exist_ok=True)
+
+# LLM keys for LightRAG entity extraction (prefers Gemini, falls back to Groq)
+_GOOGLE_AI_KEY = os.environ.get("GOOGLE_AI_API_KEY", "")
+_GROQ_KEY      = os.environ.get("GROQ_API_KEY", "")
 
 _model = None
 _index: dict[str, dict] = {}   # doc_id → {embeddings: np.ndarray, chunks: list[str]}
+_lightrag_ready: set[str] = set()   # doc_ids with completed LightRAG graph
 
 
 # ── Model ──────────────────────────────────────────────────────────────────────
@@ -190,8 +196,9 @@ def _chunk_text(text: str) -> list[str]:
 def index_document(doc_id: str, text: str) -> int:
     """
     Clean, chunk, and embed the document. Persists to disk as compressed .npz.
+    Also kicks off LightRAG knowledge graph indexing in a background thread.
     Safe to call multiple times — skips if already indexed.
-    Returns chunk count. Designed to run in a daemon thread.
+    Returns chunk count.
     """
     index_file = RAG_DIR / f"{doc_id}.npz"
 
@@ -204,6 +211,7 @@ def index_document(doc_id: str, text: str) -> int:
                 "chunks": data["chunks"].tolist(),
             }
             print(f"[RAG] Loaded index for {doc_id} ({len(_index[doc_id]['chunks'])} chunks from disk)")
+            _maybe_start_lightrag_indexing(doc_id, text)
             return len(_index[doc_id]["chunks"])
         except Exception as e:
             print(f"[RAG] Failed to load disk index for {doc_id}: {e} — re-indexing")
@@ -223,12 +231,11 @@ def index_document(doc_id: str, text: str) -> int:
             chunks,
             batch_size=64,
             show_progress_bar=False,
-            normalize_embeddings=True,   # pre-normalize → cosine = dot product
+            normalize_embeddings=True,
         ).astype(np.float32)
 
         _index[doc_id] = {"embeddings": embeddings, "chunks": chunks}
 
-        # Persist — allow_pickle needed for string object arrays
         np.savez_compressed(
             index_file,
             embeddings=embeddings,
@@ -236,6 +243,10 @@ def index_document(doc_id: str, text: str) -> int:
         )
         size_kb = index_file.stat().st_size // 1024
         print(f"[RAG] Indexed {len(chunks)} chunks for {doc_id} → {size_kb}KB on disk")
+
+        # Start LightRAG knowledge graph build in background
+        _maybe_start_lightrag_indexing(doc_id, text)
+
         return len(chunks)
 
     except Exception as e:
@@ -271,16 +282,10 @@ def retrieve_relevant(
     text: str | None = None,
 ) -> list[str]:
     """
-    Return the top_k most semantically relevant chunks in document order.
+    Return the most semantically relevant content for a query.
 
-    Args:
-        doc_id:  Document ID (used to look up pre-built index).
-        query:   The topic or question to retrieve content for.
-        top_k:   Number of chunks to return (~2250 words at top_k=15).
-        text:    Raw document text — used to build index on-the-fly if not yet indexed.
-
-    Returns:
-        List of text chunks in original document order (coherent reading).
+    Tries LightRAG hybrid retrieval first (knowledge graph + vector).
+    Falls back to pure vector cosine similarity if LightRAG isn't ready.
     """
     if not _load_index(doc_id):
         if text:
@@ -290,6 +295,18 @@ def retrieve_relevant(
         else:
             return []
 
+    # ── LightRAG path: knowledge graph + vector hybrid ────────────────────────
+    if doc_id in _lightrag_ready or _is_lightrag_indexed(doc_id):
+        try:
+            result = _lightrag_query_sync(doc_id, query)
+            if result and len(result.strip()) > 50:
+                _lightrag_ready.add(doc_id)
+                print(f"[RAG] LightRAG hybrid retrieval for '{query[:50]}'")
+                return [result]
+        except Exception as e:
+            print(f"[RAG] LightRAG query failed ({e}), falling back to vector RAG")
+
+    # ── Vector RAG fallback ───────────────────────────────────────────────────
     entry = _index.get(doc_id)
     if not entry:
         return []
@@ -300,31 +317,63 @@ def retrieve_relevant(
     try:
         model = _get_model()
         query_emb = model.encode([query], normalize_embeddings=True)[0].astype(np.float32)
-
-        # Cosine similarity (embeddings are pre-normalized → just dot product)
         scores = embeddings @ query_emb
-
         n = min(top_k, len(chunks))
-        # argpartition is O(n) vs argsort O(n log n) — faster for large indices
         top_idx = np.argpartition(scores, -n)[-n:]
-        # Sort by document position (not score) → coherent reading order
         top_idx_sorted = sorted(top_idx.tolist())
-
         return [chunks[i] for i in top_idx_sorted]
 
     except Exception as e:
-        print(f"[RAG] Retrieval failed for {doc_id}: {e}")
+        print(f"[RAG] Vector retrieval failed for {doc_id}: {e}")
         return []
+
+
+# ── Fast keyword fallback ───────────────────────────────────────────────────────
+
+def keyword_fallback(text: str, query: str, max_words: int = 4000) -> str:
+    """O(n) keyword search — used when vector index isn't ready yet.
+    Scores lines by query-word overlap, returns top hits up to max_words.
+    No model needed — instant.
+    """
+    query_words = {w.lower() for w in query.split() if len(w) > 2}
+    if not query_words:
+        return " ".join(text.split()[:max_words])
+
+    lines = [ln.strip() for ln in text.split('\n') if len(ln.strip()) > 30]
+    if not lines:
+        words = text.split()
+        lines = [" ".join(words[i:i+100]) for i in range(0, len(words), 100)]
+
+    scored = sorted(
+        ((sum(1 for w in query_words if w in ln.lower()), ln) for ln in lines),
+        key=lambda x: -x[0],
+    )
+
+    parts: list[str] = []
+    count = 0
+    for _, ln in scored:
+        wc = len(ln.split())
+        if count + wc > max_words:
+            break
+        parts.append(ln)
+        count += wc
+
+    return "\n\n".join(parts) if parts else " ".join(text.split()[:max_words])
 
 
 # ── Utilities ───────────────────────────────────────────────────────────────────
 
 def clear_index(doc_id: str):
-    """Remove a document's index from memory and disk."""
+    """Remove a document's vector index and LightRAG graph from memory and disk."""
     _index.pop(doc_id, None)
+    _lightrag_ready.discard(doc_id)
     index_file = RAG_DIR / f"{doc_id}.npz"
     if index_file.exists():
         index_file.unlink()
+    lg_dir = LIGHTRAG_DIR / doc_id
+    if lg_dir.exists():
+        import shutil
+        shutil.rmtree(lg_dir, ignore_errors=True)
     print(f"[RAG] Cleared index for {doc_id}")
 
 
@@ -342,5 +391,136 @@ def get_index_stats(doc_id: str) -> dict:
             "indexed": True,
             "chunks": len(chunks),
             "words": sum(len(c.split()) for c in chunks),
+            "lightrag": doc_id in _lightrag_ready or _is_lightrag_indexed(doc_id),
         }
-    return {"indexed": False, "chunks": 0, "words": 0}
+    return {"indexed": False, "chunks": 0, "words": 0, "lightrag": False}
+
+
+# ── LightRAG (knowledge graph + vector hybrid) ─────────────────────────────────
+
+def _is_lightrag_indexed(doc_id: str) -> bool:
+    """Check if LightRAG graph has been built for this document."""
+    lg_dir = LIGHTRAG_DIR / doc_id
+    return lg_dir.exists() and any(lg_dir.iterdir())
+
+
+def _build_lightrag_instance(doc_id: str):
+    """Create a configured LightRAG instance for a document. Returns None if unavailable."""
+    try:
+        from lightrag import LightRAG, QueryParam  # noqa: F401 — availability check
+        from lightrag.llm.openai import openai_complete_if_cache
+        from lightrag.utils import EmbeddingFunc
+    except ImportError:
+        return None, None
+
+    working_dir = str(LIGHTRAG_DIR / doc_id)
+    Path(working_dir).mkdir(parents=True, exist_ok=True)
+
+    # Pick LLM: Gemini preferred (large context), Groq fallback
+    if _GOOGLE_AI_KEY:
+        async def _llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
+            return await openai_complete_if_cache(
+                "gemini-2.0-flash", prompt,
+                system_prompt=system_prompt,
+                history_messages=history_messages,
+                api_key=_GOOGLE_AI_KEY,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                **kwargs,
+            )
+    elif _GROQ_KEY:
+        async def _llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
+            return await openai_complete_if_cache(
+                "llama-3.3-70b-versatile", prompt,
+                system_prompt=system_prompt,
+                history_messages=history_messages,
+                api_key=_GROQ_KEY,
+                base_url="https://api.groq.com/openai/v1/",
+                **kwargs,
+            )
+    else:
+        return None, None
+
+    async def _embed_func(texts: list[str]) -> np.ndarray:
+        model = _get_model()
+        return model.encode(texts, normalize_embeddings=True).astype(np.float32)
+
+    from lightrag import LightRAG
+    from lightrag.utils import EmbeddingFunc
+
+    rag = LightRAG(
+        working_dir=working_dir,
+        llm_model_func=_llm_func,
+        embedding_func=EmbeddingFunc(
+            embedding_dim=384,   # all-MiniLM-L6-v2 output dimension
+            max_token_size=512,
+            func=_embed_func,
+        ),
+    )
+    from lightrag import QueryParam
+    return rag, QueryParam
+
+
+def _run_lightrag_index(doc_id: str, text: str):
+    """Run LightRAG async insert in a dedicated event loop (called from thread)."""
+    rag, _ = _build_lightrag_instance(doc_id)
+    if rag is None:
+        return
+    try:
+        print(f"[RAG] LightRAG: building knowledge graph for {doc_id}...")
+        clean = clean_text(text)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(rag.ainsert(clean))
+        loop.close()
+        _lightrag_ready.add(doc_id)
+        print(f"[RAG] LightRAG: knowledge graph ready for {doc_id}")
+    except Exception as e:
+        print(f"[RAG] LightRAG indexing failed for {doc_id}: {e}")
+
+
+def _maybe_start_lightrag_indexing(doc_id: str, text: str):
+    """Start LightRAG graph build in a daemon thread if not already done."""
+    if not (_GOOGLE_AI_KEY or _GROQ_KEY):
+        return
+    if doc_id in _lightrag_ready or _is_lightrag_indexed(doc_id):
+        _lightrag_ready.add(doc_id)
+        return
+    import threading
+    threading.Thread(target=_run_lightrag_index, args=(doc_id, text), daemon=True).start()
+
+
+def _lightrag_query_in_thread(doc_id: str, query: str) -> str:
+    """Run LightRAG query in a dedicated thread with its own event loop.
+    Must be called from a worker thread (not the event loop thread).
+    """
+    rag, QueryParam = _build_lightrag_instance(doc_id)
+    if rag is None:
+        return ""
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            rag.aquery(query, param=QueryParam(mode="hybrid"))
+        )
+        loop.close()
+        return result or ""
+    except Exception as e:
+        print(f"[RAG] LightRAG query error: {e}")
+        return ""
+
+
+def _lightrag_query_sync(doc_id: str, query: str) -> str:
+    """Run a LightRAG hybrid query safely from any context (sync or async).
+    Dispatches to a worker thread to avoid conflicting with the running event loop.
+    """
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        try:
+            future = executor.submit(_lightrag_query_in_thread, doc_id, query)
+            return future.result(timeout=30)
+        except concurrent.futures.TimeoutError:
+            print("[RAG] LightRAG query timed out after 30s")
+            return ""
+        except Exception as e:
+            print(f"[RAG] LightRAG query failed: {e}")
+            return ""

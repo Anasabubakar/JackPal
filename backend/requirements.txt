@@ -13,6 +13,9 @@ redis>=5.0.4
 sentence-transformers>=2.7.0
 numpy>=1.26.0
 
+# LightRAG — knowledge graph + vector hybrid RAG
+lightrag-hku>=1.3.0
+
 # Nigerian Pidgin TTS (Meta MMS-TTS-pcm — ~350MB download on first use)
 transformers>=4.40.0
 scipy>=1.11.0

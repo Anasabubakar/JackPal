@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
@@ -15,53 +15,195 @@ export function Pricing() {
   const cardsY = useTransform(smooth, [0, 1], [40, -35]);
 
   return (
-    <section ref={sectionRef} id="pricing" className="relative overflow-hidden bg-[#020A2A] py-16 sm:py-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(58,146,255,0.18),transparent_40%)]" />
+    <section
+      ref={sectionRef}
+      id="pricing"
+      style={{
+        background: "var(--lp-surface)",
+        borderBottom: "1px solid var(--lp-border)",
+        padding: "80px 0",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
       <div className="relative mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
         <motion.div style={{ y: headingY }}>
           <Reveal>
-            <p className="text-center text-xs font-semibold tracking-[0.18em] text-[#87CBFF]">TRANSPARENT PRICING</p>
-            <h2 className="mx-auto mt-3 max-w-[15ch] text-center text-[clamp(1.9rem,4.1vw,3rem)] leading-tight text-white">
-              Start free. Upgrade when you are ready.
+            <p
+              className="text-center uppercase"
+              style={{
+                fontFamily: "var(--font-syne)",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                color: "var(--lp-amber)",
+                marginBottom: "16px",
+              }}
+            >
+              Transparent Pricing
+            </p>
+            <h2
+              className="mx-auto text-center"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2rem, 4.2vw, 3.2rem)",
+                fontWeight: 800,
+                lineHeight: "1.02",
+                letterSpacing: "-0.02em",
+                color: "var(--lp-text-1)",
+                maxWidth: "18ch",
+                marginBottom: "12px",
+              }}
+            >
+              Start free. Upgrade when you're ready.
             </h2>
-            <p className="mx-auto mt-4 max-w-[52ch] text-center text-sm leading-relaxed text-[#C6DBFF] sm:text-base">
+            <p
+              className="mx-auto text-center"
+              style={{
+                fontFamily: "var(--font-syne)",
+                fontSize: "14px",
+                color: "var(--lp-text-2)",
+                maxWidth: "50ch",
+                marginBottom: "40px",
+              }}
+            >
               No hidden fees. No foreign currency. Priced for the Nigerian student.
             </p>
           </Reveal>
         </motion.div>
 
-        <motion.div style={{ y: cardsY }} className="mx-auto mt-10 grid max-w-5xl gap-5 lg:grid-cols-2">
+        <motion.div style={{ y: cardsY }} className="mx-auto grid max-w-4xl gap-4 lg:grid-cols-2">
           <Reveal>
-            <article className="h-full rounded-3xl border border-[#2E4D95] bg-[#071D60]/80 p-6 sm:p-7">
-              <p className="text-sm font-semibold text-[#BFD8FF]">{freePlan.name}</p>
-              <p className="mt-3 text-5xl font-bold leading-none text-white">{freePlan.price}</p>
-              <p className="mt-2 text-sm text-[#ABCAFF]">{freePlan.meta}</p>
+            <article
+              style={{
+                height: "100%",
+                border: "1px solid var(--lp-border)",
+                borderRadius: "16px",
+                background: "var(--lp-surface-2)",
+                padding: "28px",
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "var(--lp-text-2)",
+                  marginBottom: "12px",
+                }}
+              >
+                {freePlan.name}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "48px",
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  color: "var(--lp-text-1)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {freePlan.price}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "12px",
+                  color: "var(--lp-text-3)",
+                  marginTop: "6px",
+                  marginBottom: "24px",
+                }}
+              >
+                {freePlan.meta}
+              </p>
 
-              <ul className="mt-6 space-y-2.5">
+              <ul style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
                 {freePlan.includes.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#E4EEFF]">
-                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1E7DFF] text-white">
-                      <Check className="h-3.5 w-3.5" />
+                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        background: "var(--lp-amber-dim)",
+                        border: "1px solid rgba(212, 148, 10, 0.3)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                        color: "var(--lp-amber)",
+                      }}
+                    >
+                      <Check className="h-3 w-3" strokeWidth={2.5} />
                     </span>
-                    <span>{item}</span>
+                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-2)" }}>
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
 
-              <ul className="mt-5 space-y-2.5 border-t border-[#2B4D9B] pt-5">
+              <ul
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  borderTop: "1px solid var(--lp-border)",
+                  paddingTop: "20px",
+                  marginBottom: "28px",
+                }}
+              >
                 {freePlan.limited.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#A7C1EF]">
-                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#3A5DA8] text-[#8AA5D8]">
-                      <X className="h-3.5 w-3.5" />
+                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        border: "1px solid var(--lp-border)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                        color: "var(--lp-text-3)",
+                      }}
+                    >
+                      <X className="h-3 w-3" strokeWidth={2} />
                     </span>
-                    <span>{item}</span>
+                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-3)" }}>
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
 
               <a
                 href="#final-cta"
-                className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-full border border-[#3A63BB] bg-[#0A2A7A] text-sm font-semibold text-white transition hover:bg-[#11358F]"
+                style={{
+                  display: "inline-flex",
+                  height: "46px",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "10px",
+                  border: "1px solid var(--lp-border)",
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "var(--lp-text-1)",
+                  transition: "border-color 0.15s ease, color 0.15s ease",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "var(--lp-amber)";
+                  e.currentTarget.style.color = "var(--lp-amber)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "var(--lp-border)";
+                  e.currentTarget.style.color = "var(--lp-text-1)";
+                }}
               >
                 {freePlan.cta}
               </a>
@@ -69,28 +211,115 @@ export function Pricing() {
           </Reveal>
 
           <Reveal delay={0.08}>
-            <article className="relative h-full rounded-3xl border border-[#4A79DE] bg-gradient-to-b from-[#0D2E89] to-[#082067] p-6 shadow-[0_18px_50px_rgba(39,136,255,0.3)] sm:p-7">
-              <span className="absolute right-5 top-5 rounded-full border border-[#83CFFF] bg-[#0E4AAA] px-3 py-1 text-[11px] font-bold tracking-[0.08em] text-[#DDF2FF]">
+            <article
+              style={{
+                height: "100%",
+                border: "1px solid var(--lp-amber)",
+                borderRadius: "16px",
+                background: "var(--lp-surface-2)",
+                padding: "28px",
+                position: "relative",
+                boxShadow: "0 0 0 1px rgba(212, 148, 10, 0.2), 0 24px 48px rgba(0,0,0,0.4)",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: "20px",
+                  right: "20px",
+                  background: "var(--lp-amber)",
+                  color: "var(--lp-bg)",
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  borderRadius: "6px",
+                  padding: "3px 10px",
+                }}
+              >
                 {proPlan.badge}
               </span>
-              <p className="text-sm font-semibold text-[#D8EAFF]">{proPlan.name}</p>
-              <p className="mt-3 text-5xl font-bold leading-none text-white">{proPlan.price}</p>
-              <p className="mt-2 text-sm text-[#CBE0FF]">{proPlan.meta}</p>
 
-              <ul className="mt-6 space-y-2.5">
+              <p
+                style={{
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "var(--lp-amber)",
+                  marginBottom: "12px",
+                }}
+              >
+                {proPlan.name}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "48px",
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  color: "var(--lp-text-1)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {proPlan.price}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "12px",
+                  color: "var(--lp-text-2)",
+                  marginTop: "6px",
+                  marginBottom: "24px",
+                }}
+              >
+                {proPlan.meta}
+              </p>
+
+              <ul style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "40px" }}>
                 {proPlan.includes.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#ECF4FF]">
-                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#4AD2FF] text-[#053E79]">
-                      <Check className="h-3.5 w-3.5" />
+                  <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        background: "var(--lp-amber)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                        color: "var(--lp-bg)",
+                      }}
+                    >
+                      <Check className="h-3 w-3" strokeWidth={2.5} />
                     </span>
-                    <span>{item}</span>
+                    <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", color: "var(--lp-text-1)" }}>
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
 
               <a
                 href="#final-cta"
-                className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#35BEFF] to-[#2E78FF] text-sm font-semibold text-white shadow-[0_10px_30px_rgba(56,178,255,0.38)] transition hover:brightness-110"
+                style={{
+                  display: "inline-flex",
+                  height: "46px",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "10px",
+                  background: "var(--lp-amber)",
+                  color: "var(--lp-bg)",
+                  fontFamily: "var(--font-syne)",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  transition: "filter 0.15s ease",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.1)")}
+                onMouseLeave={e => (e.currentTarget.style.filter = "brightness(1)")}
               >
                 {proPlan.cta}
               </a>

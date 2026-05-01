@@ -2,7 +2,7 @@ import os
 import asyncio
 from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Request
 from pydantic import BaseModel
-from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines
+from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines, answer_question
 from services.cache import (
     delete_keys,
     get_json,
@@ -18,9 +18,12 @@ from services.supabase_storage import (
 
 
 class PodcastRequest(BaseModel):
-    topic: str | None = None          # Optional: specific topic/section to focus on
-    ezinne_voice: str = "chinenye"   # YarnGPT voice for Ezinne (female host)
-    abeo_voice: str = "jude"         # YarnGPT voice for Abeo (male host)
+    topic: str | None = None
+    ezinne_voice: str = "chinenye"
+    abeo_voice: str = "jude"
+
+class AskRequest(BaseModel):
+    question: str
 
 from services.auth_utils import get_user_id, is_local_mode
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -90,97 +93,111 @@ async def _podcast_pipeline(
                 first_ready.set()
 
     async def _run():
-        # Step 1: collect script from Groq, start line 0 TTS immediately
-        line0_task = None
-        async for line in stream_podcast_lines(text, mode=mode, doc_id=doc_id, topic=topic):
-            script.append(line)
-            if len(script) == 1:
-                line0_task = asyncio.create_task(_synth_line(0, line))
+        try:
+            # Step 1: collect script — signal endpoint on first line so it returns fast
+            async for line in stream_podcast_lines(text, mode=mode, doc_id=doc_id, topic=topic):
+                script.append(line)
+                if not first_ready.is_set():
+                    first_ready.set()
 
-        if not script:
-            first_ready.set()
-            return
+            if not script:
+                first_ready.set()
+                return
 
-        # Wait for line 0 to finish (it was running while Groq streamed the rest)
-        if line0_task:
-            await line0_task
+            # Full script collected — persist it
+            save_podcast_script(doc_id, list(script))
+            update_document(doc_id, {"podcast_total": len(script), "podcast_status": "generating"})
 
-        # Step 2: synthesize lines 1+ in parallel batches
-        sem = asyncio.Semaphore(_TTS_CONCURRENCY)
+            # Step 2: TTS for all lines in parallel (background)
+            sem = asyncio.Semaphore(_TTS_CONCURRENCY)
 
-        async def _bounded(idx: int, line: dict):
-            async with sem:
-                await _synth_line(idx, line)
+            async def _bounded(idx: int, line: dict):
+                async with sem:
+                    await _synth_line(idx, line)
 
-        await asyncio.gather(*[
-            _bounded(i, line) for i, line in enumerate(script[1:], start=1)
-        ])
+            await asyncio.gather(*[
+                _bounded(i, line) for i, line in enumerate(script)
+            ])
 
-        update_document(doc_id, {"podcast_status": "ready", "podcast_total": len(script)})
-        if not first_ready.is_set():
-            first_ready.set()
-        print(f"[Podcast] Pipeline complete — {len(script)} lines for {doc_id}")
+            update_document(doc_id, {"podcast_status": "ready", "podcast_total": len(script)})
+            print(f"[Podcast] Pipeline complete — {len(script)} lines for {doc_id}")
+
+        except Exception as e:
+            print(f"[Podcast] Pipeline error: {e}")
+            if not first_ready.is_set():
+                first_ready.set()
+            raise
 
     task = asyncio.create_task(_run())
     return script, first_ready, task
 
 
-async def _podcast_pipeline_supabase(doc_id: str, user_id: str, text: str, mode: str = "standard"):
+async def _run_supabase_podcast(doc_id: str, user_id: str, text: str, mode: str = "standard"):
     """
-    Supabase pipeline: stream lines, synthesize, store chunks in storage,
-    and persist script/progress on the document record.
+    Full podcast pipeline for Supabase mode. Runs to completion.
+    Called from a background thread's own event loop — not the main uvicorn loop.
     """
     from services.tts import synthesize_chunk, get_tts_capabilities
     from services.supabase import get_supabase_admin
 
     caps = get_tts_capabilities()
     engine = "premium" if caps.get("premium_available") else "fast"
-    if engine == "premium":
-        tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else "YarnGPT")
-        print(f"[Podcast] Using {tts_engine_name} premium engine for {mode} mode")
-    else:
-        print(f"[Podcast] Using edge-tts fast engine for {mode} mode (Premium not available)")
-
     lang = "pcm" if mode == "pidgin" else "en"
-
     supabase = get_supabase_admin()
-    script: list[dict] = []
-    first_ready = asyncio.Event()
 
-    async def _run():
-        idx = 0
+    print(f"[Podcast] Generating script for {doc_id} ({len(text.split())} words, engine={engine})")
+
+    # Step 1: generate script
+    script: list[dict] = []
+    try:
         async for line in stream_podcast_lines(text, mode=mode):
             script.append(line)
-            try:
-                try:
-                    audio = await synthesize_chunk(line["text"], line["voice"], engine, lang=lang)
-                except Exception as tts_err:
-                    print(f"[Podcast] Line {idx} premium TTS failed ({tts_err}), falling back to edge-tts")
-                    audio = await synthesize_chunk(line["text"], line["voice"], "fast", lang=lang)
-                upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
-                supabase.table("documents").update({
-                    "podcast_ready": idx + 1,
-                    "podcast_status": "generating",
-                    "podcast_script": script,
-                }).eq("id", doc_id).execute()
-            except Exception as e:
-                print(f"[Podcast] Line {idx} TTS failed: {e}")
-            finally:
-                if idx == 0:
-                    first_ready.set()
-                idx += 1
+    except Exception as e:
+        print(f"[Podcast] Script generation failed: {e}")
+        return
 
+    if not script:
+        print(f"[Podcast] Empty script for {doc_id}")
+        return
+
+    print(f"[Podcast] Script ready — {len(script)} lines, starting TTS for {doc_id}")
+
+    # Persist script
+    try:
         supabase.table("documents").update({
-            "podcast_status": "ready",
+            "podcast_status": "generating",
             "podcast_total": len(script),
             "podcast_script": script,
         }).eq("id", doc_id).execute()
-        if not first_ready.is_set():
-            first_ready.set()
-        print(f"[Podcast] Pipeline complete — {len(script)} lines for {doc_id}")
+    except Exception as e:
+        print(f"[Podcast] DB script save failed: {e}")
 
-    task = asyncio.create_task(_run())
-    return script, first_ready, task
+    # Step 2: TTS all lines in parallel
+    sem = asyncio.Semaphore(_TTS_CONCURRENCY)
+
+    async def _synth_and_upload(idx: int, line: dict):
+        async with sem:
+            try:
+                try:
+                    audio = await synthesize_chunk(line["text"], line["voice"], engine, lang=lang)
+                except Exception:
+                    audio = await synthesize_chunk(line["text"], line["voice"], "fast", lang=lang)
+                upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
+                supabase.table("documents").update({"podcast_ready": idx + 1}).eq("id", doc_id).execute()
+            except Exception as e:
+                print(f"[Podcast] Line {idx} TTS failed: {e}")
+
+    await asyncio.gather(*[_synth_and_upload(i, line) for i, line in enumerate(script)])
+
+    try:
+        supabase.table("documents").update({
+            "podcast_status": "ready",
+            "podcast_total": len(script),
+        }).eq("id", doc_id).execute()
+    except Exception as e:
+        print(f"[Podcast] DB status update failed: {e}")
+
+    print(f"[Podcast] Complete — {len(script)} lines for {doc_id}")
 
 
 @router.post("/podcast/{doc_id}")
@@ -203,80 +220,82 @@ async def generate_podcast(
     user_id = get_user_id(authorization)
 
     if not USE_LOCAL:
-        from services.supabase import get_supabase_admin
-        from services.chapters import detect_chapters
+        import threading
 
-        supabase = get_supabase_admin()
-        doc = supabase.table("documents") \
-            .select("extracted_text, podcast_status, podcast_script, podcast_total") \
-            .eq("id", doc_id).eq("user_id", user_id).single().execute()
-        if not doc.data:
-            raise HTTPException(status_code=404, detail="Document not found.")
+        def _supabase_and_generate():
+            """All Supabase I/O + AI generation in a background thread — never blocks endpoint."""
+            import asyncio
+            from services.supabase import get_supabase_admin
+            from services.chapters import detect_chapters
 
-        topic_text = body.topic if body.topic and body.topic.strip() else None
-        force_regen = regenerate or bool(topic_text) or chapter is not None
+            supabase = get_supabase_admin()
+            try:
+                doc = supabase.table("documents") \
+                    .select("extracted_text, podcast_status, podcast_script, podcast_total") \
+                    .eq("id", doc_id).eq("user_id", user_id).single().execute()
+            except Exception as e:
+                print(f"[Podcast] DB fetch failed: {e}")
+                return
 
-        existing_script = doc.data.get("podcast_script") or []
-        existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+            if not doc.data:
+                print(f"[Podcast] Document {doc_id} not found")
+                return
 
-        if not force_regen and existing_script and doc.data.get("podcast_status") == "ready":
-            return {
-                "status": "ready",
-                "total_lines": doc.data.get("podcast_total", len(existing_script)),
-                "ready_lines": len(existing_chunks),
-                "script": existing_script,
-                "cached": True,
-            }
+            topic_text = body.topic if body.topic and body.topic.strip() else None
+            force_regen = regenerate or bool(topic_text) or chapter is not None
+            existing_script = doc.data.get("podcast_script") or []
 
-        if not force_regen and existing_script and doc.data.get("podcast_status") == "generating":
-            return {
-                "status": "generating",
-                "total_lines": doc.data.get("podcast_total", len(existing_script)),
-                "ready_lines": len(existing_chunks),
-                "script": existing_script,
-                "cached": True,
-            }
+            if not force_regen and existing_script and doc.data.get("podcast_status") in ("ready", "generating"):
+                print(f"[Podcast] Using cached script for {doc_id}")
+                return
 
-        full_text = doc.data.get("extracted_text") or ""
-        if not full_text.strip():
-            raise HTTPException(status_code=422, detail="Document has no extracted text.")
+            full_text = doc.data.get("extracted_text") or ""
+            if not full_text.strip():
+                print(f"[Podcast] No text for {doc_id}")
+                return
 
-        if topic_text:
-            text = topic_text
-        elif chapter is not None:
-            chapter_list = detect_chapters(full_text)
-            if 0 <= chapter < len(chapter_list):
-                ch = chapter_list[chapter]
-                words = full_text.split()
-                text = " ".join(words[ch["start_word"]: ch["start_word"] + ch["word_count"]])
+            if topic_text:
+                text = topic_text
+            elif chapter is not None:
+                chapter_list = detect_chapters(full_text)
+                if 0 <= chapter < len(chapter_list):
+                    ch = chapter_list[chapter]
+                    words = full_text.split()
+                    text = " ".join(words[ch["start_word"]: ch["start_word"] + ch["word_count"]])
+                else:
+                    text = full_text
             else:
                 text = full_text
-        else:
-            text = full_text
 
-        delete_audio_chunks_supabase(user_id, doc_id, "podcast")
-        supabase.table("documents").update({
-            "podcast_status": "generating",
-            "podcast_ready": 0,
-            "podcast_total": 0,
-            "podcast_script": None,
-        }).eq("id", doc_id).execute()
-        delete_keys(key_podcast_chunks(user_id, doc_id))
+            try:
+                delete_audio_chunks_supabase(user_id, doc_id, "podcast")
+                supabase.table("documents").update({
+                    "podcast_status": "generating",
+                    "podcast_ready": 0,
+                    "podcast_total": 0,
+                    "podcast_script": None,
+                }).eq("id", doc_id).execute()
+                delete_keys(key_podcast_chunks(user_id, doc_id))
+            except Exception as e:
+                print(f"[Podcast] DB reset failed: {e}")
 
-        script_ref, first_ready, _task = await _podcast_pipeline_supabase(doc_id, user_id, text, mode=mode)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(_run_supabase_podcast(doc_id, user_id, text, mode=mode))
+            except Exception as e:
+                print(f"[Podcast] Pipeline error: {e}")
+            finally:
+                loop.close()
 
-        try:
-            await asyncio.wait_for(first_ready.wait(), timeout=120)
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=504, detail="Podcast generation timed out.")
-
-        ready_chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+        threading.Thread(target=_supabase_and_generate, daemon=True).start()
+        print(f"[Podcast] Kicked off background thread for {doc_id}, returning 200")
 
         return {
             "status": "generating",
-            "total_lines": len(script_ref),
-            "ready_lines": len(ready_chunks),
-            "script": script_ref,
+            "total_lines": 0,
+            "ready_lines": 0,
+            "script": [],
             "cached": False,
         }
 
@@ -340,29 +359,19 @@ async def generate_podcast(
     update_document(doc_id, {"podcast_status": "generating", "podcast_ready": 0, "podcast_total": 0})
     delete_keys(key_podcast_chunks(user_id, doc_id))
 
-    # Start pipeline — script generation + TTS run concurrently
-    script_ref, first_ready, _task = await _podcast_pipeline(
+    # Fire and forget — return immediately, frontend polls /chunks
+    await _podcast_pipeline(
         doc_id, user_id, text, mode=mode,
         ezinne_voice=body.ezinne_voice,
         abeo_voice=body.abeo_voice,
         topic=topic_text,
     )
 
-    # Wait only until the FIRST audio chunk is synthesized (~8-12s)
-    try:
-        await asyncio.wait_for(first_ready.wait(), timeout=120)
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Podcast generation timed out. Is Ollama running?")
-
-    from services.local_storage import get_podcast_script as _get_script, list_podcast_chunks
-    current_script = _get_script(doc_id) or script_ref
-    ready_chunks = list_podcast_chunks(doc_id, user_id)
-
     return {
         "status": "generating",
-        "total_lines": len(current_script),
-        "ready_lines": len(ready_chunks),
-        "script": current_script,
+        "total_lines": 0,
+        "ready_lines": 0,
+        "script": [],
         "cached": False,
     }
 
@@ -499,3 +508,45 @@ async def summarize(doc_id: str, authorization: str = Header(...)):
     supabase.table("documents").update({"summary": summary}).eq("id", doc_id).execute()
     set_json(cache_key, summary, 86400)
     return {"summary": summary, "cached": False}
+
+
+@router.post("/ask/{doc_id}")
+async def ask_document(doc_id: str, body: AskRequest, authorization: str = Header(...)):
+    """Answer a student's question about a document using LightRAG retrieval."""
+    user_id = get_user_id(authorization)
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is empty.")
+
+    if USE_LOCAL:
+        from services.local_storage import get_document
+        doc = get_document(doc_id, user_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found.")
+        text = doc.get("extracted_text", "")
+    else:
+        from services.supabase import get_supabase_admin
+        supabase = get_supabase_admin()
+        doc = supabase.table("documents").select("extracted_text") \
+            .eq("id", doc_id).eq("user_id", user_id).single().execute()
+        if not doc.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+        text = doc.data.get("extracted_text", "")
+
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="Document has no text.")
+
+    from services.rag import retrieve_relevant, is_indexed, index_document, keyword_fallback
+    import threading
+
+    if not is_indexed(doc_id):
+        # Index in background — don't block this request
+        threading.Thread(target=index_document, args=(doc_id, text), daemon=True).start()
+        # Fast keyword search as first-request fallback (instant, no model)
+        context = keyword_fallback(text, question, max_words=4000)
+    else:
+        chunks = retrieve_relevant(doc_id, question, top_k=12, text=text)
+        context = " ".join(chunks) if chunks else keyword_fallback(text, question, max_words=4000)
+
+    answer = await answer_question(context, question)
+    return {"answer": answer, "question": question}

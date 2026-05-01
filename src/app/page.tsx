@@ -1,5 +1,6 @@
 ﻿import { ConditionsSection } from "@/components/landing/ConditionsSection";
 import { FAQ } from "@/components/landing/FAQ";
+import { FeatureAnimation } from "@/components/landing/FeatureAnimation";
 import { FeatureGrid } from "@/components/landing/FeatureGrid";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
@@ -15,11 +16,12 @@ import { VoiceFeature } from "@/components/landing/VoiceFeature";
 
 export default function Home() {
   return (
-    <div className="overflow-x-clip bg-[#020A2A] text-white">
+    <div className="overflow-x-clip" style={{ background: "var(--lp-bg)", color: "var(--lp-text-1)" }}>
       <ScrollProgress />
       <Navbar />
       <main>
         <Hero />
+        <FeatureAnimation />
         <SocialProof />
         <ProblemReality />
         <HowItWorks />

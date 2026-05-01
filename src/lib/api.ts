@@ -252,3 +252,10 @@ export async function getDocumentText(docId: string): Promise<string> {
   const data = await request<{ text: string }>(`/documents/${docId}/text`);
   return data.text;
 }
+
+export async function askDocument(docId: string, question: string) {
+  return request<{ answer: string; question: string }>(`/ai/ask/${docId}`, {
+    method: "POST",
+    body: JSON.stringify({ question }),
+  });
+}

@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { Quote, Star } from "lucide-react";
+import { Quote } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { testimonials } from "./data";
 
@@ -13,36 +13,107 @@ export function SocialProof() {
   const headingY = useTransform(smooth, [0, 1], [24, -18]);
 
   return (
-    <section ref={sectionRef} className="bg-[#F4F8FF] py-16 text-[#102349] sm:py-24">
+    <section
+      ref={sectionRef}
+      style={{
+        background: "var(--lp-bg)",
+        borderBottom: "1px solid var(--lp-border)",
+        padding: "80px 0",
+      }}
+    >
       <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
         <motion.div style={{ y: headingY }}>
           <Reveal>
-            <p className="text-xs font-semibold tracking-[0.18em] text-[#2A73ED]">REAL ACTION</p>
-            <h2 className="mt-3 max-w-[22ch] text-[clamp(1.9rem,4.4vw,3.1rem)] leading-tight">
+            <p
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-syne)",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                color: "var(--lp-amber)",
+                marginBottom: "16px",
+              }}
+            >
+              First Reactions
+            </p>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2rem, 4.4vw, 3.2rem)",
+                fontWeight: 800,
+                lineHeight: "1.02",
+                letterSpacing: "-0.02em",
+                color: "var(--lp-text-1)",
+                maxWidth: "26ch",
+                marginBottom: "40px",
+              }}
+            >
               What students said when we showed them a demo
             </h2>
           </Reveal>
         </motion.div>
 
-        <div className="mt-9 -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
           {testimonials.map((item, index) => (
             <Reveal key={item.name} delay={index * 0.07} className="min-w-[84%] snap-start sm:min-w-[67%] lg:min-w-0">
               <motion.article
-                whileHover={{ y: -6 }}
+                whileHover={{ y: -4 }}
                 transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="h-full rounded-3xl border border-[#D7E4FA] bg-white p-6 shadow-[0_12px_24px_rgba(20,43,90,0.08)] transition hover:shadow-[0_22px_40px_rgba(20,43,90,0.14)]"
+                style={{
+                  height: "100%",
+                  border: "1px solid var(--lp-border)",
+                  borderRadius: "16px",
+                  background: "var(--lp-surface)",
+                  padding: "24px",
+                  transition: "border-color 0.2s ease",
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(212, 148, 10, 0.35)")}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = "var(--lp-border)")}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1 text-[#F6B644]">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                  <div style={{ display: "flex", gap: "3px", color: "var(--lp-amber)" }}>
                     {Array.from({ length: 5 }).map((_, idx) => (
-                      <Star key={`${item.name}-${idx}`} className="h-4 w-4 fill-current" />
+                      <span key={`${item.name}-${idx}`} style={{ fontSize: "14px" }}>★</span>
                     ))}
                   </div>
-                  <Quote className="h-5 w-5 text-[#2A73ED]" />
+                  <Quote
+                    style={{ width: "16px", height: "16px", color: "var(--lp-text-3)" }}
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <p className="mt-4 text-[15px] leading-relaxed text-[#2A3F66]">{item.quote}</p>
-                <p className="mt-5 text-sm font-semibold text-[#0F2A57]">{item.name}</p>
-                <p className="mt-1 text-xs text-[#5B729C]">{item.meta}</p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "15px",
+                    lineHeight: "1.7",
+                    color: "var(--lp-text-2)",
+                    marginBottom: "20px",
+                    fontStyle: "italic",
+                  }}
+                >
+                  &ldquo;{item.quote}&rdquo;
+                </p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "var(--lp-text-1)",
+                  }}
+                >
+                  {item.name}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "11px",
+                    color: "var(--lp-text-3)",
+                    marginTop: "3px",
+                  }}
+                >
+                  {item.meta}
+                </p>
               </motion.article>
             </Reveal>
           ))}

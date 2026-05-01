@@ -1,87 +1,131 @@
-﻿import Image from "next/image";
-import { Play, Volume2 } from "lucide-react";
+"use client";
 
-const voices = ["Adaora", "Zainab", "Nonso", "Jude"];
+import { useEffect, useState } from "react";
+import { Play, SkipBack, SkipForward } from "lucide-react";
+
+const WAVEFORM = [14, 22, 34, 26, 18, 30, 42, 28, 16, 36, 44, 24, 18, 32, 40, 22, 16, 34, 46, 28, 20, 36, 42, 26, 16, 30, 38, 24, 18, 32, 44, 28, 20, 34, 40, 22, 16, 28, 36, 20];
+const PIVOT_INIT = 23;
+const TOTAL_SECONDS = 18 * 60;
 
 export function AudioPlayerMock({
   large = false,
-  showMascot = false,
 }: {
   large?: boolean;
   showMascot?: boolean;
 }) {
+  const [pivot,   setPivot]   = useState(PIVOT_INIT);
+  const [elapsed, setElapsed] = useState(Math.round((PIVOT_INIT / WAVEFORM.length) * TOTAL_SECONDS));
+
+  useEffect(() => {
+    const barInterval  = setInterval(() => setPivot(p => (p + 1) % WAVEFORM.length), 140);
+    const timeInterval = setInterval(() => setElapsed(s => (s + 1) % TOTAL_SECONDS), 1000);
+    return () => { clearInterval(barInterval); clearInterval(timeInterval); };
+  }, []);
+
+  const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const seconds = String(elapsed % 60).padStart(2, "0");
+  const progress = (elapsed / TOTAL_SECONDS) * 100;
+
   return (
-    <div className="relative mx-auto w-full max-w-[520px]">
+    <div className="relative mx-auto w-full" style={{ maxWidth: large ? "540px" : "500px" }}>
       <div
-        className={[
-          "relative overflow-hidden rounded-[28px] border border-[#2B4EA8]/80 bg-gradient-to-b from-[#0A226D]/95 to-[#041A58]/95",
-          "shadow-[0_20px_60px_rgba(0,0,0,0.45)]",
-          large ? "p-6 sm:p-8" : "p-5 sm:p-6",
-        ].join(" ")}
+        style={{
+          background: "var(--lp-surface)",
+          border: "1px solid var(--lp-border)",
+          borderRadius: "20px",
+          padding: large ? "32px" : "26px",
+          boxShadow: "var(--lp-shadow-card)",
+        }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_0%,rgba(84,205,255,0.24),transparent_42%),radial-gradient(circle_at_0%_100%,rgba(53,126,255,0.2),transparent_44%)]" />
-        <div className="relative">
-          <p className="text-xs font-semibold tracking-[0.18em] text-[#9AC2FF]">NOW PLAYING</p>
-          <div className="mt-3 rounded-2xl border border-[#3A64CA]/70 bg-[#0B2A7D]/70 p-4">
-            <p className={large ? "text-lg font-semibold" : "text-base font-semibold"}>BIO302 - Cell Division Notes</p>
-            <p className="mt-1 text-xs text-[#B8D0FF]">12 pages · 18 min listen</p>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px" }}>
+          <div>
+            <p style={{ fontFamily: "var(--font-syne)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", color: "var(--lp-amber)", textTransform: "uppercase", marginBottom: "6px" }}>
+              Now Playing
+            </p>
+            <p style={{ fontFamily: "var(--font-display)", fontSize: large ? "20px" : "18px", fontWeight: 800, color: "var(--lp-text-1)", lineHeight: 1.1, letterSpacing: "-0.01em" }}>
+              BIO302 · Cell Division
+            </p>
+            <p style={{ fontFamily: "var(--font-syne)", fontSize: "11px", color: "var(--lp-text-3)", marginTop: "4px" }}>
+              Chapter 4 · 18 min · 12 pages
+            </p>
           </div>
 
-          <div className="mt-5 flex items-end gap-[4px]">
-            {Array.from({ length: large ? 34 : 26 }).map((_, i) => (
-              <span
-                key={i}
-                className={[
-                  "animate-wave rounded-full bg-gradient-to-b from-[#66DDFF] to-[#2AA6FF]",
-                  large ? "w-[4px] sm:w-[5px]" : "w-[3px] sm:w-[4px]",
-                ].join(" ")}
-                style={{ height: `${10 + ((i * 7) % (large ? 28 : 20))}px`, animationDelay: `${(i % 8) * 0.1}s` }}
-              />
-            ))}
-          </div>
-
-          <div className="mt-5 h-1.5 rounded-full bg-[#113988]">
-            <div className="h-full w-[64%] rounded-full bg-gradient-to-r from-[#32BBFF] to-[#4D9CFF]" />
-          </div>
-
-          <div className="mt-4 flex items-center justify-between">
-            <button
-              type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#4D79DD] bg-[#1651C8] text-white transition hover:bg-[#1E61DC]"
-              aria-label="Play audio preview"
-            >
-              <Play className="h-4 w-4 fill-current" />
-            </button>
-            <div className="flex items-center gap-1.5 rounded-full border border-[#3159BE] bg-[#0E307F] px-3 py-1.5 text-xs text-[#D7E8FF]">
-              <Volume2 className="h-3.5 w-3.5" />
-              1x
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {voices.map((voice) => (
-              <span
-                key={voice}
-                className="rounded-full border border-[#3863C9] bg-[#0D2A75] px-3 py-1 text-xs font-semibold text-[#D9E7FF]"
-              >
-                {voice}
-              </span>
-            ))}
+          {/* Live indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid var(--lp-border)", borderRadius: "8px", padding: "6px 10px", flexShrink: 0 }}>
+            <span
+              style={{
+                width: "6px", height: "6px", borderRadius: "50%",
+                background: "var(--lp-amber)", display: "inline-block",
+                animation: "pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite",
+              }}
+            />
+            <span style={{ fontFamily: "var(--font-syne)", fontSize: "10px", fontWeight: 700, color: "var(--lp-text-2)", letterSpacing: "0.1em" }}>
+              LIVE
+            </span>
           </div>
         </div>
-      </div>
 
-      {showMascot ? (
-        <Image
-          src="/images/JackPal 1.png"
-          alt="Jackpals blue audio mascot"
-          width={120}
-          height={120}
-          className="absolute -bottom-9 -right-2 hidden animate-float lg:block"
-          priority={false}
-        />
-      ) : null}
+        {/* Waveform */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "2px", height: "52px", marginBottom: "14px" }}>
+          {WAVEFORM.map((h, i) => {
+            const isPast    = i < pivot;
+            const isCurrent = i === pivot;
+            const isNear    = Math.abs(i - pivot) <= 3;
+            return (
+              <span
+                key={i}
+                className={isCurrent || isNear ? "animate-wave" : ""}
+                style={{
+                  width: "3px",
+                  height: `${h}px`,
+                  borderRadius: "2px",
+                  background: isPast
+                    ? "var(--lp-amber)"
+                    : isCurrent
+                    ? "var(--lp-amber-bright)"
+                    : "var(--lp-border)",
+                  opacity: isPast ? 0.85 : isCurrent ? 1 : isNear ? 0.55 : 0.3,
+                  animationDelay: `${(i % 6) * 0.12}s`,
+                  flexShrink: 0,
+                  transition: "background 0.08s ease, opacity 0.08s ease",
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Progress */}
+        <div style={{ height: "2px", background: "var(--lp-border)", borderRadius: "1px", marginBottom: "14px" }}>
+          <div style={{ height: "100%", width: `${progress}%`, background: "var(--lp-amber)", borderRadius: "1px", transition: "width 0.9s linear" }} />
+        </div>
+
+        {/* Transport */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontFamily: "var(--font-syne)", fontSize: "11px", color: "var(--lp-text-3)" }}>{minutes}:{seconds}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <button type="button" style={{ color: "var(--lp-text-3)", lineHeight: 0 }} aria-label="Skip back">
+              <SkipBack size={15} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              aria-label="Play"
+              style={{
+                width: "42px", height: "42px", borderRadius: "50%",
+                background: "var(--lp-amber)", display: "flex",
+                alignItems: "center", justifyContent: "center",
+                color: "#fff", flexShrink: 0,
+              }}
+            >
+              <Play size={16} fill="currentColor" />
+            </button>
+            <button type="button" style={{ color: "var(--lp-text-3)", lineHeight: 0 }} aria-label="Skip forward">
+              <SkipForward size={15} strokeWidth={1.75} />
+            </button>
+          </div>
+          <span style={{ fontFamily: "var(--font-syne)", fontSize: "11px", color: "var(--lp-text-3)" }}>18:00</span>
+        </div>
+      </div>
     </div>
   );
 }
-

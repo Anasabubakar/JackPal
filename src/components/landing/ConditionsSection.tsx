@@ -1,40 +1,140 @@
-﻿import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { conditionBullets } from "./data";
 
 export function ConditionsSection() {
   return (
-    <section className="bg-[#020A2A] py-16 sm:py-24">
+    <section
+      style={{
+        background: "var(--lp-surface)",
+        borderBottom: "1px solid var(--lp-border)",
+        padding: "80px 0",
+      }}
+    >
       <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <article className="relative overflow-hidden rounded-[32px] border border-[#2A458D] bg-gradient-to-r from-[#071A58] to-[#041343] p-7 shadow-[0_18px_44px_rgba(0,0,0,0.34)] sm:p-10">
-            <div className="pointer-events-none absolute -right-24 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(70,214,255,0.42)_0%,rgba(70,214,255,0)_70%)]" />
+          <article
+            className="p-6 sm:p-10"
+            style={{
+              overflow: "hidden",
+              borderRadius: "20px",
+              border: "1px solid var(--lp-border)",
+              background: "var(--lp-surface-2)",
+              position: "relative",
+            }}
+          >
+            {/* Amber accent line at top */}
+            <div
+              className="pointer-events-none absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "var(--lp-amber)", opacity: 0.5 }}
+              aria-hidden
+            />
 
-            <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div className="relative grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div>
-                <p className="text-xs font-semibold tracking-[0.18em] text-[#93CCFF]">Privacy & performance</p>
-                <h2 className="mt-3 max-w-[22ch] text-[clamp(1.8rem,4vw,2.9rem)] leading-tight text-white">
-                  Built for real-world <span className="text-[#38C1FF]">Nigerian conditions.</span>
+                <p
+                  className="uppercase"
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.22em",
+                    color: "var(--lp-amber)",
+                    marginBottom: "16px",
+                  }}
+                >
+                  Privacy & Performance
+                </p>
+                <h2
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "clamp(1.8rem, 4vw, 3rem)",
+                    fontWeight: 800,
+                    lineHeight: "1.02",
+                    letterSpacing: "-0.02em",
+                    color: "var(--lp-text-1)",
+                    maxWidth: "22ch",
+                    marginBottom: "16px",
+                  }}
+                >
+                  Built for real-world{" "}
+                  <em style={{ fontStyle: "italic", color: "var(--lp-amber)" }}>Nigerian conditions.</em>
                 </h2>
-                <p className="mt-4 max-w-[65ch] text-sm leading-relaxed text-[#CFE1FF] sm:text-base">
-                  Jackpals does not assume you have fast WiFi, unlimited data, or a 2024 flagship phone. It is engineered for the actual
-                  constraints of student life.
+                <p
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontSize: "14px",
+                    lineHeight: "1.75",
+                    color: "var(--lp-text-2)",
+                    maxWidth: "60ch",
+                    marginBottom: "24px",
+                  }}
+                >
+                  JackPal does not assume you have fast WiFi, unlimited data, or a 2024 flagship phone. It is engineered for the actual constraints of student life.
                 </p>
 
-                <ul className="mt-6 space-y-3">
+                <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {conditionBullets.map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-[#E3EEFF]">
-                      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#56D0FF]" />
-                      <span>{item}</span>
+                    <li
+                      key={item}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "12px",
+                      }}
+                    >
+                      <ShieldCheck
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          flexShrink: 0,
+                          marginTop: "1px",
+                          color: "var(--lp-amber)",
+                        }}
+                        strokeWidth={1.75}
+                      />
+                      <span
+                        style={{
+                          fontFamily: "var(--font-syne)",
+                          fontSize: "13px",
+                          lineHeight: "1.6",
+                          color: "var(--lp-text-2)",
+                        }}
+                      >
+                        {item}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="relative hidden h-64 items-center justify-center lg:flex">
-                <div className="absolute h-56 w-56 rounded-full border border-[#3A67D0]/50" />
-                <div className="absolute h-44 w-44 rounded-full border border-[#3EC7FF]/45" />
-                <div className="h-28 w-28 rounded-full bg-[radial-gradient(circle,#5EE0FF_0%,#2B79FF_70%)] blur-[2px]" />
+              {/* Editorial waveform decoration */}
+              <div
+                className="relative hidden items-center justify-center lg:flex"
+                style={{ height: "220px" }}
+                aria-hidden
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    gap: "4px",
+                    opacity: 0.2,
+                  }}
+                >
+                  {[20, 34, 52, 40, 28, 44, 60, 36, 22, 48, 64, 32, 20, 38, 56, 30, 22, 44, 68, 38, 24, 50, 58, 34].map((h, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        width: "5px",
+                        height: `${h}px`,
+                        borderRadius: "3px",
+                        background: "var(--lp-amber)",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </article>
@@ -43,4 +143,3 @@ export function ConditionsSection() {
     </section>
   );
 }
-
