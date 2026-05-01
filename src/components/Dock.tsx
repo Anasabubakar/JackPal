@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 interface NavItem {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   href: string;
 }
 
@@ -60,18 +60,19 @@ export function Dock({ onCenterAction }: DockProps) {
         >
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
+            const Icon = item.icon;
             return (
               <a
                 key={item.id}
                 href={item.href}
                 className={cn(
                   "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)] outline-none cursor-pointer overflow-hidden rounded-full",
-                  isActive 
-                    ? "bg-[#2585C7]/85 px-5 py-3 shadow-[0_2px_12px_rgba(37,133,199,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-white min-w-[120px]" 
+                  isActive
+                    ? "bg-[#2585C7]/85 px-5 py-3 shadow-[0_2px_12px_rgba(37,133,199,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-white min-w-[120px]"
                     : "px-3.5 py-3 text-[#02013D]/40 hover:text-[#2585C7] min-w-[48px]"
                 )}
               >
-                <item.icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
+                <Icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
                 <span 
                   className={cn(
                     "text-[15px] font-semibold tracking-tight whitespace-nowrap transition-all duration-300",
