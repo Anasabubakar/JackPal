@@ -110,14 +110,6 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <ThemeToggle />
-          <Link
-            href="/login"
-            style={{ fontFamily: "var(--font-syne)", fontSize: "13px", fontWeight: 500, color: "var(--lp-text-2)", transition: "color 0.15s ease" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--lp-text-1)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--lp-text-2)")}
-          >
-            Login
-          </Link>
           <a
             href="#final-cta"
             style={{
@@ -172,17 +164,6 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
-            <Link
-              href="/login"
-              onClick={() => setMenuOpen(false)}
-              style={{
-                borderRadius: "8px", border: "1px solid var(--lp-border)",
-                padding: "11px 14px", fontFamily: "var(--font-syne)", fontSize: "14px",
-                color: "var(--lp-text-2)",
-              }}
-            >
-              Login
-            </Link>
             <a
               href="#final-cta"
               onClick={() => setMenuOpen(false)}

@@ -2,7 +2,6 @@
 
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { Quote } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { testimonials } from "./data";
 
@@ -46,7 +45,7 @@ export function SocialProof() {
                 letterSpacing: "-0.02em",
                 color: "var(--lp-text-1)",
                 maxWidth: "26ch",
-                marginBottom: "40px",
+                marginBottom: "48px",
               }}
             >
               What students said when we showed them a demo
@@ -54,67 +53,72 @@ export function SocialProof() {
           </Reveal>
         </motion.div>
 
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+        <div className="grid gap-0 lg:grid-cols-3">
           {testimonials.map((item, index) => (
-            <Reveal key={item.name} delay={index * 0.07} className="min-w-[84%] snap-start sm:min-w-[67%] lg:min-w-0">
-              <motion.article
-                whileHover={{ y: -4 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            <Reveal key={item.name} delay={index * 0.09}>
+              <article
                 style={{
+                  padding: "28px 0",
+                  paddingRight: "32px",
+                  borderTop: `2px solid ${index === 0 ? "var(--lp-amber)" : "var(--lp-border)"}`,
                   height: "100%",
-                  border: "1px solid var(--lp-border)",
-                  borderRadius: "16px",
-                  background: "var(--lp-surface)",
-                  padding: "24px",
-                  transition: "border-color 0.2s ease",
                 }}
-                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(212, 148, 10, 0.35)")}
-                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = "var(--lp-border)")}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", gap: "3px", color: "var(--lp-amber)" }}>
-                    {Array.from({ length: 5 }).map((_, idx) => (
-                      <span key={`${item.name}-${idx}`} style={{ fontSize: "14px" }}>★</span>
-                    ))}
-                  </div>
-                  <Quote
-                    style={{ width: "16px", height: "16px", color: "var(--lp-text-3)" }}
-                    strokeWidth={1.5}
-                  />
-                </div>
+                {/* Decorative quote mark */}
+                <p
+                  aria-hidden
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "72px",
+                    lineHeight: 0.8,
+                    letterSpacing: "-0.04em",
+                    color: "var(--lp-amber)",
+                    opacity: index === 0 ? 0.55 : 0.18,
+                    marginBottom: "14px",
+                    userSelect: "none",
+                  }}
+                >
+                  &ldquo;
+                </p>
+
+                {/* Quote text */}
                 <p
                   style={{
                     fontFamily: "var(--font-display)",
-                    fontSize: "15px",
-                    lineHeight: "1.7",
-                    color: "var(--lp-text-2)",
-                    marginBottom: "20px",
-                    fontStyle: "italic",
-                  }}
-                >
-                  &ldquo;{item.quote}&rdquo;
-                </p>
-                <p
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    fontSize: "13px",
-                    fontWeight: 600,
+                    fontSize: "clamp(15px, 1.8vw, 17px)",
+                    lineHeight: "1.6",
                     color: "var(--lp-text-1)",
+                    marginBottom: "24px",
                   }}
                 >
-                  {item.name}
+                  {item.quote}
                 </p>
-                <p
-                  style={{
-                    fontFamily: "var(--font-syne)",
-                    fontSize: "11px",
-                    color: "var(--lp-text-3)",
-                    marginTop: "3px",
-                  }}
-                >
-                  {item.meta}
-                </p>
-              </motion.article>
+
+                {/* Attribution */}
+                <div style={{ marginTop: "auto" }}>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-syne)",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: index === 0 ? "var(--lp-amber)" : "var(--lp-text-1)",
+                    }}
+                  >
+                    {item.name}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-syne)",
+                      fontSize: "11px",
+                      color: "var(--lp-text-3)",
+                      marginTop: "3px",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    {item.meta}
+                  </p>
+                </div>
+              </article>
             </Reveal>
           ))}
         </div>
