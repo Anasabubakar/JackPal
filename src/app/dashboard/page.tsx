@@ -1146,81 +1146,21 @@ export default function Dashboard() {
             </div>
           ) : isEmpty ? (
             /* â”€â”€ Empty state â”€â”€ */
-            <div className="flex flex-col justify-center h-full gap-7 px-8" style={{ maxWidth: 460, margin: "0 auto", width: "100%" }}>
-              {/* Editorial headline */}
-              <div>
-                <div
-                  className="leading-[1.0]"
-                  style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "clamp(36px, 5vw, 52px)" }}
-                >
-                  Your notes.<br />
-                  <em style={{ color: "var(--teal)", fontStyle: "italic" }}>Discussed</em> out loud.
-                </div>
-                <div
-                  className="mt-4 leading-relaxed"
-                  style={{ color: "var(--text-3)", fontSize: 12, fontFamily: "var(--font-syne)", maxWidth: 320 }}
-                >
-                  Upload a PDF or Word doc — Ezinne & Abeo turn it into a podcast episode in ~30 seconds.
-                </div>
-              </div>
-
-              {/* Host cards */}
-              <div className="flex gap-3">
-                <div
-                  className="flex-1 rounded-xl p-4"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-                >
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold animate-float"
-                      style={{ background: "var(--teal)", color: "var(--ink)" }}
-                    >E</div>
-                    <div>
-                      <div className="text-[12px] font-bold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>Ezinne</div>
-                      <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: "var(--teal)" }}>Host</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-3)" }}>
-                    Asks the sharp questions. Makes abstract concepts click.
-                  </div>
-                </div>
-                <div
-                  className="flex-1 rounded-xl p-4"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-                >
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white animate-float float-delay-1"
-                      style={{ background: "var(--blue)" }}
-                    >A</div>
-                    <div>
-                      <div className="text-[12px] font-bold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>Abeo</div>
-                      <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: "var(--blue)" }}>Host</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-3)" }}>
-                    Breaks it down step by step. Explains until it sticks.
-                  </div>
-                </div>
-              </div>
-
-              {/* Upload strip */}
+            <div className="flex flex-col items-center justify-center h-full px-6" style={{ gap: "28px" }}>
+              {/* Upload zone */}
               <label
-                className="flex items-center gap-4 rounded-xl px-5 py-4 cursor-pointer transition-all"
-                style={{ border: "1.5px dashed var(--border)", background: "var(--surface)" }}
+                className="w-full cursor-pointer transition-all"
+                style={{ maxWidth: 400 }}
                 onDragOver={e => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = "var(--blue)";
-                  e.currentTarget.style.background = "var(--blue-dim)";
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "border-color:var(--blue);background:var(--blue-dim)");
                 }}
                 onDragLeave={e => {
-                  e.currentTarget.style.borderColor = "var(--border)";
-                  e.currentTarget.style.background = "var(--surface)";
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
                 }}
                 onDrop={async e => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = "var(--border)";
-                  e.currentTarget.style.background = "var(--surface)";
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
                   const file = e.dataTransfer.files?.[0];
                   if (!file) return;
                   setUploading(true);
@@ -1236,18 +1176,29 @@ export default function Dashboard() {
                 }}
               >
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "var(--surface-2)" }}
+                  className="upload-zone flex flex-col items-center gap-5 rounded-2xl py-12 px-8 transition-all"
+                  style={{ border: "1.5px dashed var(--border)", background: "var(--surface)" }}
                 >
-                  {uploading
-                    ? <Loader2 size={16} className="animate-spin" style={{ color: "var(--blue)" }} />
-                    : <CloudUpload size={16} strokeWidth={1.5} style={{ color: "var(--blue)" }} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-semibold" style={{ color: "var(--text-1)" }}>
-                    {uploading ? "Uploading..." : "Drop a file or click to browse"}
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                  >
+                    {uploading
+                      ? <Loader2 size={22} className="animate-spin" style={{ color: "var(--blue)" }} />
+                      : <CloudUpload size={22} strokeWidth={1.5} style={{ color: "var(--blue)" }} />}
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>PDF · DOCX · TXT · up to 10MB</div>
+                  <div className="text-center">
+                    <div className="text-[14px] font-semibold mb-1" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>
+                      {uploading ? "Uploading…" : "Drop your notes here"}
+                    </div>
+                    <div className="text-[11px]" style={{ color: "var(--text-3)" }}>PDF · DOCX · TXT · up to 10 MB</div>
+                  </div>
+                  <div
+                    className="px-5 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest"
+                    style={{ background: "var(--blue)", color: "#fff" }}
+                  >
+                    Browse files
+                  </div>
                 </div>
                 <input
                   type="file"
@@ -1256,6 +1207,24 @@ export default function Dashboard() {
                   onChange={handleFileUpload}
                 />
               </label>
+
+              {/* What happens next */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-[11px] text-center" style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}>
+                  Becomes a podcast in ~30 s, hosted by
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: "var(--teal)", color: "var(--ink)" }}>E</div>
+                    <span className="text-[11px] font-medium" style={{ color: "var(--text-2)", fontFamily: "var(--font-syne)" }}>Ezinne</span>
+                  </div>
+                  <span className="text-[10px]" style={{ color: "var(--text-3)" }}>&amp;</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: "var(--blue)" }}>A</div>
+                    <span className="text-[11px] font-medium" style={{ color: "var(--text-2)", fontFamily: "var(--font-syne)" }}>Abeo</span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             /* â”€â”€ Document list â”€â”€ */
