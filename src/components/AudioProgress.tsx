@@ -1,79 +1,55 @@
-"use client";
-
-import React from 'react';
+import React, { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { useAudioPlayer } from '@/lib/AudioPlayerContext';
 
 interface AudioProgressProps {
   label: string;
-  compact?: boolean;
 }
 
-const formatTime = (seconds: number) => {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${mins}:${secs}`;
-};
-
-export const AudioProgress: React.FC<AudioProgressProps> = ({ label, compact = false }) => {
-  const { activeVoice, progress, currentTime, duration, isPlaying, isLoading, error, seekToPercent } = useAudioPlayer();
+export const AudioProgress: React.FC<AudioProgressProps> = ({ label }) => {
+  const { activeVoice, progress, isPlaying } = useAudioPlayer();
   const isActive = activeVoice === label;
-  const displayProgress = isActive ? progress : 0;
-
-  const seekFromPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!isActive) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const percent = ((event.clientX - rect.left) / rect.width) * 100;
-    seekToPercent(percent);
-  };
-
-  const seekFromKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!isActive) return;
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      seekToPercent(displayProgress - 5);
-    }
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      seekToPercent(displayProgress + 5);
-    }
-    if (event.key === "Home") {
-      event.preventDefault();
-      seekToPercent(0);
-    }
-    if (event.key === "End") {
-      event.preventDefault();
-      seekToPercent(100);
-    }
-  };
+  
+  // Use a stable key for animation to prevent jitter during updates
+  const bars = useMemo(() => Array.from({ length: 40 }, () => Math.random() * 0.6 + 0.4), []);
 
   return (
-    <div className="jp-progress-container" style={compact ? { margin: "18px 0 14px" } : undefined}>
-      <div className="jp-progress-meta">
-        <span>{isLoading && isActive ? "Loading voice" : label}</span>
-        <span>{isActive ? `${formatTime(currentTime)} / ${formatTime(duration)}` : "0:00 / 0:00"}</span>
+    <div className="group relative w-full py-6">
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">{label}</span>
+        <span className="text-xs font-mono text-white/80">{Math.round(isActive ? progress : 0)}%</span>
       </div>
-      <div
-        className="jp-progress-bar"
-        onPointerDown={seekFromPointer}
-        role="slider"
-        aria-label={`${label} audio progress`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(displayProgress)}
-        tabIndex={isActive ? 0 : -1}
-        onKeyDown={seekFromKeyboard}
-      >
-        <div className="jp-progress-track" />
-        <div className="jp-progress-fill" style={{ width: `${displayProgress}%` }}>
-          <span className="jp-progress-glow" />
-        </div>
-        <div className="jp-progress-handle" style={{ left: `${displayProgress}%` }}>
-          <span className="handle-inner" />
-          {isActive && isPlaying ? <span className="handle-ripple" /> : null}
-        </div>
+
+      <div className="relative flex items-center justify-between gap-1 h-12 px-2">
+        {bars.map((height, i) => {
+          const isPlayed = isActive && (i / bars.length) * 100 <= progress;
+          return (
+            <div
+              key={i}
+              className={cn(
+                "w-1 rounded-full transition-all duration-300",
+                isPlayed 
+                  ? "bg-gradient-to-t from-indigo-500 to-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" 
+                  : "bg-white/10"
+              )}
+              style={{
+                height: `${height * 100}%`,
+                // Animation is persistent for the visualizer effect, speed/opacity reacts to playback
+                animation: `wave-pulse 1.5s infinite ease-in-out ${i * 0.05}s`,
+                animationPlayState: isPlaying && isActive ? 'running' : 'paused',
+                opacity: (isPlaying && isActive) ? 1 : 0.6
+              }}
+            />
+          );
+        })}
       </div>
-      {isActive && error ? <p className="jp-audio-error">{error}</p> : null}
+
+      <style jsx>{`
+        @keyframes wave-pulse {
+          0%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(1.8); }
+        }
+      `}</style>
     </div>
   );
 };
