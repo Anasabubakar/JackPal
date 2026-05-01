@@ -1,5 +1,5 @@
 ﻿import type { Metadata } from "next";
-import { Fraunces, Syne } from "next/font/google";
+import { Fraunces, Inter, Syne } from "next/font/google";
 import "./globals.css";
 
 const display = Fraunces({
@@ -13,6 +13,13 @@ const syne = Syne({
   subsets: ["latin"],
   variable: "--font-syne",
   weight: ["400", "600", "700", "800"],
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -31,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${syne.variable}`}>
+    <html lang="en" className={`${display.variable} ${syne.variable} ${inter.variable}`}>
       <head>
         {/* Anti-flash: apply saved theme before paint */}
         <script

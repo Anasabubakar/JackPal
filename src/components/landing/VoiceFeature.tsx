@@ -1,176 +1,252 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { Check } from "lucide-react";
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Reveal } from "./Reveal";
+import { useState, useRef, useEffect } from "react";
+import { Play, Pause, CheckCircle2 } from "lucide-react";
 import { voiceBullets } from "./data";
 
-const NUM_BARS = 36;
-const SPEECH_RHYTHM = [0.3, 0.5, 0.9, 1.0, 0.8, 0.6, 0.4, 0.7, 1.0, 0.9, 0.5, 0.3, 0.2, 0.4, 0.8, 1.0, 0.7, 0.5];
+const VOICE_LIST = [
+  { name: "Adaora", gender: "Female", src: "/audio/adaora_yarngpt.mp3" },
+  { name: "Zainab", gender: "Female", src: "/audio/zainab_yarngpt.mp3" },
+  { name: "Nonso",  gender: "Male",   src: "/audio/nonso_yarngpt.mp3"  },
+  { name: "Jude",   gender: "Male",   src: "/audio/jude_yarngpt.mp3"   },
+];
 
-function LiveFreqVisualizer() {
-  const [heights, setHeights] = useState<number[]>(() => Array.from({ length: NUM_BARS }, () => 4));
-  const phaseRef = useRef(0);
+const PROGRESS_PATH =
+  "M4 24 C10 24 12 17 18 24 S28 31 34 24 S44 17 50 24 S60 31 66 24 S76 17 82 24 S92 31 98 24 S108 17 114 24 S124 31 130 24 S140 17 146 24 S156 31 162 24 S172 17 178 24 S188 31 194 24 S204 17 210 24 S220 31 226 24 L516 24";
 
-  const tick = useCallback(() => {
-    phaseRef.current = (phaseRef.current + 1) % SPEECH_RHYTHM.length;
-    const energy = SPEECH_RHYTHM[phaseRef.current];
-    setHeights(prev => prev.map((_, i) => {
-      const center = NUM_BARS / 2;
-      const dist = Math.abs(i - center) / center;
-      const envelope = 1 - dist * 0.6;
-      const rand = 0.4 + Math.random() * 0.6;
-      const target = 4 + energy * envelope * rand * 52;
-      return prev[i] + (target - prev[i]) * 0.28;
-    }));
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(tick, 75);
-    return () => clearInterval(id);
-  }, [tick]);
-
+function VoiceCard({
+  voice,
+  active,
+  playing,
+  onSelect,
+}: {
+  voice: typeof VOICE_LIST[0];
+  active: boolean;
+  playing: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <div
+    <button
+      onClick={onSelect}
       style={{
-        border: "1px solid var(--lp-border)",
-        borderRadius: "16px",
-        background: "var(--lp-surface)",
-        padding: "28px 24px 20px",
-        boxShadow: "var(--lp-shadow-card)",
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
+        padding: "14px 16px",
+        borderRadius: "12px",
+        border: active ? "1px solid rgba(27,110,243,0.4)" : "1px solid rgba(255,255,255,0.06)",
+        background: active ? "rgba(27,110,243,0.12)" : "rgba(255,255,255,0.02)",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "all 0.15s",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px" }}>
-        <span
-          style={{
-            width: "6px", height: "6px", borderRadius: "50%",
-            background: "var(--lp-amber)",
-            animation: "pulse-ring 2s cubic-bezier(0.455,0.03,0.515,0.955) infinite",
-            display: "inline-block",
-          }}
-        />
-        <span style={{ fontFamily: "var(--font-syne)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.18em", color: "var(--lp-text-3)" }}>
-          LIVE AUDIO · Nigerian Voice
-        </span>
-      </div>
-
-      {/* Bars */}
+      {/* Avatar */}
       <div
         style={{
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          background: active
+            ? "linear-gradient(135deg, #1B6EF3, #4F9CF9)"
+            : "linear-gradient(135deg, #1C2E55, #253A6E)",
           display: "flex",
           alignItems: "center",
-          gap: "3px",
-          height: "64px",
           justifyContent: "center",
+          flexShrink: 0,
+          fontSize: "15px",
+          fontWeight: 700,
+          color: "white",
+          fontFamily: "var(--font-syne)",
         }}
       >
-        {heights.map((h, i) => (
-          <motion.span
-            key={i}
-            animate={{ height: `${h}px` }}
-            transition={{ duration: 0.08, ease: "easeOut" }}
-            style={{
-              width: "3px",
-              borderRadius: "3px",
-              background: `color-mix(in srgb, var(--lp-amber) ${60 + (h / 60) * 40}%, var(--lp-amber-bright))`,
-              opacity: 0.5 + (h / 60) * 0.5,
-              display: "inline-block",
-              flexShrink: 0,
-            }}
-          />
-        ))}
+        {voice.name[0]}
       </div>
 
-      <p style={{
-        fontFamily: "var(--font-syne)", fontSize: "11px",
-        color: "var(--lp-text-3)", marginTop: "14px", textAlign: "center",
-        letterSpacing: "0.04em",
-      }}>
-        "...the mitochondria is the powerhouse of the cell..."
-      </p>
-    </div>
+      {/* Info */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: "var(--font-syne)", fontSize: "14px", fontWeight: 700, color: active ? "#FFFFFF" : "#C9D6E8" }}>
+          {voice.name}
+        </div>
+        <div style={{ fontFamily: "var(--font-syne)", fontSize: "12px", color: "#8B9BB4", marginTop: "2px" }}>
+          {voice.gender} · Nigerian AI
+        </div>
+      </div>
+
+      {/* Waveform / playing indicator */}
+      {active && playing ? (
+        <div
+          style={{
+            width: "42px",
+            height: "8px",
+            borderRadius: "999px",
+            background: "rgba(255,255,255,0.12)",
+            overflow: "hidden",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "inherit",
+              background: "linear-gradient(90deg, #1B6EF3 0%, #61E3F0 100%)",
+              boxShadow: "0 0 12px rgba(97,227,240,0.45)",
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            borderRadius: "50%",
+            background: active ? "#1B6EF3" : "rgba(255,255,255,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Play size={11} fill={active ? "white" : "#8B9BB4"} color={active ? "white" : "#8B9BB4"} style={{ marginLeft: "1px" }} />
+        </div>
+      )}
+    </button>
   );
 }
 
 export function VoiceFeature() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(VOICE_LIST[activeIdx].src);
+    audioRef.current = audio;
+    audio.addEventListener("timeupdate", () => {
+      if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
+    });
+    audio.addEventListener("ended", () => { setPlaying(false); setProgress(0); });
+    return () => { audio.pause(); audio.src = ""; };
+  }, [activeIdx]);
+
+  function selectVoice(i: number) {
+    audioRef.current?.pause();
+    setPlaying(false);
+    setProgress(0);
+    setActiveIdx(i);
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play().catch(() => {}); setPlaying(true); }
+  }
+
   return (
-    <section
-      id="voices"
-      style={{
-        background: "var(--lp-bg)",
-        borderBottom: "1px solid var(--lp-border)",
-        padding: "80px 0",
-      }}
-    >
-      <div className="mx-auto grid w-full max-w-[1200px] gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8">
+    <section id="voices" style={{ background: "#060C22", padding: "96px 0" }}>
+      <div className="section-container">
+        <div className="lp-two-col" style={{ display: "grid" }}>
+          {/* Left — voice player */}
+          <div>
+            <div
+              style={{
+                background: "#0D1635",
+                borderRadius: "20px",
+                border: "1px solid rgba(255,255,255,0.07)",
+                padding: "28px",
+              }}
+            >
+              {/* Progress */}
+              <div className="jp-audio-progress" style={{ margin: "0 0 24px" }}>
+                <div className="jp-audio-wave-rail">
+                  <svg viewBox="0 0 520 48" aria-hidden="true" preserveAspectRatio="none">
+                    <path d={PROGRESS_PATH} pathLength={100} />
+                  </svg>
+                  <div className="jp-audio-wave-fill" style={{ width: `${progress}%` }}>
+                    <svg viewBox="0 0 520 48" aria-hidden="true" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="jp-progress-gradient-voice" x1="0" x2="1" y1="0" y2="0">
+                          <stop offset="0%" stopColor="#2d6bff" />
+                          <stop offset="38%" stopColor="#0095ff" />
+                          <stop offset="72%" stopColor="#24d4f5" />
+                          <stop offset="100%" stopColor="#9dfbff" />
+                        </linearGradient>
+                      </defs>
+                      <path d={PROGRESS_PATH} pathLength={100} stroke="url(#jp-progress-gradient-voice)" />
+                    </svg>
+                  </div>
+                  <span className="jp-audio-wave-thumb" style={{ left: `${progress}%` }} />
+                </div>
+              </div>
 
-        <Reveal>
-          <LiveFreqVisualizer />
-        </Reveal>
-
-        <Reveal delay={0.08}>
-          <p
-            className="uppercase"
-            style={{
-              fontFamily: "var(--font-syne)", fontSize: "10px", fontWeight: 700,
-              letterSpacing: "0.22em", color: "var(--lp-amber)", marginBottom: "16px",
-            }}
-          >
-            Nigerian Voices
-          </p>
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(2rem, 4.2vw, 3.2rem)",
-              fontWeight: 800, lineHeight: "1.02", letterSpacing: "-0.02em",
-              color: "var(--lp-text-1)", maxWidth: "22ch", marginBottom: "20px",
-            }}
-          >
-            Voices that actually sound like{" "}
-            <em style={{ fontStyle: "italic", color: "var(--lp-amber)" }}>you.</em>
-          </h2>
-          <p
-            style={{
-              fontFamily: "var(--font-syne)", fontSize: "15px", lineHeight: "1.75",
-              color: "var(--lp-text-2)", marginBottom: "24px", maxWidth: "48ch",
-            }}
-          >
-            Our Nigerian AI voices carry rhythm, warmth, and familiarity. When you hear something that sounds like home, your brain stays present.
-          </p>
-          <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {voiceBullets.map((item, i) => (
-              <motion.li
-                key={item}
-                initial={{ opacity: 0, x: -12 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.5 }}
-                transition={{ duration: 0.4, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  display: "flex", alignItems: "flex-start", gap: "12px",
-                  border: "1px solid var(--lp-border)", borderRadius: "10px",
-                  background: "var(--lp-surface)", padding: "12px 14px",
-                }}
-              >
-                <span
+              {/* Play button */}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+                <button
+                  onClick={togglePlay}
                   style={{
-                    display: "inline-flex", width: "20px", height: "20px",
-                    borderRadius: "50%", background: "var(--lp-amber-dim)",
-                    border: "1px solid rgba(44,123,229,0.3)",
-                    alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, marginTop: "1px", color: "var(--lp-amber)",
+                    width: "52px", height: "52px", borderRadius: "50%",
+                    background: "#1B6EF3", border: "none", color: "white",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 6px 20px rgba(27,110,243,0.45)",
                   }}
                 >
-                  <Check className="h-3 w-3" strokeWidth={2.5} />
-                </span>
-                <span style={{ fontFamily: "var(--font-syne)", fontSize: "13px", lineHeight: "1.6", color: "var(--lp-text-2)" }}>
-                  {item}
-                </span>
-              </motion.li>
-            ))}
-          </ul>
-        </Reveal>
+                  {playing ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" style={{ marginLeft: "2px" }} />}
+                </button>
+              </div>
 
+              {/* Voice list */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {VOICE_LIST.map((v, i) => (
+                  <VoiceCard
+                    key={v.name}
+                    voice={v}
+                    active={i === activeIdx}
+                    playing={playing && i === activeIdx}
+                    onSelect={() => selectVoice(i)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right — copy */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(28px, 3.5vw, 42px)",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                lineHeight: 1.2,
+                letterSpacing: "-0.025em",
+                marginBottom: "32px",
+              }}
+            >
+              Voices that actually sound like{" "}
+              <span style={{ color: "#1B6EF3", textDecoration: "underline", textDecorationColor: "rgba(27,110,243,0.4)", textUnderlineOffset: "6px" }}>you</span>
+            </h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {voiceBullets.map((bullet, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                  <CheckCircle2
+                    size={20}
+                    color="#1B6EF3"
+                    strokeWidth={2}
+                    style={{ flexShrink: 0, marginTop: "2px" }}
+                  />
+                  <p style={{ fontFamily: "var(--font-syne)", fontSize: "15px", color: "#8B9BB4", lineHeight: 1.65 }}>
+                    {bullet}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
