@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AudioProgressProps {
@@ -7,38 +7,43 @@ interface AudioProgressProps {
 }
 
 export const AudioProgress: React.FC<AudioProgressProps> = ({ progress, label }) => {
+  // Generate 40 pseudo-random bars for the waveform
+  const bars = useMemo(() => Array.from({ length: 40 }, () => Math.random() * 0.6 + 0.4), []);
+
   return (
-    <div className="group relative w-full py-4">
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-xs font-semibold uppercase tracking-widest text-blue-200/60">{label}</span>
-        <span className="text-xs font-bold text-white tabular-nums">{Math.round(progress)}%</span>
-      </div>
-      
-      {/* Container with depth */}
-      <div className="relative h-2 w-full rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/5 overflow-hidden shadow-inner">
-        {/* Track layer */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20" />
-        
-        {/* Progress fill with depth */}
-        <div 
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-[600ms] cubic-bezier(0.34, 1.56, 0.64, 1) bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
-          style={{ width: `${progress}%` }}
-        />
-        
-        {/* Shine effect */}
-        <div className="absolute inset-y-0 left-0 rounded-full w-full bg-gradient-to-b from-white/10 to-transparent opacity-50" />
+    <div className="group relative w-full py-6">
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">{label}</span>
+        <span className="text-xs font-mono text-white/80">{Math.round(progress)}%</span>
       </div>
 
-      {/* Interactive Handle */}
-      <div 
-        className="absolute top-[32px] -translate-y-1/2 -ml-2 w-4 h-4 transition-all duration-[600ms] cubic-bezier(0.34, 1.56, 0.64, 1)"
-        style={{ left: `${progress}%` }}
-      >
-        <div className="relative w-full h-full">
-          <div className="absolute inset-0 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)] scale-75 group-hover:scale-100 transition-transform duration-300" />
-          <div className="absolute -inset-2 rounded-full border border-white/20 animate-[ripple_2s_infinite_linear]" />
-        </div>
+      <div className="relative flex items-center justify-between gap-1 h-12 px-2 rounded-2xl bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl">
+        {bars.map((height, i) => {
+          const isActive = (i / bars.length) * 100 <= progress;
+          return (
+            <div
+              key={i}
+              className={cn(
+                "w-1 rounded-full transition-all duration-300",
+                isActive 
+                  ? "bg-gradient-to-t from-indigo-500 to-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" 
+                  : "bg-white/10"
+              )}
+              style={{
+                height: `${height * 100}%`,
+                animation: isActive ? `wave-pulse 1.5s infinite ease-in-out ${i * 0.05}s` : 'none'
+              }}
+            />
+          );
+        })}
       </div>
+
+      <style jsx>{`
+        @keyframes wave-pulse {
+          0%, 100% { transform: scaleY(1); opacity: 0.7; }
+          50% { transform: scaleY(1.4); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
