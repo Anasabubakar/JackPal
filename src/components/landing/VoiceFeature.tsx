@@ -1,16 +1,11 @@
 "use client";
 
-import { CheckCircle2, Play, Pause } from "lucide-react";
-import { voiceBullets } from "./data";
+import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { AudioProgress } from "@/components/AudioProgress";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { AUDIO_PREVIEW_VOICES, type AudioPreviewVoice } from "@/lib/audioPreviews";
 
-const VOICE_LIST = [
-  { name: "Adaora", gender: "Female", src: "/audio/adaora_yarngpt.mp3" },
-  { name: "Zainab", gender: "Female", src: "/audio/zainab_yarngpt.mp3" },
-  { name: "Nonso",  gender: "Male",   src: "/audio/nonso_yarngpt.mp3"  },
-  { name: "Jude",   gender: "Male",   src: "/audio/jude_yarngpt.mp3"   },
-];
+const VOICE_LIST = AUDIO_PREVIEW_VOICES;
 
 function VoiceCard({
   voice,
@@ -18,7 +13,7 @@ function VoiceCard({
   playing,
   onSelect,
 }: {
-  voice: typeof VOICE_LIST[0];
+  voice: AudioPreviewVoice;
   active: boolean;
   playing: boolean;
   onSelect: () => void;
@@ -65,7 +60,7 @@ function VoiceCard({
           {voice.name}
         </div>
         <div style={{ fontSize: "12px", color: "#8B9BB4", marginTop: "2px" }}>
-          {voice.gender} · Nigerian AI
+          {playing ? "Playing now" : `${voice.gender} · Nigerian AI`}
         </div>
       </div>
     </button>
@@ -73,8 +68,26 @@ function VoiceCard({
 }
 
 export function VoiceFeature() {
-  const { playVoice, togglePlay, isPlaying, activeVoice } = useAudioPlayer();
-  const activeIdx = VOICE_LIST.findIndex(v => v.name === activeVoice) === -1 ? 0 : VOICE_LIST.findIndex(v => v.name === activeVoice);
+  const {
+    playVoice,
+    togglePlay,
+    isPlaying,
+    activeVoice,
+    activeSrc,
+    skipBy,
+    playbackRate,
+    cyclePlaybackRate,
+  } = useAudioPlayer();
+  const selectedVoice = VOICE_LIST.find((voice) => voice.name === activeVoice) ?? VOICE_LIST[0];
+  const isCurrentPreview = activeSrc === selectedVoice.src;
+
+  const handleToggle = () => {
+    if (isCurrentPreview) {
+      togglePlay();
+      return;
+    }
+    playVoice(selectedVoice.name, selectedVoice.src);
+  };
 
   return (
     <section id="voices" style={{ background: "#060C22", padding: "96px 0" }}>
@@ -89,11 +102,22 @@ export function VoiceFeature() {
                 padding: "28px",
               }}
             >
-              <AudioProgress label={activeVoice || VOICE_LIST[0].name} />
+              <AudioProgress label={selectedVoice.name} />
 
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
                 <button
-                  onClick={togglePlay}
+                  onClick={() => skipBy(-10)}
+                  aria-label="Skip voice preview back 10 seconds"
+                  style={{
+                    width: "38px", height: "38px", borderRadius: "50%",
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B9BB4",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <SkipBack size={17} />
+                </button>
+                <button
+                  onClick={handleToggle}
                   style={{
                     width: "52px", height: "52px", borderRadius: "50%",
                     background: "#1B6EF3", border: "none", color: "white",
@@ -101,7 +125,29 @@ export function VoiceFeature() {
                     boxShadow: "0 6px 20px rgba(27,110,243,0.45)",
                   }}
                 >
-                  {isPlaying ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" style={{ marginLeft: "2px" }} />}
+                  {isCurrentPreview && isPlaying ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" style={{ marginLeft: "2px" }} />}
+                </button>
+                <button
+                  onClick={() => skipBy(10)}
+                  aria-label="Skip voice preview forward 10 seconds"
+                  style={{
+                    width: "38px", height: "38px", borderRadius: "50%",
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B9BB4",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <SkipForward size={17} />
+                </button>
+                <button
+                  onClick={cyclePlaybackRate}
+                  aria-label="Change voice preview speed"
+                  style={{
+                    height: "34px", minWidth: "52px", borderRadius: "999px",
+                    background: "rgba(27,110,243,0.12)", border: "1px solid rgba(27,110,243,0.24)", color: "#6BAAFF",
+                    cursor: "pointer", fontSize: "12px", fontWeight: 700,
+                  }}
+                >
+                  {playbackRate}x
                 </button>
               </div>
 
@@ -110,7 +156,7 @@ export function VoiceFeature() {
                   <VoiceCard
                     key={v.name}
                     voice={v}
-                    active={v.name === activeVoice}
+                    active={v.name === selectedVoice.name}
                     playing={isPlaying && v.name === activeVoice}
                     onSelect={() => playVoice(v.name, v.src)}
                   />

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { AudioProgress } from '@/components/AudioProgress';
+import { AudioProgress } from "@/components/AudioProgress";
 import {
   Camera,
   Check,
@@ -19,7 +19,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
+import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -73,12 +75,7 @@ const steps = [
   },
 ];
 
-const voices = [
-  ["Adaora", "Igbo - Female"],
-  ["Zainab", "Hausa - Female"],
-  ["Nonso", "Igbo - Female"],
-  ["Jude", "Yoruba - Male"],
-];
+const voices = AUDIO_PREVIEW_VOICES;
 
 const voiceBullets = [
   "Trained on authentic Nigerian speech patterns — not generic TTS engines",
@@ -206,22 +203,37 @@ function CtaButton({
   );
 }
 
-const progressPath =
-  "M4 24 C10 24 12 17 18 24 S28 31 34 24 S44 17 50 24 S60 31 66 24 S76 17 82 24 S92 31 98 24 S108 17 114 24 S124 31 130 24 S140 17 146 24 S156 31 162 24 S172 17 178 24 S188 31 194 24 S204 17 210 24 S220 31 226 24 L516 24";
-
-// ... (rest of code)
 function AudioCard({ large = false }: { large?: boolean }) {
-// ... (rest of code)
-  const [playing, setPlaying] = useState(true);
-  const [progress, setProgress] = useState(38);
+  const {
+    activeVoice,
+    activeSrc,
+    isPlaying,
+    playbackRate,
+    playVoice,
+    togglePlay,
+    skipBy,
+    cyclePlaybackRate,
+  } = useAudioPlayer();
+  const [selectedVoiceName, setSelectedVoiceName] = useState(large ? "Adaora" : "Zainab");
+  const selectedVoice =
+    voices.find((voice) => voice.name === activeVoice) ??
+    voices.find((voice) => voice.name === selectedVoiceName) ??
+    voices[0];
+  const isCurrentPreview = activeSrc === selectedVoice.src;
+  const playing = isCurrentPreview && isPlaying;
 
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => {
-      setProgress((value) => (value >= 100 ? 0 : value + 0.6));
-    }, 120);
-    return () => window.clearInterval(timer);
-  }, [playing]);
+  const handlePlayToggle = () => {
+    if (isCurrentPreview) {
+      togglePlay();
+      return;
+    }
+    playVoice(selectedVoice.name, selectedVoice.src);
+  };
+
+  const handleVoiceSelect = (voice: typeof voices[number]) => {
+    setSelectedVoiceName(voice.name);
+    playVoice(voice.name, voice.src);
+  };
 
   return (
     <div className={`jp-audio-card ${large ? "jp-audio-card-large" : ""} ${playing ? "is-playing" : "is-paused"}`}>
@@ -236,38 +248,54 @@ function AudioCard({ large = false }: { large?: boolean }) {
         </div>
       </div>
 
-      <AudioProgress progress={progress} label={large ? "Study session" : "Chapter progress"} />
+      <AudioProgress label={selectedVoice.name} />
 
       <div className="jp-player-row">
-        <div className="jp-time">{large ? "00:00" : "17:55"} / {large ? "14:32" : "18:06"}</div>
+        <div className="jp-time">{selectedVoice.name} preview</div>
         <div className="jp-controls">
-          <SkipBack size={large ? 15 : 13} />
-          <button type="button" onClick={() => setPlaying((value) => !value)} aria-label="Toggle audio preview">
+          <button className="jp-control-icon" type="button" onClick={() => skipBy(-10)} aria-label="Skip preview back 10 seconds">
+            <SkipBack size={large ? 15 : 13} />
+          </button>
+          <button className="jp-control-main" type="button" onClick={handlePlayToggle} aria-label="Toggle audio preview">
             {playing ? <Pause size={large ? 14 : 12} fill="currentColor" /> : <Play size={large ? 14 : 12} fill="currentColor" />}
           </button>
-          <SkipForward size={large ? 15 : 13} />
+          <button className="jp-control-icon" type="button" onClick={() => skipBy(10)} aria-label="Skip preview forward 10 seconds">
+            <SkipForward size={large ? 15 : 13} />
+          </button>
         </div>
-        <div className="jp-speed">1x</div>
+        <button type="button" className="jp-speed" onClick={cyclePlaybackRate} aria-label="Change playback speed">
+          {playbackRate}x
+        </button>
       </div>
 
       {large ? (
         <div className="jp-voice-grid">
           <strong>NIGERIAN VOICES</strong>
           <div>
-            {voices.map(([voice, origin]) => (
-              <span key={voice}>
-                {voice}
-                <small>{origin}</small>
-              </span>
+            {voices.map((voice) => (
+              <button
+                type="button"
+                className={voice.name === selectedVoice.name ? "selected" : ""}
+                key={voice.name}
+                onClick={() => handleVoiceSelect(voice)}
+              >
+                {voice.name}
+                <small>{voice.origin}</small>
+              </button>
             ))}
           </div>
         </div>
       ) : (
         <div className="jp-voice-tabs" aria-label="Voice options">
-          {["Adaora", "Zainab", "Nonso", "Jude"].map((voice) => (
-            <span className={voice === "Zainab" ? "selected" : ""} key={voice}>
-              {voice}
-            </span>
+          {voices.map((voice) => (
+            <button
+              type="button"
+              className={voice.name === selectedVoice.name ? "selected" : ""}
+              key={voice.name}
+              onClick={() => handleVoiceSelect(voice)}
+            >
+              {voice.name}
+            </button>
           ))}
         </div>
       )}
