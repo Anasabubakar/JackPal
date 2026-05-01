@@ -3,6 +3,7 @@
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
+import { WaitlistForm } from "./WaitlistForm";
 
 export function FinalCTA() {
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -83,64 +84,13 @@ export function FinalCTA() {
               fontSize: "11px",
               color: "var(--lp-text-3)",
               letterSpacing: "0.04em",
-              marginBottom: "36px",
+              marginBottom: "28px",
             }}
           >
             Launching Q2 2026 · ₦1,000/month after launch
           </p>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <a
-              href="#"
-              style={{
-                display: "inline-flex",
-                height: "50px",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                borderRadius: "10px",
-                background: "var(--lp-amber)",
-                color: "#fff",
-                fontFamily: "var(--font-syne)",
-                fontSize: "13px",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                padding: "0 28px",
-                transition: "filter 0.15s ease",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.1)")}
-              onMouseLeave={e => (e.currentTarget.style.filter = "brightness(1)")}
-            >
-              Join the Waitlist
-            </a>
-            <a
-              href="#how-it-works"
-              style={{
-                display: "inline-flex",
-                height: "50px",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "10px",
-                border: "1px solid var(--lp-border)",
-                color: "var(--lp-text-1)",
-                fontFamily: "var(--font-syne)",
-                fontSize: "13px",
-                fontWeight: 600,
-                padding: "0 28px",
-                transition: "border-color 0.15s ease, color 0.15s ease",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = "var(--lp-amber)";
-                e.currentTarget.style.color = "var(--lp-amber)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "var(--lp-border)";
-                e.currentTarget.style.color = "var(--lp-text-1)";
-              }}
-            >
-              Learn More
-            </a>
-          </div>
+          <WaitlistForm />
         </motion.div>
 
         {/* Right — mascot visual */}

@@ -157,6 +157,11 @@ h1, h2, h3, h4 {
 .wave-delay-3 { animation-delay: 0.24s; }
 .wave-delay-4 { animation-delay: 0.32s; }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-4px); }
