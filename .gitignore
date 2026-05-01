@@ -53,3 +53,17 @@ backend/data/
 
 # claude
 .claude/
+
+# agent coordination (internal only)
+agents/
+AGENTS.md
+CLAUDE.md
+
+# launch scripts (internal only)
+launch-claude.ps1
+launch-codex.ps1
+launch-dashboard.ps1
+agents-dashboard.ps1
+
+# demo audio files
+backend/*.mp3

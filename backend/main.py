@@ -21,12 +21,24 @@ def _build_allowed_origins() -> list[str]:
     return origins
 
 
+def _prewarm_rag():
+    """Load sentence-transformer model at startup so first Ask is instant."""
+    try:
+        from services.rag import _get_model
+        _get_model()
+        print("[Startup] Embedding model ready.")
+    except Exception as e:
+        print(f"[Startup] Embedding model pre-warm skipped: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup tasks run here; shutdown tasks go after the yield."""
+    import threading
     _seed_dev_user()
     _reset_stale_generating()
     _log_tts_engines()
+    threading.Thread(target=_prewarm_rag, daemon=True).start()
     yield
 
 

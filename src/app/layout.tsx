@@ -1,23 +1,27 @@
-import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+﻿import type { Metadata } from "next";
+import { Fraunces, Syne } from "next/font/google";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
+  preload: true,
 });
 
-const body = Inter({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-syne",
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "JackPal — Your Audio Study Companion",
+  title: "JackPal - Your Audio Study Companion",
   description:
     "Convert your readings, PDFs, and notes into high-quality audio you can listen to anywhere. Offline-first, student-focused.",
   icons: {
-    icon: "/images/logo.svg",
+    icon: "/icon.png",
   },
 };
 
@@ -27,7 +31,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${display.variable} ${syne.variable}`}>
+      <head>
+        {/* Anti-flash: apply saved theme before paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('jp-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

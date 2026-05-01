@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
         hostname: 'www.google.com',
       },
     ],
+    formats: ["image/avif", "image/webp"],
   },
 };
 

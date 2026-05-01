@@ -9,12 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@react-three/rapier": "^2.2.0",
+    "@supabase/supabase-js": "^2.50.0",
     "@types/three": "^0.183.0",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.574.0",
     "meshline": "^3.3.1",
     "next": "^16.0.0",
@@ -33,7 +34,7 @@
     "eslint": "^10.0.0",
     "eslint-config-next": "^0.2.4",
     "postcss": "^8.5.0",
-    "tailwindcss": "^4.0.0",
+    "tailwindcss": "^4.2.4",
     "typescript": "^5.9.3"
   }
 }
