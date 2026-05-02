@@ -107,6 +107,10 @@ h1, h2, h3, h4 {
   from { transform: scaleY(0.3); }
   to   { transform: scaleY(1); }
 }
+@keyframes wave-pulse {
+  0%, 100% { transform: scaleY(1); }
+  50%       { transform: scaleY(1.8); }
+}
 
 .animate-shimmer    { animation: shimmer 2s infinite linear; }
 .animate-fade-up    { animation: fade-up 0.3s ease both; }
@@ -392,6 +396,20 @@ h1, h2, h3, h4 {
   line-height: 30px;
 }
 
+.jp-h1-prefix {
+  display: inline;
+}
+
+.jp-h1-word {
+  display: inline-block;
+  transition: opacity 0.25s ease;
+  opacity: 0;
+}
+
+.jp-h1-word.jp-h1-word-in {
+  opacity: 1;
+}
+
 .jp-triangle {
   width: 0;
   height: 0;
@@ -485,6 +503,8 @@ button.jp-button {
 
 .jp-audio-card {
   position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
   width: 100%;
   max-width: 416px;
   min-height: 383px;
@@ -2093,16 +2113,45 @@ button.jp-button {
     padding-top: 72px;
   }
 
-  .jp-hero h1,
+  .jp-h1-prefix {
+    display: none;
+  }
+
+  .jp-hero h1::first-letter {
+    text-transform: uppercase;
+  }
+
+  .jp-hero h1 {
+    font-size: clamp(20px, 6.5vw, 28px);
+    line-height: 1.08;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
   .jp-faq-title h2 {
-    font-size: clamp(28px, 11vw, 46px);
+    font-size: clamp(28px, 9vw, 40px);
     line-height: 0.98;
     word-break: break-word;
   }
 
+  .jp-hero-copy {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .jp-kicker {
+    font-size: 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
   .jp-hero-copy > p {
-    font-size: clamp(15px, 4vw, 18px);
-    line-height: 1.55;
+    font-size: clamp(14px, 3.8vw, 17px);
+    line-height: 1.6;
+    margin-top: 18px;
+    overflow-wrap: break-word;
   }
 
   .jp-proof h2,
