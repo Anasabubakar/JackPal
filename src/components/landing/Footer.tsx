@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Github, Globe, Linkedin, Twitter } from "lucide-react";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 import { SOCIAL_LINKS } from "@/lib/socialLinks";
 
 const productLinks = ["How It Works", "Voices", "Features", "Pricing"];
@@ -24,13 +24,7 @@ export function Footer() {
           {/* Brand column */}
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-              <Image
-                src="/images/Jackpals Logo 3 1.png"
-                alt="Jackpals"
-                width={100}
-                height={28}
-                style={{ height: "24px", width: "auto" }}
-              />
+              <JackpalsLogo variant="footer" className="h-6 w-auto" />
             </div>
             <p
               style={{

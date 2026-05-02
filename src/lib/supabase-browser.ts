@@ -17,16 +17,6 @@ export function getSupabase() {
   return getClient();
 }
 
-export async function signUpWithEmail(email: string, password: string, fullName: string) {
-  const { data, error } = await getClient().auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
-  });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 export async function signInWithEmail(email: string, password: string) {
   const { data, error } = await getClient().auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
@@ -50,5 +40,13 @@ export async function signInWithGoogle() {
     options: { redirectTo },
   });
 
+  if (error) throw new Error(error.message);
+}
+
+/** Sends Supabase password recovery email; redirect targets `/reset-password` on this origin. */
+export async function sendPasswordResetEmail(email: string) {
+  const redirectTo =
+    typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined;
+  const { error } = await getClient().auth.resetPasswordForEmail(email.trim(), { redirectTo });
   if (error) throw new Error(error.message);
 }

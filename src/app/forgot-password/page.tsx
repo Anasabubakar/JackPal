@@ -9,10 +9,10 @@ import {
   ShieldCheck,
   Loader2 
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { requestPasswordReset } from "@/lib/api";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
+import { sendPasswordResetEmail } from "@/lib/supabase-browser";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError("");
     try {
-      await requestPasswordReset(email);
+      await sendPasswordResetEmail(email);
       setSubmitted(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Request failed. Try again.");
@@ -35,11 +35,15 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
+    <div className="flex min-h-[100dvh] min-h-screen flex-col lg:flex-row bg-[#F7F7F7] text-[#02013D] font-sans overflow-x-hidden">
       {/* Back Button */}
       <Link 
         href="/login" 
-        className="fixed top-6 left-6 z-50 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#02013D]/60 hover:text-[#2585C7] transition-colors group"
+        className="fixed z-50 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#02013D]/60 hover:text-[#2585C7] transition-colors group"
+        style={{
+          top: "max(1.5rem, env(safe-area-inset-top))",
+          left: "max(1.5rem, env(safe-area-inset-left))",
+        }}
       >
         <div className="bg-white p-2 rounded-full shadow-lg border border-[#EFEFEF] group-hover:-translate-x-1 transition-transform">
           <ArrowLeft className="h-4 w-4" />
@@ -48,21 +52,18 @@ export default function ForgotPasswordPage() {
       </Link>
 
       {/* Left Column: Brand & Visual (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#02013D] relative overflow-hidden flex-col justify-between p-16 text-white border-r-8 border-[#2585C7] h-full">
+      <div className="hidden lg:flex lg:w-1/2 bg-[#02013D] relative overflow-hidden flex-col justify-between p-12 xl:p-16 text-white border-r-8 border-[#2585C7] lg:min-h-screen">
         {/* Background Patterns */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#2585C7]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#61E3F0]/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
         
         <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 mb-10 group">
-            <Image 
-              src="/images/logo.svg" 
-              alt="JackPal Logo" 
-              width={40} 
-              height={40} 
-              className="group-hover:rotate-12 transition-transform"
+          <Link href="/" className="inline-block mb-10 group">
+            <JackpalsLogo
+              variant="wordmark"
+              priority
+              className="h-9 w-auto drop-shadow-sm group-hover:opacity-95 transition-opacity"
             />
-            <span className="text-2xl font-black tracking-tighter uppercase italic">JackPal</span>
           </Link>
 
           <div className="space-y-4 max-w-lg">
@@ -97,7 +98,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* Right Column: Recovery Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-12 lg:p-20 relative h-full overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-12 lg:p-20 relative flex-1 min-h-0 overflow-y-auto">
         <div className="w-full max-w-md space-y-8 py-10">
           {submitted ? (
             <div className="text-center space-y-8 animate-in fade-in zoom-in duration-500">
@@ -121,7 +122,7 @@ export default function ForgotPasswordPage() {
             <>
               <div className="text-center lg:text-left space-y-2">
                 <div className="lg:hidden flex justify-center mb-6">
-                  <Image src="/images/logo.svg" alt="JackPal Logo" width={48} height={48} />
+                  <JackpalsLogo variant="wordmark" priority className="h-10 w-auto" />
                 </div>
                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Reset Password</h2>
                 <p className="text-[10px] md:text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em]">Enter your email to receive a recovery link</p>

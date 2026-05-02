@@ -29,6 +29,7 @@ import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
 import { SOCIAL_LINKS } from "@/lib/socialLinks";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -326,7 +327,7 @@ function Navbar({ openWaitlist }: { openWaitlist: () => void }) {
     <header className="jp-nav">
       <div className="jp-nav-inner">
         <Link className="jp-nav-logo" href="/">
-          <Image src="/images/Jackpals Logo 4 1.png" alt="Jackpals" width={164} height={36} priority />
+          <JackpalsLogo variant="wordmark" priority className="h-9 w-auto" />
         </Link>
         <nav className="jp-nav-links" aria-label="Primary navigation">
           {navLinks.map((item, index) => (
@@ -560,7 +561,7 @@ function Conditions() {
             <span className="orb-ring ring-1" />
             <span className="orb-ring ring-2" />
             <span className="orb-core">
-              <img src="/images/Jackpals Logo 2 1.png" alt="" aria-hidden="true" />
+              <JackpalsLogo variant="mark" alt="" />
             </span>
           </div>
         </div>
@@ -713,7 +714,7 @@ function Footer() {
     <footer className="jp-footer">
       <div className="jp-container jp-footer-grid">
         <div>
-          <Image src="/images/Jackpals Logo 3 1.png" alt="Jackpals" width={252} height={57} />
+          <JackpalsLogo variant="footer" className="h-auto w-[252px] max-w-full" />
           <p>Learn in a way that actually works. Your notes, your voice, your pace.</p>
         </div>
         {groups.map(([title, ...links]) => (

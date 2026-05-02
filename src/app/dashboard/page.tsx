@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isOthersModalOpen, setIsOthersModalOpen] = useState(false);
 
@@ -218,6 +220,11 @@ export default function Dashboard() {
   }, [documents, searchQuery, subjects]);
   useEffect(() => {
     setMounted(true);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const syncLayout = () => setIsMobileLayout(mq.matches);
+    syncLayout();
+    mq.addEventListener("change", syncLayout);
+
     const u = getUser();
     const savedVoice = localStorage.getItem("jackpal_voice");
     if (savedVoice && VOICE_OPTIONS.find(v => v.value === savedVoice)) setSelectedVoice(savedVoice);
@@ -227,10 +234,11 @@ export default function Dashboard() {
     if (rawProgress) setSavedProgress(JSON.parse(rawProgress));
     if (!u) {
       router.push("/login");
-      return;
+      return () => mq.removeEventListener("change", syncLayout);
     }
     fetchDocuments();
-  }, []);
+    return () => mq.removeEventListener("change", syncLayout);
+  }, [router]);
 
   function saveSubject(docId: string, subject: string) {
     const updated = { ...subjects, [docId]: subject };
@@ -1003,11 +1011,11 @@ export default function Dashboard() {
 
   const LeftRail = () => (
     <nav
-      className="w-14 flex-shrink-0 flex flex-col items-center py-5 gap-1 z-40"
+      className="w-24 flex-shrink-0 flex flex-col items-center py-5 gap-1 z-40"
       style={{ background: "var(--surface)", borderRight: "1px solid var(--border)" }}
     >
-      <div className="mb-5">
-        <Image src="/images/logo.svg" alt="JackPal" width={26} height={26} priority />
+      <div className="mb-5 px-1 w-full flex justify-center">
+        <JackpalsLogo variant="wordmark" priority className="h-8 w-auto max-w-[5.5rem]" />
       </div>
       {[
         { id: "home", Icon: Library, label: "Library" },
@@ -1067,10 +1075,10 @@ export default function Dashboard() {
       >
         {/* Top bar */}
         <div
-          className="flex items-center justify-between px-5 py-3 flex-shrink-0 gap-4"
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div
               className="text-[9px] font-bold uppercase tracking-[0.25em]"
               style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}
@@ -1084,12 +1092,12 @@ export default function Dashboard() {
               {firstName}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:justify-end">
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search library..."
-              className="rounded-lg px-3 py-2 text-[11px] outline-none w-36 transition-all"
+              className="rounded-lg px-3 py-2 text-[11px] outline-none flex-1 min-w-0 sm:w-36 sm:flex-none transition-all"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
               onFocus={e => (e.currentTarget.style.borderColor = "var(--blue)")}
               onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
@@ -1419,8 +1427,42 @@ export default function Dashboard() {
   const RightPanel = () => (
     <AnimatePresence>
       {selectedDocId && selectedDoc && (
-        <motion.aside key="panel" initial={{ width: 0, opacity: 0 }} animate={{ width: 304, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={ease.spring} className="flex-shrink-0 overflow-hidden" style={{ borderLeft: "1px solid var(--border)", background: "var(--surface)" }}>
-          <div className="h-full overflow-y-auto studio-scroll p-5 space-y-6">
+        <>
+          {isMobileLayout && (
+            <motion.button
+              key="panel-backdrop"
+              type="button"
+              aria-label="Close document panel"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[55] bg-black/45 md:hidden"
+              onClick={() => setSelectedDocId(null)}
+            />
+          )}
+          <motion.aside
+            key="panel"
+            initial={
+              isMobileLayout
+                ? { x: "100%", opacity: 1 }
+                : { width: 0, opacity: 0 }
+            }
+            animate={
+              isMobileLayout
+                ? { x: 0, opacity: 1 }
+                : { width: 304, opacity: 1 }
+            }
+            exit={isMobileLayout ? { x: "100%" } : { width: 0, opacity: 0 }}
+            transition={ease.spring}
+            className={
+              isMobileLayout
+                ? "fixed top-0 right-0 bottom-0 z-[60] flex w-full max-w-[304px] flex-shrink-0 flex-col overflow-hidden shadow-2xl md:hidden"
+                : "relative hidden h-full flex-shrink-0 overflow-hidden md:flex"
+            }
+            style={{ borderLeft: "1px solid var(--border)", background: "var(--surface)" }}
+          >
+            <div className="h-full min-h-0 overflow-y-auto studio-scroll p-5 space-y-6">
             <div className="flex items-center justify-between">
               <div className="text-[10px] font-semibold truncate" style={{ color: "var(--text-2)" }}>{selectedDoc.filename}</div>
               <button className="p-1 rounded" style={{ color: "var(--text-3)" }} onClick={() => setSelectedDocId(null)}><X size={14} /></button>
@@ -1483,6 +1525,7 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.aside>
+        </>
       )}
     </AnimatePresence>
   );
@@ -1494,8 +1537,18 @@ export default function Dashboard() {
     const chunkCurrent = isPodcast ? podcastChunkIndex : activeChunk;
     const isPlaying = isPodcast ? !!podcastPlayingDocId : !!playingDocId;
     return (
-      <div className="fixed bottom-0 z-50 flex items-center gap-4 px-5" style={{ left: 56, right: 0, height: 64, background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-3 w-48 min-w-0 flex-shrink-0">
+      <div
+        className="fixed bottom-0 z-50 flex items-center gap-2 px-2 sm:gap-4 sm:px-5 max-sm:flex-wrap max-sm:py-1.5"
+        style={{
+          left: isMobileLayout ? 0 : 96,
+          right: 0,
+          minHeight: 64,
+          paddingBottom: "max(0px, env(safe-area-inset-bottom))",
+          background: "var(--surface)",
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        <div className="flex items-center gap-2 sm:gap-3 w-32 min-w-0 flex-shrink-0 sm:w-48 max-sm:order-1">
           <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold" style={isPodcast ? { background: "var(--teal)", color: "var(--ink)" } : { background: "var(--blue)", color: "white" }}>
             {isPodcast ? currentSpeaker?.[0] ?? "E" : <AudioLines size={13} strokeWidth={1.75} />}
           </div>
@@ -1503,7 +1556,7 @@ export default function Dashboard() {
             <div className="text-[11px] font-semibold truncate" style={{ color: "var(--text-1)" }}>{currentTitle}</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 max-sm:order-2 flex-shrink-0">
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => skipBy(-10)} style={{ color: "var(--text-3)" }}><SkipBack size={16} strokeWidth={1.75} /></motion.button>
           <SpringScale>
             <motion.button whileTap={{ scale: 0.88 }} onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }} className="w-9 h-9 flex items-center justify-center rounded-full" style={{ background: isPodcast ? "var(--teal)" : "var(--blue)", color: isPodcast ? "var(--ink)" : "white" }}>
@@ -1515,7 +1568,7 @@ export default function Dashboard() {
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => skipBy(10)} style={{ color: "var(--text-3)" }}><SkipForward size={16} strokeWidth={1.75} /></motion.button>
         </div>
         {/* Progress bar */}
-        <div className="flex-1 flex items-center gap-3 min-w-0">
+        <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0 max-sm:order-4 max-sm:basis-full max-sm:px-1">
           <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: "var(--text-3)" }}>
             {formatTime(currentTime)}
           </span>
@@ -1567,17 +1620,27 @@ export default function Dashboard() {
             {formatTime(duration)}
           </span>
         </div>
-        <button onClick={() => { const next = SPEED_OPTIONS[(SPEED_OPTIONS.indexOf(playbackRate) + 1) % SPEED_OPTIONS.length]; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="text-[10px] font-bold w-10 text-center transition-colors" style={{ color: "var(--text-3)" }}>{playbackRate}x</button>
-        {currentDocId && <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDownload(currentDocId)} style={{ color: "var(--text-3)" }}><Download size={15} strokeWidth={1.75} /></motion.button>}
+        <button onClick={() => { const next = SPEED_OPTIONS[(SPEED_OPTIONS.indexOf(playbackRate) + 1) % SPEED_OPTIONS.length]; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="text-[10px] font-bold w-9 sm:w-10 text-center transition-colors flex-shrink-0 max-sm:order-3" style={{ color: "var(--text-3)" }}>{playbackRate}x</button>
+        {currentDocId && <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDownload(currentDocId)} className="max-sm:order-5 flex-shrink-0" style={{ color: "var(--text-3)" }}><Download size={15} strokeWidth={1.75} /></motion.button>}
       </div>
     );
   };
 
   return (
-    <div className="studio flex h-screen overflow-hidden" style={{ background: "var(--ink)", color: "var(--text-1)" }}>
+    <div className="studio flex h-screen max-h-[100dvh] min-h-0 overflow-hidden" style={{ background: "var(--ink)", color: "var(--text-1)" }}>
       <audio ref={audioRef} />
       <LeftRail />
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ paddingBottom: currentDocId || podcastPlayingDocId || isAudioLoading ? 64 : 0 }}>
+      <main
+        className="flex-1 flex flex-col min-w-0 overflow-hidden"
+        style={{
+          paddingBottom:
+            currentDocId || podcastPlayingDocId || isAudioLoading
+              ? isMobileLayout
+                ? `max(72px, calc(56px + env(safe-area-inset-bottom, 0px)))`
+                : 64
+              : 0,
+        }}
+      >
         <AnimatePresence mode="wait">
           {activeTab === "home" && !currentDocId && !podcastPlayingDocId && <LibraryView key="library" />}
           {currentDocId && !podcastPlayingDocId && <SyncReader key="reader" />}

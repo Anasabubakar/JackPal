@@ -106,23 +106,9 @@ export async function login(email: string, password: string) {
   return data;
 }
 
-export async function signup(email: string, password: string, full_name: string) {
-  return request("/auth/signup", {
-    method: "POST",
-    body: JSON.stringify({ email, password, full_name }),
-  });
-}
-
 export async function logout() {
   await request("/auth/logout", { method: "POST" }).catch(() => {});
   clearSession();
-}
-
-export async function requestPasswordReset(email: string) {
-  return request("/auth/reset", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────
