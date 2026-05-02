@@ -2183,6 +2183,7 @@ button.jp-button {
   .jp-player-row {
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
   }
 
   .jp-time {
@@ -2192,12 +2193,12 @@ button.jp-button {
   }
 
   .jp-controls {
-    flex: 1;
+    flex: none;
     justify-content: center;
   }
 
   .jp-speed {
-    margin-left: auto;
+    margin-left: 0;
   }
 
   .jp-audio-card,

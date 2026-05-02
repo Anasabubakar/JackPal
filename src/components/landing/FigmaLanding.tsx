@@ -30,7 +30,7 @@ import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModa
 import { SOCIAL_LINKS } from "@/lib/socialLinks";
 import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
 
-const STUDY_WORDS = ["textbooks", "notes", "PDFs", "lecture slides"] as const;
+const STUDY_WORDS = ["textbooks", "notes", "PDFs", "slides"] as const;
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
