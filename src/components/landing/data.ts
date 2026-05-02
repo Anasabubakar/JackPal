@@ -117,7 +117,7 @@ export const proPlan = {
   name: "PRO PLAN",
   price: "₦1,000",
   meta: "Per month · Cancel anytime",
-  badge: "MOST POPULAR",
+  badge: "RECOMMENDED",
   includes: [
     "Unlimited documents",
     "No page limits",

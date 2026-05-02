@@ -1820,8 +1820,8 @@ button.jp-button {
 
 .jp-footer-grid {
   display: grid;
-  grid-template-columns: 1.4fr repeat(3, 0.55fr);
-  gap: 72px;
+  grid-template-columns: 1.5fr repeat(2, 0.65fr);
+  gap: 64px;
 }
 
 .jp-footer img {
@@ -1901,6 +1901,35 @@ button.jp-button {
 .jp-footer-bottom a.jp-footer-social svg {
   width: 16px;
   height: 16px;
+}
+
+/* ── Mid-range breakpoints (860px) ── */
+@media (max-width: 860px) {
+  .jp-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+
+  .jp-footer-grid > div:first-child {
+    grid-column: span 2;
+  }
+
+  .jp-faq-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  .jp-faq-title h2 {
+    margin: 16px 0 24px;
+    font-size: clamp(36px, 6vw, 56px);
+  }
+
+  .jp-reality-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -2012,6 +2041,36 @@ button.jp-button {
   .jp-testimonials {
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  /* Section padding reduction */
+  .jp-proof { padding: 40px 0 48px; }
+  .jp-dark-section { padding: 52px 0 64px; }
+  .jp-features { padding: 44px 0 60px; }
+  .jp-conditions { padding: 52px 0 48px; }
+  .jp-faq-band { padding: 36px 0 0; }
+  .jp-footer { padding: 40px 0 24px; }
+  .jp-footer-bottom { margin-top: 40px; }
+
+  /* Reduce over-spacious inner spacing */
+  .jp-condition-panel p { margin-bottom: 32px; }
+  .jp-voice-copy li + li { margin-top: 20px; }
+  .jp-condition-panel li + li { margin-top: 20px; }
+  .jp-step-grid { gap: 16px; margin-bottom: 48px; }
+  .jp-voice-copy p { margin: 20px 0 32px; font-size: 16px; }
+  .jp-voice-copy li span,
+  .jp-condition-panel li span { font-size: 15px; line-height: 1.6; }
+
+  /* Footer text scale */
+  .jp-footer p,
+  .jp-footer a,
+  .jp-footer strong { font-size: 15px; }
+  .jp-footer-bottom p { font-size: 13px; }
+  .jp-footer-grid { grid-template-columns: 1fr; gap: 28px; }
+
+  /* Pricing gradient match single-column */
+  .jp-pricing {
+    background: linear-gradient(180deg, var(--jp-navy) 0 44%, #fff 44% 100%);
   }
 
   .jp-nav {

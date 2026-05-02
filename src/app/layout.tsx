@@ -25,11 +25,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "JackPal - Your Audio Study Companion",
+  title: "JackPals — Study audio in Nigerian voices",
   description:
-    "Convert your readings, PDFs, and notes into high-quality audio you can listen to anywhere. Offline-first, student-focused.",
+    "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices. Learn on commutes, offline, without staring at a screen.",
   icons: {
     icon: "/icon.png",
+  },
+  openGraph: {
+    title: "JackPals — Study audio in Nigerian voices",
+    description:
+      "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices. Learn on commutes, offline, without staring at a screen.",
+    siteName: "JackPals",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "JackPals — Study audio in Nigerian voices" }],
+    type: "website",
+    locale: "en_NG",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "JackPals — Study audio in Nigerian voices",
+    description: "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices.",
+    images: ["/og-image.png"],
   },
 };
 

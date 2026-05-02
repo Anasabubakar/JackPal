@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { useAudioPlayer } from '@/lib/AudioPlayerContext';
 
@@ -6,12 +6,14 @@ interface AudioProgressProps {
   label: string;
 }
 
+const BARS = Array.from({ length: 40 }, (_, i) =>
+  0.4 + 0.3 * Math.abs(Math.sin(i * 2.1)) + 0.3 * Math.abs(Math.sin(i * 0.7 + 1.3))
+);
+
 export const AudioProgress: React.FC<AudioProgressProps> = ({ label }) => {
   const { activeVoice, progress, isPlaying } = useAudioPlayer();
   const isActive = activeVoice === label;
-  
-  // Use a stable key for animation to prevent jitter during updates
-  const bars = useMemo(() => Array.from({ length: 40 }, () => Math.random() * 0.6 + 0.4), []);
+  const bars = BARS;
 
   return (
     <div className="group relative w-full py-6">
