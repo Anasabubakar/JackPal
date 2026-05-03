@@ -30,28 +30,24 @@ export const AudioProgress: React.FC<AudioProgressProps> = ({ label }) => {
               key={i}
               className={cn(
                 "w-1 rounded-full transition-all duration-300",
-                isPlayed 
-                  ? "bg-gradient-to-t from-indigo-500 to-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" 
+                isPlayed
+                  ? "bg-gradient-to-t from-indigo-500 to-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]"
                   : "bg-white/10"
               )}
               style={{
-                height: `${height * 100}%`,
-                // Animation is persistent for the visualizer effect, speed/opacity reacts to playback
-                animation: `wave-pulse 1.5s infinite ease-in-out ${i * 0.05}s`,
+                height: `${(height * 100).toFixed(4)}%`,
+                animationName: 'wave-pulse',
+                animationDuration: '1.5s',
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDelay: `${(i * 0.05).toFixed(2)}s`,
                 animationPlayState: isPlaying && isActive ? 'running' : 'paused',
-                opacity: (isPlaying && isActive) ? 1 : 0.6
+                opacity: isPlaying && isActive ? 1 : 0.6,
               }}
             />
           );
         })}
       </div>
-
-      <style jsx>{`
-        @keyframes wave-pulse {
-          0%, 100% { transform: scaleY(1); }
-          50% { transform: scaleY(1.8); }
-        }
-      `}</style>
     </div>
   );
 };

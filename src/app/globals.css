@@ -107,6 +107,10 @@ h1, h2, h3, h4 {
   from { transform: scaleY(0.3); }
   to   { transform: scaleY(1); }
 }
+@keyframes wave-pulse {
+  0%, 100% { transform: scaleY(1); }
+  50%       { transform: scaleY(1.8); }
+}
 
 .animate-shimmer    { animation: shimmer 2s infinite linear; }
 .animate-fade-up    { animation: fade-up 0.3s ease both; }
@@ -392,6 +396,20 @@ h1, h2, h3, h4 {
   line-height: 30px;
 }
 
+.jp-h1-prefix {
+  display: inline;
+}
+
+.jp-h1-word {
+  display: inline-block;
+  transition: opacity 0.25s ease;
+  opacity: 0;
+}
+
+.jp-h1-word.jp-h1-word-in {
+  opacity: 1;
+}
+
 .jp-triangle {
   width: 0;
   height: 0;
@@ -485,6 +503,8 @@ button.jp-button {
 
 .jp-audio-card {
   position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
   width: 100%;
   max-width: 416px;
   min-height: 383px;
@@ -2091,6 +2111,14 @@ button.jp-button {
 
   .jp-hero {
     padding-top: 72px;
+  }
+
+  .jp-h1-prefix {
+    display: none;
+  }
+
+  .jp-hero h1::first-letter {
+    text-transform: uppercase;
   }
 
   .jp-hero h1 {
