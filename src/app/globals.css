@@ -2093,16 +2093,37 @@ button.jp-button {
     padding-top: 72px;
   }
 
-  .jp-hero h1,
+  .jp-hero h1 {
+    font-size: clamp(20px, 6.5vw, 28px);
+    line-height: 1.08;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
   .jp-faq-title h2 {
-    font-size: clamp(28px, 11vw, 46px);
+    font-size: clamp(28px, 9vw, 40px);
     line-height: 0.98;
     word-break: break-word;
   }
 
+  .jp-hero-copy {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .jp-kicker {
+    font-size: 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
   .jp-hero-copy > p {
-    font-size: clamp(15px, 4vw, 18px);
-    line-height: 1.55;
+    font-size: clamp(14px, 3.8vw, 17px);
+    line-height: 1.6;
+    margin-top: 18px;
+    overflow-wrap: break-word;
   }
 
   .jp-proof h2,

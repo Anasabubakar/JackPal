@@ -388,8 +388,7 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
             read out loud, in a <span>voice that sounds like home.</span>
           </h1>
           <p>
-            JackPals converts any document, PDF, or link into high-quality audio narrated by Nigerian AI voices.
-            Study on a commute, between classes, or anywhere your life takes you, without staring at a screen.
+            Drop in any PDF or note, pick a Nigerian voice, and listen hands-free anywhere. Even without internet.
           </p>
           <div className="jp-actions">
             <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
