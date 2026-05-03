@@ -23,14 +23,12 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
 import { SOCIAL_LINKS } from "@/lib/socialLinks";
 import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
-
-const STUDY_WORDS = ["textbooks", "notes", "PDFs", "slides"] as const;
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -374,20 +372,6 @@ function Navbar({ openWaitlist }: { openWaitlist: () => void }) {
 }
 
 function Hero({ openWaitlist }: { openWaitlist: () => void }) {
-  const [wordIdx, setWordIdx] = useState(0);
-  const [wordIn, setWordIn] = useState(true);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setWordIn(false);
-      setTimeout(() => {
-        setWordIdx(prev => (prev + 1) % STUDY_WORDS.length);
-        setWordIn(true);
-      }, 280);
-    }, 2800);
-    return () => clearInterval(id);
-  }, []);
-
   return (
     <section className="jp-hero">
       <img className="jp-hero-bg" src="/images/Whisk_c70ae977c0feb5492014aa58127a071fdr 1.png" alt="" aria-hidden="true" />
@@ -399,7 +383,7 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
           </div>
           <h1>
             <span className="jp-h1-prefix">
-              Your <span className={`jp-h1-word${wordIn ? " jp-h1-word-in" : ""}`}>{STUDY_WORDS[wordIdx]}</span>,<br />
+              Your textbooks,<br />
               read out loud,{" "}
             </span>
             in a <span>voice that sounds like home.</span>

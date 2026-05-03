@@ -400,16 +400,6 @@ h1, h2, h3, h4 {
   display: inline;
 }
 
-.jp-h1-word {
-  display: inline-block;
-  transition: opacity 0.25s ease;
-  opacity: 0;
-}
-
-.jp-h1-word.jp-h1-word-in {
-  opacity: 1;
-}
-
 .jp-triangle {
   width: 0;
   height: 0;
