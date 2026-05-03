@@ -66,13 +66,13 @@ const steps = [
   {
     number: "01",
     title: "Upload Anything",
-    text: "Drop a PDF, paste a link, or type your notes directly. JackPals handles the rest — no formatting needed.",
+    text: "Drop a PDF, paste a link, or type your notes directly. JackPals handles the rest. No formatting needed.",
     tone: "green",
   },
   {
     number: "02",
     title: "Choose Your Voice",
-    text: "Pick from Adaora, Zainab, Nonso, or Jude — Nigerian AI voices that sound natural, warm, and familiar.",
+    text: "Pick from Adaora, Zainab, Nonso, or Jude. Nigerian AI voices that sound natural, warm, and familiar.",
     tone: "blue",
   },
   {
@@ -86,8 +86,8 @@ const steps = [
 const voices = AUDIO_PREVIEW_VOICES;
 
 const voiceBullets = [
-  "Trained on authentic Nigerian speech patterns — not generic TTS engines",
-  "Speed control from 0.75× to 2.5× — learn at the pace your brain works best",
+  "Trained on authentic Nigerian speech patterns, not generic TTS engines",
+  "Speed control from 0.75× to 2.5×. Learn at the pace your brain works best",
   "Handles technical jargon, equations, and complex academic language",
   "More voices and regional accents coming with every release",
 ];
@@ -96,22 +96,22 @@ const featureCards = [
   {
     icon: Mic2,
     title: "Nigerian Voices",
-    text: "Four distinct AI voices with authentic Nigerian accents — Adaora, Zainab, Nonso, and Jude. Familiar, warm, and built for extended listening.",
+    text: "Four distinct AI voices with authentic Nigerian accents: Adaora, Zainab, Nonso, and Jude. Familiar, warm, and built for extended listening.",
   },
   {
     icon: FolderOpen,
     title: "Upload Anything",
-    text: "PDFs, Word docs, links, plain text, lecture slides — paste it or upload it, and JackPals converts it to audio. No formatting required.",
+    text: "PDFs, Word docs, links, plain text, lecture slides. Paste it or upload it, and JackPals converts it to audio. No formatting required.",
   },
   {
     icon: MessageSquareText,
     title: "Offline Access",
-    text: "Downloads are optimised for low storage and slow connections. Once it's on your device, listen anywhere — no data, no excuses.",
+    text: "Downloads are optimised for low storage and slow connections. Once it's on your device, listen anywhere. No data, no excuses.",
   },
   {
     icon: Medal,
     title: "Private Seminar",
-    text: "Studying a hard topic? Switch to Private Seminar mode — JackPals reads, pauses, and explains concepts the way a patient tutor would.",
+    text: "Studying a hard topic? Switch to Private Seminar mode. JackPals reads, pauses, and explains concepts the way a patient tutor would.",
   },
   {
     icon: Camera,
@@ -126,10 +126,10 @@ const featureCards = [
 ];
 
 const conditionBullets = [
-  "Encrypted local storage — your notes never leave your device without permission",
-  "Optimised for budget Android — runs smoothly on 2GB RAM devices",
-  "Background downloads — queue your lectures and download while you sleep",
-  "Web app availability — no app store required, works in any browser",
+  "Encrypted local storage. Your notes never leave your device without permission",
+  "Optimised for budget Android. Runs smoothly on 2GB RAM devices",
+  "Background downloads. Queue your lectures and download while you sleep",
+  "Web app availability. No app store required, works in any browser",
 ];
 
 const freeFeatures = [
@@ -158,12 +158,12 @@ const faqs = [
   {
     question: "What exactly is Jackpals?",
     answer:
-      "Jackpals turns notes, PDFs, links, and documents into Nigerian-accented study audio so you can revise while commuting, walking, or resting.",
+      "JackPals turns notes, PDFs, links, and documents into Nigerian-accented study audio so you can revise while commuting, walking, or resting.",
   },
   {
     question: "Why Nigerian voice specifically?",
     answer:
-      "Familiar voices reduce listening fatigue. The product is designed so study material sounds closer to home instead of like a generic foreign TTS demo.",
+      "Familiar voices reduce listening fatigue. JackPals is designed so study material sounds closer to home instead of like a generic foreign TTS demo.",
   },
   {
     question: "Does it work offline?",
@@ -389,7 +389,7 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
           </h1>
           <p>
             JackPals converts any document, PDF, or link into high-quality audio narrated by Nigerian AI voices.
-            Study on a commute, between classes, or anywhere your life takes you — without staring at a screen.
+            Study on a commute, between classes, or anywhere your life takes you, without staring at a screen.
           </p>
           <div className="jp-actions">
             <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
@@ -403,7 +403,7 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
           <Image className="jp-mascot" src="/images/JackPal 2.png" alt="Jackpals mascot" width={105} height={136} priority />
         </div>
       </div>
-      <p className="jp-launch-note">--- Launching Q2 2026 · ₦1,000/month · No credit card required to join waitlist</p>
+      <p className="jp-launch-note">Launching Q2 2026 · ₦1,000/month · No credit card required</p>
     </section>
   );
 }
@@ -449,14 +449,14 @@ function Reality() {
           </div>
           <div className="jp-stat-card">
             <strong>₦0</strong>
-            <span>tools built specifically for this context — until now</span>
+            <span>tools built specifically for this context, until now</span>
           </div>
         </div>
         <div className="jp-reality-copy">
           <h2>Nigerian students are reading more and <span>retaining less.</span></h2>
           <p>
             Between long commutes, noisy hostels, shared reading spaces, and the sheer volume of course material
-            — the traditional "sit down and read" method is failing most undergraduates.
+            the traditional "sit down and read" method is failing most undergraduates.
           </p>
           <p>Not because students aren't trying. Because the tools available weren't built for how we actually live.</p>
           <p>
@@ -464,7 +464,7 @@ function Reality() {
             accents are unfamiliar. And when something sounds distant, your brain switches off faster.
           </p>
           <div className="jp-reality-note">
-            JackPals is built differently — for the Nigerian student experience, from the ground up.
+            JackPals is built differently, for the Nigerian student experience, from the ground up.
           </div>
         </div>
       </div>
@@ -497,7 +497,7 @@ function HowItWorks() {
           <div className="jp-voice-copy">
             <h2>Voices that actually sound like <span>you</span>.</h2>
             <p>
-              Our Nigerian AI voices aren't just text-to-speech — they carry rhythm, warmth, and familiarity.
+              Our Nigerian AI voices aren't just text-to-speech. They carry rhythm, warmth, and familiarity.
               When you hear something that sounds like home, your brain stays present.
             </p>
             <ul>
@@ -598,7 +598,7 @@ function Pricing({ openWaitlist }: { openWaitlist: () => void }) {
         </article>
 
         <article className="jp-price-card featured">
-          <div className="jp-ribbon">MOST POPULAR</div>
+          <div className="jp-ribbon">RECOMMENDED</div>
           <h3>PRO PLAN</h3>
           <strong>₦1,000</strong>
           <p>Per month · Cancel anytime</p>
@@ -687,7 +687,7 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
             <span className="jp-final-line jp-final-accent">all-night reading</span>
             <span className="jp-final-line jp-final-accent">sessions.</span>
           </h2>
-          <p className="jp-final-lead">Join thousands of Nigerian students already on the waitlist.</p>
+          <p className="jp-final-lead">Join the early access waitlist.</p>
           <div className="jp-actions jp-final-actions">
             <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
             <CtaButton href="#how-it-works" variant="ghost">
@@ -706,8 +706,7 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
 function Footer() {
   const groups = [
     ["PRODUCT", "How It Works", "Voices", "Features", "Pricing", "Waitlist"],
-    ["COMPANY", "About", "Blog", "Career", "Contact"],
-    ["LEGAL", "Privacy Policy", "Term of Use", "Cookie Policy"],
+    ["LEGAL", "Privacy Policy", "Terms of Use", "Cookie Policy"],
   ];
 
   return (

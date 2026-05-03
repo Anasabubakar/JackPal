@@ -39,27 +39,6 @@ const LEVELS = [
   { value: "other", label: "Other" },
 ];
 
-const USE_CASES = [
-  { value: "", label: "What will you use Jackpals for most?" },
-  { value: "commute", label: "Listening on commutes" },
-  { value: "revision", label: "Exam revision & cram sessions" },
-  { value: "offline", label: "Offline study (low data)" },
-  { value: "accessibility", label: "Less screen time / eye strain" },
-  { value: "seminar", label: "Private seminar–style explanations" },
-  { value: "vision", label: "Scanning notes & handwritten pages" },
-  { value: "other", label: "Something else" },
-];
-
-const REFERRALS = [
-  { value: "", label: "How did you hear about us? (optional)" },
-  { value: "friend", label: "Friend or classmate" },
-  { value: "twitter", label: "Twitter / X" },
-  { value: "instagram", label: "Instagram" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "whatsapp", label: "WhatsApp / campus group" },
-  { value: "search", label: "Google / search" },
-  { value: "other", label: "Other" },
-];
 
 type FormStatus = "idle" | "loading" | "success" | "error";
 
@@ -68,16 +47,9 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
   const panelRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [institution, setInstitution] = useState("");
   const [level, setLevel] = useState("");
-  const [fieldOfStudy, setFieldOfStudy] = useState("");
-  const [primaryUse, setPrimaryUse] = useState("");
-  const [struggle, setStruggle] = useState("");
-  const [referralSource, setReferralSource] = useState("");
-  const [wantsNigerianVoices, setWantsNigerianVoices] = useState(true);
 
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -88,6 +60,9 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
     if (!open) return;
     setStatus("idle");
     setErrorMsg("");
+    setEmail("");
+    setInstitution("");
+    setLevel("");
     document.body.style.overflow = "hidden";
     const t = window.setTimeout(() => {
       panelRef.current?.querySelector<HTMLElement>("input,select,textarea")?.focus();
@@ -112,7 +87,7 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
     if (status === "loading" || status === "success") return;
 
     setErrorMsg("");
-    if (!fullName.trim() || !email.trim() || !institution.trim() || !level || !fieldOfStudy.trim() || !primaryUse || !struggle.trim()) {
+    if (!email.trim() || !institution.trim() || !level) {
       setStatus("error");
       setErrorMsg("Please fill in every required field.");
       return;
@@ -124,16 +99,9 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: fullName.trim(),
           email: email.trim(),
-          phone: phone.trim() || undefined,
           institution: institution.trim(),
           level,
-          fieldOfStudy: fieldOfStudy.trim(),
-          primaryUse,
-          struggle: struggle.trim(),
-          referralSource: referralSource || undefined,
-          wantsNigerianVoices,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -205,23 +173,13 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
             ) : (
               <>
                 <div className="jp-wl-header">
-                  <h2 id={`${id}-title`}>Join the Jackpals waitlist</h2>
-                  <p>Tell us a bit about your study life — we use this to shape the product and your invite.</p>
+                  <h2 id={`${id}-title`}>Join the JackPals waitlist</h2>
+                  <p>Get early access when we launch. Takes 20 seconds.</p>
                 </div>
 
                 <form className="jp-wl-form" onSubmit={handleSubmit} noValidate>
                   <div className="jp-wl-grid">
                     <div className="jp-wl-field jp-wl-span2">
-                      <label htmlFor={`${id}-name`}>Full name *</label>
-                      <input
-                        id={`${id}-name`}
-                        autoComplete="name"
-                        placeholder="e.g. Chiamaka Okonkwo"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                      />
-                    </div>
-                    <div className="jp-wl-field">
                       <label htmlFor={`${id}-email`}>Email *</label>
                       <input
                         id={`${id}-email`}
@@ -233,17 +191,6 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
                         required
                       />
                     </div>
-                    <div className="jp-wl-field">
-                      <label htmlFor={`${id}-phone`}>Phone / WhatsApp <span className="jp-wl-opt">optional</span></label>
-                      <input
-                        id={`${id}-phone`}
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="+234 …"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
                     <div className="jp-wl-field jp-wl-span2">
                       <label htmlFor={`${id}-school`}>School or university *</label>
                       <input
@@ -253,7 +200,7 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
                         onChange={(e) => setInstitution(e.target.value)}
                       />
                     </div>
-                    <div className="jp-wl-field">
+                    <div className="jp-wl-field jp-wl-span2">
                       <label htmlFor={`${id}-level`}>Level *</label>
                       <select
                         id={`${id}-level`}
@@ -268,65 +215,6 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
                         ))}
                       </select>
                     </div>
-                    <div className="jp-wl-field">
-                      <label htmlFor={`${id}-course`}>Field of study *</label>
-                      <input
-                        id={`${id}-course`}
-                        placeholder="e.g. Pharmacy, Computer Science"
-                        value={fieldOfStudy}
-                        onChange={(e) => setFieldOfStudy(e.target.value)}
-                      />
-                    </div>
-                    <div className="jp-wl-field jp-wl-span2">
-                      <label htmlFor={`${id}-use`}>Primary use *</label>
-                      <select
-                        id={`${id}-use`}
-                        value={primaryUse}
-                        onChange={(e) => setPrimaryUse(e.target.value)}
-                        required
-                      >
-                        {USE_CASES.map((o) => (
-                          <option key={o.value || "u-empty"} value={o.value} disabled={o.value === ""}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="jp-wl-field jp-wl-span2">
-                      <label htmlFor={`${id}-struggle`}>Biggest study struggle right now *</label>
-                      <textarea
-                        id={`${id}-struggle`}
-                        rows={3}
-                        placeholder="Long commutes, noisy hostels, foreign-sounding TTS, retention…?"
-                        value={struggle}
-                        onChange={(e) => setStruggle(e.target.value)}
-                      />
-                    </div>
-                    <div className="jp-wl-field jp-wl-span2">
-                      <label htmlFor={`${id}-ref`}>Discovery</label>
-                      <select
-                        id={`${id}-ref`}
-                        value={referralSource}
-                        onChange={(e) => setReferralSource(e.target.value)}
-                      >
-                        {REFERRALS.map((o) => (
-                          <option key={o.value || "r-empty"} value={o.value} disabled={o.value === ""}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <label className="jp-wl-check jp-wl-span2">
-                      <input
-                        type="checkbox"
-                        checked={wantsNigerianVoices}
-                        onChange={(e) => setWantsNigerianVoices(e.target.checked)}
-                      />
-                      <span>
-                        I want early access to <strong>Nigerian AI voices</strong>, offline downloads, and launch
-                        pricing for students.
-                      </span>
-                    </label>
                   </div>
 
                   {status === "error" && errorMsg && (
@@ -349,7 +237,7 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
                     )}
                   </button>
                   <p className="jp-wl-trust">
-                    Free during beta · No credit card · We only email about launch and early access — no spam.
+                    Free during beta · No credit card · We only email about launch and early access. No spam.
                   </p>
                 </form>
               </>
