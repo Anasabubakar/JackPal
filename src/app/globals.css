@@ -518,6 +518,9 @@ button.jp-button {
 }
 
 .jp-now {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin-bottom: 12px;
   color: #4a5c82;
   font-size: 14px;
@@ -776,6 +779,73 @@ button.jp-button {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+/* ── Karaoke word display ── */
+.jp-karaoke {
+  margin: 22px 0 10px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+  min-height: 90px;
+}
+
+.jp-kw-future {
+  color: rgba(255, 255, 255, 0.14);
+  transition: color 0.25s;
+}
+
+.jp-kw-past {
+  color: rgba(100, 149, 220, 0.45);
+  transition: color 0.25s;
+}
+
+.jp-kw-current {
+  color: #ffffff;
+  text-shadow:
+    0 0 14px rgba(120, 190, 255, 0.95),
+    0 0 32px rgba(60, 140, 255, 0.55);
+  transition: color 0.15s, text-shadow 0.15s;
+}
+
+/* ── Slim progress bar ── */
+.jp-bar-wrap {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.jp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2d6bff, #7c3aed);
+  border-radius: 2px;
+  transition: width 0.4s linear;
+}
+
+/* ── NOW PLAYING live dot ── */
+.jp-now::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #4a5c82;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.jp-audio-card.is-playing .jp-now::before {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
+  50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.08); }
 }
 
 .jp-player-row {

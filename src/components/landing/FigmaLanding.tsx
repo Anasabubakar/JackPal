@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { AudioProgress } from "@/components/AudioProgress";
 import {
   Camera,
   Check,
@@ -218,11 +217,40 @@ function CtaButton({
   );
 }
 
+const BIO302_WORDS = [
+  "The", "cell", "cycle", "consists", "of", "interphase", "and", "mitosis.",
+  "During", "interphase,", "the", "cell", "grows", "and", "replicates", "its", "DNA.",
+  "Mitosis", "then", "divides", "the", "nucleus,", "producing", "two", "genetically",
+  "identical", "daughter", "cells", "with", "the", "same", "chromosome", "number",
+  "as", "the", "parent", "cell.",
+];
+
+function KaraokeDisplay({ isActive, progress }: { isActive: boolean; progress: number }) {
+  const currentIdx = isActive
+    ? Math.min(Math.floor((progress / 100) * BIO302_WORDS.length), BIO302_WORDS.length - 1)
+    : -1;
+  return (
+    <div className="jp-karaoke">
+      {BIO302_WORDS.map((word, i) => (
+        <span
+          key={i}
+          className={
+            i < currentIdx ? "jp-kw-past" : i === currentIdx ? "jp-kw-current" : "jp-kw-future"
+          }
+        >
+          {word}{" "}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function AudioCard({ large = false }: { large?: boolean }) {
   const {
     activeVoice,
     activeSrc,
     isPlaying,
+    progress,
     playbackRate,
     playVoice,
     togglePlay,
@@ -258,12 +286,15 @@ function AudioCard({ large = false }: { large?: boolean }) {
           <FileAudio size={24} />
         </div>
         <div>
-          <strong>{large ? "PHY302 - Mechanics & Waves" : "BIO302 - Cell Division Notes"}</strong>
-          <span>{large ? "Chapter 4 + 8 pages" : "12 pages - 18 min listen"}</span>
+          <strong>BIO302 - Cell Division Notes</strong>
+          <span>12 pages · 18 min listen</span>
         </div>
       </div>
 
-      <AudioProgress label={selectedVoice.name} />
+      <KaraokeDisplay isActive={isCurrentPreview} progress={progress} />
+      <div className="jp-bar-wrap">
+        <div className="jp-bar-fill" style={{ width: `${isCurrentPreview ? progress : 0}%` }} />
+      </div>
 
       <div className="jp-player-row">
         <div className="jp-time">{selectedVoice.name} preview</div>
