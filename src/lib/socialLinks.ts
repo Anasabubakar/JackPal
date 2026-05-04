@@ -7,4 +7,5 @@ export const SOCIAL_LINKS = {
   linkedin: "https://www.linkedin.com/company/teenovatex-labs",
   github: "https://github.com/Anasabubakar/JackPal",
   site: "https://jackpal.vercel.app",
+  instagram: "https://www.instagram.com/jackpals",
 } as const;

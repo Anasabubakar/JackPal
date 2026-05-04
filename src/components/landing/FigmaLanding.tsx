@@ -4,13 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { AudioProgress } from "@/components/AudioProgress";
 import {
-  ArrowRight,
   Camera,
   Check,
   ChevronDown,
   FileAudio,
   FolderOpen,
-  Globe,
+  Instagram,
   Linkedin,
   Medal,
   MessageSquareText,
@@ -23,14 +22,12 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
 import { SOCIAL_LINKS } from "@/lib/socialLinks";
 import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
-
-const STUDY_WORDS = ["textbooks", "notes", "PDFs", "slides"] as const;
 
 const navLinks = [
   { href: "#how-it-works", label: "How It Works" },
@@ -374,20 +371,6 @@ function Navbar({ openWaitlist }: { openWaitlist: () => void }) {
 }
 
 function Hero({ openWaitlist }: { openWaitlist: () => void }) {
-  const [wordIdx, setWordIdx] = useState(0);
-  const [wordIn, setWordIn] = useState(true);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setWordIn(false);
-      setTimeout(() => {
-        setWordIdx(prev => (prev + 1) % STUDY_WORDS.length);
-        setWordIn(true);
-      }, 280);
-    }, 2800);
-    return () => clearInterval(id);
-  }, []);
-
   return (
     <section className="jp-hero">
       <img className="jp-hero-bg" src="/images/Whisk_c70ae977c0feb5492014aa58127a071fdr 1.png" alt="" aria-hidden="true" />
@@ -398,14 +381,12 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
             Your study. Your voice. Your pace.
           </div>
           <h1>
-            <span className="jp-h1-prefix">
-              Your <span className={`jp-h1-word${wordIn ? " jp-h1-word-in" : ""}`}>{STUDY_WORDS[wordIdx]}</span>,<br />
-              read out loud,{" "}
-            </span>
-            in a <span>voice that sounds like home.</span>
+            Your <span>textbooks,</span><br />
+            read out loud, in a voice that sounds{" "}
+            <span>like home.</span>
           </h1>
           <p>
-            Drop in any PDF or note, pick a Nigerian voice, and listen hands-free anywhere. Even without internet.
+            Turn any document type or link, into audio in a Nigerian voice. Listen on the bus, between classes, even offline.
           </p>
           <div className="jp-actions">
             <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
@@ -460,27 +441,39 @@ function Reality() {
             <span>of Nigerian undergrads commute over 1 hour daily</span>
           </div>
           <div className="jp-stat-card">
-            <strong>3x</strong>
-            <span>faster retention with audio vs passive reading</span>
+            <strong>2x</strong>
+            <span>retention when students read, then listen</span>
           </div>
           <div className="jp-stat-card">
-            <strong>₦0</strong>
-            <span>tools built specifically for this context, until now</span>
+            <strong>Zero</strong>
+            <span>tools built specifically for this context — until now</span>
           </div>
         </div>
         <div className="jp-reality-copy">
           <h2>Nigerian students are reading more and <span>retaining less.</span></h2>
           <p>
-            Between long commutes, noisy hostels, shared reading spaces, and the sheer volume of course material
-            the traditional "sit down and read" method is failing most undergraduates.
+            Between hour-long commutes, noisy hostels, shared reading rooms, and the sheer volume of course material, the &ldquo;sit down and read&rdquo; method is failing most undergraduates.
           </p>
-          <p>Not because students aren't trying. Because the tools available weren't built for how we actually live.</p>
+          <p>Not because students aren&apos;t trying. Because the tools available weren&apos;t built for how we actually live.</p>
           <p>
-            Apps like NotebookLM exist, but they were built for a different context. The voices are foreign. The
-            accents are unfamiliar. And when something sounds distant, your brain switches off faster.
+            Existing study apps don&apos;t change that. The voices are foreign, the accents are unfamiliar, and when something sounds distant, attention drops.
           </p>
           <div className="jp-reality-note">
-            JackPals is built differently, for the Nigerian student experience, from the ground up.
+            <svg className="jp-reality-note-svg" width="100%" height="100%" aria-hidden="true">
+              <defs>
+                <linearGradient id="note-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#FF6B7E" />
+                  <stop offset="100%" stopColor="#7C6FE8" />
+                </linearGradient>
+                <filter id="note-rough" x="-3%" y="-25%" width="106%" height="150%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="5" result="noise" />
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" />
+                </filter>
+              </defs>
+              <rect x="0" y="0" width="100%" height="100%" rx="12" ry="12" fill="none" stroke="url(#note-grad)" strokeWidth="1" strokeDasharray="5 1.8" strokeLinecap="round" filter="url(#note-rough)" />
+              <rect x="0" y="0" width="100%" height="100%" rx="12" ry="12" fill="none" stroke="url(#note-grad)" strokeWidth="0.8" strokeDasharray="4 2.5" strokeLinecap="round" filter="url(#note-rough)" opacity="0.6" transform="translate(0.5, 0.3)" />
+            </svg>
+            JackPals is built for how Nigerian students actually live, study, and listen
           </div>
         </div>
       </div>
@@ -708,7 +701,6 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
             <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
             <CtaButton href="#how-it-works" variant="ghost">
               Learn More
-              <ArrowRight size={18} strokeWidth={2} className="jp-final-cta-arrow" aria-hidden />
             </CtaButton>
           </div>
           <small>Launching Q2 2026 · ₦1,000/month after launch · No credit card required</small>
@@ -764,12 +756,12 @@ function Footer() {
           </a>
           <a
             className="jp-footer-social"
-            href={SOCIAL_LINKS.site}
+            href={SOCIAL_LINKS.instagram}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="JackPals website"
+            aria-label="JackPals on Instagram"
           >
-            <Globe size={16} strokeWidth={2} aria-hidden />
+            <Instagram size={16} strokeWidth={2} aria-hidden />
           </a>
         </div>
       </div>
