@@ -402,8 +402,7 @@ h1, h2, h3, h4 {
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 11px solid currentColor;
-  transform: rotate(90deg);
+  border-top: 11px solid currentColor;
 }
 
 .jp-hero h1 {
@@ -413,6 +412,11 @@ h1, h2, h3, h4 {
   font-size: clamp(48px, 5.55vw, 80px);
   font-weight: 800;
   line-height: 0.925;
+}
+
+.jp-br-mobile { display: none; }
+@media (max-width: 640px) {
+  .jp-br-mobile { display: inline; }
 }
 
 .jp-hero h1 span {
@@ -781,7 +785,28 @@ button.jp-button {
   line-height: 1.4;
 }
 
-/* ── Karaoke word display ── */
+/* ── Waveform bars ── */
+.jp-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  margin: 20px 0 6px;
+}
+
+.jp-wf-bar {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  transition: background 0.25s ease;
+}
+
+.jp-wf-bar--played {
+  background: #2d6bff;
+}
+
+/* ── Karaoke word display (kept for future use) ── */
 .jp-karaoke {
   margin: 22px 0 10px;
   font-size: 17px;
@@ -791,22 +816,22 @@ button.jp-button {
   min-height: 90px;
 }
 
-.jp-kw-future {
-  color: rgba(255, 255, 255, 0.14);
-  transition: color 0.25s;
-}
-
-.jp-kw-past {
-  color: rgba(100, 149, 220, 0.45);
-  transition: color 0.25s;
-}
-
+.jp-kw-future { color: rgba(255, 255, 255, 0.14); transition: color 0.25s; }
+.jp-kw-past   { color: rgba(100, 149, 220, 0.45); transition: color 0.25s; }
 .jp-kw-current {
   color: #ffffff;
-  text-shadow:
-    0 0 14px rgba(120, 190, 255, 0.95),
-    0 0 32px rgba(60, 140, 255, 0.55);
+  text-shadow: 0 0 14px rgba(120, 190, 255, 0.95), 0 0 32px rgba(60, 140, 255, 0.55);
   transition: color 0.15s, text-shadow 0.15s;
+}
+
+/* ── Voice section label ── */
+.jp-voice-label {
+  margin: 20px 0 4px;
+  color: #4a5c82;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* ── Slim progress bar ── */
@@ -929,7 +954,7 @@ button.jp-button {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  margin-top: 28px;
+  margin-top: 6px;
 }
 
 .jp-voice-tabs span,
@@ -2095,7 +2120,8 @@ button.jp-button {
     width: 100%;
     min-width: 0;
     margin-inline: auto;
-    overflow: hidden;
+    margin-bottom: 110px;
+    overflow: visible;
   }
 
   .jp-launch-note {
@@ -2210,10 +2236,12 @@ button.jp-button {
     width: auto;
   }
 
-  .jp-mascot {
-    right: 0;
-    bottom: -28px;
-    width: min(105px, 30vw);
+  .jp-hero-demo .jp-mascot {
+    right: -8px;
+    bottom: -100px;
+    width: min(110px, 28vw);
+    height: auto;
+    z-index: 2;
   }
 
   .jp-hero {
@@ -2282,24 +2310,29 @@ button.jp-button {
   }
 
   .jp-player-row {
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 12px;
+    justify-content: flex-start;
+    margin-top: 14px;
   }
 
-  .jp-time {
-    flex: 1 1 100%;
-    text-align: center;
-    order: -1;
+  .jp-skip {
+    display: none;
   }
 
   .jp-controls {
     flex: none;
-    justify-content: center;
+  }
+
+  .jp-time {
+    flex: 1;
+    text-align: left;
+    order: unset;
   }
 
   .jp-speed {
     margin-left: 0;
+    flex: none;
   }
 
   .jp-audio-card,
