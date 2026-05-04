@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
@@ -473,14 +473,23 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
 }
 
 function SocialProof() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setActive((i) => (i + 1) % testimonials.length);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
     <section className="jp-proof">
       <Pill>REAL ACTION</Pill>
       <h2>What students said when<br />we showed them a demo</h2>
+
       <div className="jp-testimonials">
         {testimonials.map((item, index) => (
           <article className="jp-testimonial" key={item.name}>
-            <div className="jp-stars">★★★★★</div>
             <span className="jp-quote-mark">“</span>
             <p>“{item.quote}”</p>
             <div className="jp-person">
@@ -491,6 +500,40 @@ function SocialProof() {
               </div>
             </div>
           </article>
+        ))}
+      </div>
+
+      <div className="jp-testimonial-mobile" aria-live="polite">
+        {testimonials.map((item, index) => (
+          <article
+            className={`jp-testimonial${active === index ? " is-active" : ""}`}
+            key={item.name}
+            aria-hidden={active !== index}
+          >
+            <span className="jp-quote-mark">“</span>
+            <p>“{item.quote}”</p>
+            <div className="jp-person">
+              <span className={`avatar avatar-${index}`}>{item.initials}</span>
+              <div>
+                <strong>{item.name}</strong>
+                <small>{item.meta}</small>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="jp-testimonial-dots" role="tablist">
+        {testimonials.map((item, index) => (
+          <button
+            key={item.name}
+            type="button"
+            role="tab"
+            aria-selected={active === index}
+            aria-label={`Show testimonial from ${item.name}`}
+            className={`jp-testimonial-dot${active === index ? " is-active" : ""}`}
+            onClick={() => setActive(index)}
+          />
         ))}
       </div>
     </section>

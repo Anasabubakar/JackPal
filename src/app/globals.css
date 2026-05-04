@@ -370,10 +370,16 @@ h1, h2, h3, h4 {
 }
 
 .jp-hero-bg {
-  opacity: 0.47;
+  opacity: 0.22;
   mix-blend-mode: multiply;
   transform: scale(1.14) translateY(-32%);
   transform-origin: top left;
+}
+
+@media (max-width: 640px) {
+  .jp-hero-bg {
+    opacity: 0.1;
+  }
 }
 
 .jp-hero-grid {
@@ -1089,6 +1095,58 @@ button.jp-button {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 21px;
+}
+
+/* Mobile carousel: one card visible at a time, fades between */
+.jp-testimonial-mobile {
+  display: none;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 max(16px, env(safe-area-inset-left));
+}
+
+.jp-testimonial-mobile .jp-testimonial {
+  position: absolute;
+  inset: 0 max(16px, env(safe-area-inset-left));
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+
+.jp-testimonial-mobile .jp-testimonial.is-active {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.jp-testimonial-dots {
+  display: none;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.jp-testimonial-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(11, 49, 101, 0.18);
+  cursor: pointer;
+  transition: background 0.25s, width 0.25s;
+}
+
+.jp-testimonial-dot.is-active {
+  width: 22px;
+  border-radius: 4px;
+  background: var(--jp-blue, #1B6EF3);
 }
 
 .jp-testimonial {
@@ -2153,7 +2211,6 @@ button.jp-button {
 
   .jp-step-grid,
   .jp-feature-grid,
-  .jp-testimonials,
   .jp-footer-grid {
     grid-template-columns: 1fr;
   }
@@ -2191,13 +2248,38 @@ button.jp-button {
     padding-right: max(16px, env(safe-area-inset-right));
   }
 
+  /* Mobile: hide 3-card grid, show single auto-rotating card + dots */
   .jp-testimonials {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    display: none;
+  }
+
+  .jp-testimonial-mobile {
+    display: block;
+  }
+
+  .jp-testimonial-dots {
+    display: flex;
+  }
+
+  .jp-testimonial {
+    min-height: 0;
+    padding: 28px 22px 22px;
+  }
+
+  .jp-testimonial p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 20px 0 20px;
+  }
+
+  .jp-quote-mark {
+    font-size: 48px;
+    top: 14px;
+    right: 20px;
   }
 
   /* Section padding reduction */
-  .jp-proof { padding: 40px 0 48px; }
+  .jp-proof { padding: 32px 0 36px; }
   .jp-dark-section { padding: 52px 0 64px; }
   .jp-features { padding: 44px 0 60px; }
   .jp-conditions { padding: 52px 0 48px; }
@@ -2249,8 +2331,8 @@ button.jp-button {
   }
 
   .jp-hero h1 {
-    font-size: clamp(24px, 7.2vw, 30px);
-    line-height: 1.1;
+    font-size: clamp(32px, 8.6vw, 38px);
+    line-height: 1.08;
     word-break: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
@@ -2269,16 +2351,16 @@ button.jp-button {
   }
 
   .jp-kicker {
-    font-size: 14px;
+    font-size: 16px;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
   }
 
   .jp-hero-copy > p {
-    font-size: clamp(14px, 3.8vw, 17px);
-    line-height: 1.6;
-    margin-top: 18px;
+    font-size: clamp(16px, 4.4vw, 19px);
+    line-height: 1.55;
+    margin-top: 22px;
     overflow-wrap: break-word;
     max-width: 100%;
   }
@@ -2395,9 +2477,9 @@ button.jp-button {
 
   .jp-hero .jp-button {
     width: auto;
-    font-size: 14px;
-    min-height: 40px;
-    padding: 0 20px;
+    font-size: 15px;
+    min-height: 46px;
+    padding: 0 22px;
     white-space: nowrap;
     line-height: 1;
   }
