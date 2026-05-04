@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { AudioProgress } from "@/components/AudioProgress";
 import {
   Camera,
   Check,
@@ -218,11 +217,70 @@ function CtaButton({
   );
 }
 
+function formatTime(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const WAVEFORM_BARS = Array.from({ length: 62 }, (_, i) =>
+  Math.max(0.12, 0.28 + 0.46 * Math.abs(Math.sin(i * 0.41)) + 0.26 * Math.abs(Math.sin(i * 0.17 + 1.2)))
+);
+
+function WaveformDisplay({ isActive, progress }: { isActive: boolean; progress: number }) {
+  return (
+    <div className="jp-waveform">
+      {WAVEFORM_BARS.map((h, i) => {
+        const pct = (i / WAVEFORM_BARS.length) * 100;
+        const played = isActive && pct <= progress;
+        return (
+          <div
+            key={i}
+            className={`jp-wf-bar${played ? " jp-wf-bar--played" : ""}`}
+            style={{ height: `${(h * 100).toFixed(1)}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+const BIO302_WORDS = [
+  "The", "cell", "cycle", "consists", "of", "interphase", "and", "mitosis.",
+  "During", "interphase,", "the", "cell", "grows", "and", "replicates", "its", "DNA.",
+  "Mitosis", "then", "divides", "the", "nucleus,", "producing", "two", "genetically",
+  "identical", "daughter", "cells", "with", "the", "same", "chromosome", "number",
+  "as", "the", "parent", "cell.",
+];
+
+function KaraokeDisplay({ isActive, progress }: { isActive: boolean; progress: number }) {
+  const currentIdx = isActive
+    ? Math.min(Math.floor((progress / 100) * BIO302_WORDS.length), BIO302_WORDS.length - 1)
+    : -1;
+  return (
+    <div className="jp-karaoke">
+      {BIO302_WORDS.map((word, i) => (
+        <span
+          key={i}
+          className={
+            i < currentIdx ? "jp-kw-past" : i === currentIdx ? "jp-kw-current" : "jp-kw-future"
+          }
+        >
+          {word}{" "}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function AudioCard({ large = false }: { large?: boolean }) {
   const {
     activeVoice,
     activeSrc,
     isPlaying,
+    progress,
+    currentTime,
+    duration,
     playbackRate,
     playVoice,
     togglePlay,
@@ -258,25 +316,30 @@ function AudioCard({ large = false }: { large?: boolean }) {
           <FileAudio size={24} />
         </div>
         <div>
-          <strong>{large ? "PHY302 - Mechanics & Waves" : "BIO302 - Cell Division Notes"}</strong>
-          <span>{large ? "Chapter 4 + 8 pages" : "12 pages - 18 min listen"}</span>
+          <strong>BIO302 - Cell Division Notes</strong>
+          <span>12 pages · 18 min listen</span>
         </div>
       </div>
 
-      <AudioProgress label={selectedVoice.name} />
+      <WaveformDisplay isActive={isCurrentPreview} progress={progress} />
+      <div className="jp-bar-wrap">
+        <div className="jp-bar-fill" style={{ width: `${isCurrentPreview ? progress : 0}%` }} />
+      </div>
 
       <div className="jp-player-row">
-        <div className="jp-time">{selectedVoice.name} preview</div>
         <div className="jp-controls">
-          <button className="jp-control-icon" type="button" onClick={() => skipBy(-10)} aria-label="Skip preview back 10 seconds">
+          <button className="jp-control-icon jp-skip" type="button" onClick={() => skipBy(-10)} aria-label="Skip back 10 seconds">
             <SkipBack size={large ? 15 : 13} />
           </button>
           <button className="jp-control-main" type="button" onClick={handlePlayToggle} aria-label="Toggle audio preview">
-            {playing ? <Pause size={large ? 14 : 12} fill="currentColor" /> : <Play size={large ? 14 : 12} fill="currentColor" />}
+            {playing ? <Pause size={large ? 16 : 14} fill="currentColor" /> : <Play size={large ? 16 : 14} fill="currentColor" />}
           </button>
-          <button className="jp-control-icon" type="button" onClick={() => skipBy(10)} aria-label="Skip preview forward 10 seconds">
+          <button className="jp-control-icon jp-skip" type="button" onClick={() => skipBy(10)} aria-label="Skip forward 10 seconds">
             <SkipForward size={large ? 15 : 13} />
           </button>
+        </div>
+        <div className="jp-time">
+          {formatTime(isCurrentPreview ? currentTime : 0)} / {formatTime(isCurrentPreview ? duration : 0)}
         </div>
         <button type="button" className="jp-speed" onClick={cyclePlaybackRate} aria-label="Change playback speed">
           {playbackRate}x
@@ -301,18 +364,21 @@ function AudioCard({ large = false }: { large?: boolean }) {
           </div>
         </div>
       ) : (
-        <div className="jp-voice-tabs" aria-label="Voice options">
-          {voices.map((voice) => (
-            <button
-              type="button"
-              className={voice.name === selectedVoice.name ? "selected" : ""}
-              key={voice.name}
-              onClick={() => handleVoiceSelect(voice)}
-            >
-              {voice.name}
-            </button>
-          ))}
-        </div>
+        <>
+          <p className="jp-voice-label">VOICE</p>
+          <div className="jp-voice-tabs" aria-label="Voice options">
+            {voices.map((voice) => (
+              <button
+                type="button"
+                className={voice.name === selectedVoice.name ? "selected" : ""}
+                key={voice.name}
+                onClick={() => handleVoiceSelect(voice)}
+              >
+                {voice.name}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -382,7 +448,8 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
           </div>
           <h1>
             Your <span>textbooks,</span><br />
-            read out loud, in a voice that sounds{" "}
+            read out loud, in<br className="jp-br-mobile" />{" "}
+            a voice that sounds<br className="jp-br-mobile" />{" "}
             <span>like home.</span>
           </h1>
           <p>
