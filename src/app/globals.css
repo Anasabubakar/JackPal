@@ -2467,19 +2467,22 @@ button.jp-button {
     line-height: 1.25;
   }
 
-  /* Hero CTAs: keep side-by-side, smaller, pill-shaped */
+  /* Hero CTAs: lock side-by-side, never wrap */
   .jp-hero .jp-actions {
     flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 10px;
+    width: 100%;
   }
 
   .jp-hero .jp-button {
+    flex: 1 1 0;
     width: auto;
-    font-size: 15px;
+    min-width: 0;
+    font-size: 14px;
     min-height: 46px;
-    padding: 0 22px;
+    padding: 0 14px;
     white-space: nowrap;
     line-height: 1;
   }
