@@ -2023,7 +2023,9 @@ button.jp-button {
     justify-self: stretch;
     max-width: 416px;
     width: 100%;
+    min-width: 0;
     margin-inline: auto;
+    overflow: hidden;
   }
 
   .jp-launch-note {
@@ -2037,6 +2039,12 @@ button.jp-button {
 
   .jp-hero-grid {
     gap: 54px;
+  }
+
+  .jp-hero-copy {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .jp-voice-area,
@@ -2143,10 +2151,11 @@ button.jp-button {
   }
 
   .jp-hero h1 {
-    font-size: clamp(30px, 9vw, 40px);
-    line-height: 1.08;
+    font-size: clamp(24px, 7.2vw, 30px);
+    line-height: 1.1;
     word-break: break-word;
     overflow-wrap: break-word;
+    max-width: 100%;
   }
 
   .jp-faq-title h2 {
@@ -2173,6 +2182,7 @@ button.jp-button {
     line-height: 1.6;
     margin-top: 18px;
     overflow-wrap: break-word;
+    max-width: 100%;
   }
 
   .jp-proof h2,
@@ -2231,6 +2241,8 @@ button.jp-button {
   .jp-audio-card,
   .jp-audio-card-large {
     padding: 24px 18px;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .jp-reality-grid {
