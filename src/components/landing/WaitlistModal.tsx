@@ -28,6 +28,34 @@ export function useWaitlist() {
   return ctx;
 }
 
+const NG_UNIVERSITIES = [
+  "University of Lagos (UNILAG)",
+  "University of Ibadan (UI)",
+  "Obafemi Awolowo University (OAU)",
+  "Ahmadu Bello University (ABU)",
+  "University of Nigeria, Nsukka (UNN)",
+  "University of Ilorin (UNILORIN)",
+  "University of Benin (UNIBEN)",
+  "University of Port Harcourt (UNIPORT)",
+  "University of Abuja",
+  "Bayero University Kano (BUK)",
+  "Nnamdi Azikiwe University (UNIZIK)",
+  "Federal University of Technology Akure (FUTA)",
+  "Federal University of Technology Minna (FUTMINNA)",
+  "Federal University Oye-Ekiti (FUOYE)",
+  "Lagos State University (LASU)",
+  "Covenant University",
+  "Babcock University",
+  "Redeemer's University",
+  "Pan-Atlantic University",
+  "American University of Nigeria (AUN)",
+  "Landmark University",
+  "Bowen University",
+  "Osun State University",
+  "Rivers State University",
+  "Kwara State University",
+];
+
 const LEVELS = [
   { value: "", label: "Select level" },
   { value: "100l", label: "100 Level" },
@@ -192,13 +220,20 @@ function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }
                       />
                     </div>
                     <div className="jp-wl-field jp-wl-span2">
-                      <label htmlFor={`${id}-school`}>School or university *</label>
+                      <label htmlFor={`${id}-school`}>University *</label>
                       <input
                         id={`${id}-school`}
-                        placeholder="Where are you studying?"
+                        list={`${id}-uni-list`}
+                        placeholder="Search or type your university"
+                        autoComplete="off"
                         value={institution}
                         onChange={(e) => setInstitution(e.target.value)}
                       />
+                      <datalist id={`${id}-uni-list`}>
+                        {NG_UNIVERSITIES.map((u) => (
+                          <option key={u} value={u} />
+                        ))}
+                      </datalist>
                     </div>
                     <div className="jp-wl-field jp-wl-span2">
                       <label htmlFor={`${id}-level`}>Level *</label>
