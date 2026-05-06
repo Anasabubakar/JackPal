@@ -141,8 +141,8 @@ def key_script_by_hash(c_hash: str, mode: str, chapter: int | None = None) -> st
 def key_listen_by_hash(c_hash: str) -> str:
     """Cross-user listen-narration script cache key.
     Bump the prefix when the narration prompt changes to invalidate old
-    cached output. v3 = peak-explanation prompt (teach, don't transcribe)."""
-    return cache_key("listen_h_v3", c_hash)
+    cached output. v4 = walk-through-doc-in-order, no early truncation."""
+    return cache_key("listen_h_v4", c_hash)
 
 
 def key_summary_by_hash(c_hash: str) -> str:

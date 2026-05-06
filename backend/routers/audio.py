@@ -332,19 +332,32 @@ async def generate_audio(
 
     same_voice = doc.data.get("audio_voice") == voice and doc.data.get("audio_engine", DEFAULT_ENGINE) == engine
     existing_chunks = list_audio_chunks_supabase(user_id, doc_id, "chunk") if same_voice else []
-    if same_voice and existing_chunks:
+    cached_total = doc.data.get("total_chunks") or 0
+    # Reuse cached audio ONLY if voice+engine match AND the number of chunks
+    # in storage matches what THIS generation expects. The chunk count differs
+    # between narrated and raw-text audio for the same doc, so a mismatch
+    # signals stale chunks from a previous mode.
+    chunks_match_current = (
+        same_voice
+        and existing_chunks
+        and len(existing_chunks) == total_chunks
+        and cached_total == total_chunks
+    )
+    if chunks_match_current:
         ready = len(existing_chunks)
-        total = doc.data.get("total_chunks") or ready
         return {
             "status": doc.data.get("status") or "audio_ready",
             "ready_chunks": ready,
-            "total_chunks": total,
+            "total_chunks": ready,
             "audio_voice": voice,
             "audio_engine": engine,
             "message": "Cached.",
         }
 
-    if not same_voice:
+    # Invalidate stale chunks (different voice/engine OR chunk-count mismatch
+    # because the underlying text changed — e.g. raw -> narrated).
+    if existing_chunks:
+        print(f"[Audio] Invalidating {len(existing_chunks)} stale chunks for {doc_id} (cached_total={cached_total}, new_total={total_chunks})")
         delete_audio_chunks_supabase(user_id, doc_id, "chunk")
 
     supabase.table("documents").update({
