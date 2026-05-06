@@ -122,7 +122,7 @@ export default function Dashboard() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [chaptersLoading, setChaptersLoading] = useState(false);
 
-  // AI Summary â€” per-doc
+  // AI Summary — per-doc
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [summaryLoadingId, setSummaryLoadingId] = useState<string | null>(null);
 
@@ -145,7 +145,7 @@ export default function Dashboard() {
   const [podcastMode, setPodcastMode] = useState<"standard" | "pidgin">("standard");
   const [podcastTopic, setPodcastTopic] = useState<string | null>(null); // section text being podcasted
 
-  // Resume playback â€” chunk index per document
+  // Resume playback — chunk index per document
   const [savedProgress, setSavedProgress] = useState<Record<string, number>>({});
 
   // Transcript / seeking
@@ -154,7 +154,7 @@ export default function Dashboard() {
   const [showFullTranscript, setShowFullTranscript] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
-  // 80-word chunks matching backend split â€” enables click-to-seek
+  // 80-word chunks matching backend split — enables click-to-seek
   const textChunks = useMemo(() => {
     if (!docText) return [];
     const words = docText.split(/\s+/).filter(Boolean);
@@ -237,6 +237,9 @@ export default function Dashboard() {
       return () => mq.removeEventListener("change", syncLayout);
     }
     fetchDocuments();
+    // Warm up Render backend so user's first Listen/Podcast click hits an
+    // awake container instead of paying 30-50s cold-start.
+    fetch(`${API_URL}/audio/capabilities`).catch(() => {});
     return () => mq.removeEventListener("change", syncLayout);
   }, [router]);
 
@@ -505,7 +508,7 @@ export default function Dashboard() {
       setIsAudioLoading(false);
       const msg = err instanceof Error ? err.message : "";
       if (msg.toLowerCase().includes("not found") || msg.includes("404")) {
-        setUploadError("Document not found on server â€” try re-uploading your file.");
+        setUploadError("Document not found on server — try re-uploading your file.");
         fetchDocuments();
       } else {
         setUploadError("Audio generation failed. Is the backend running?");
@@ -814,7 +817,7 @@ export default function Dashboard() {
     try {
       const text = await getDocumentText(docId);
       setDocText(text);
-    } catch { /* non-fatal â€” transcript just won't show */ }
+    } catch { /* non-fatal — transcript just won't show */ }
   }
 
   function jumpToPodcastLine(index: number) {
@@ -907,7 +910,7 @@ export default function Dashboard() {
   }
 
   async function handlePodcast(doc: Document, regenerate = false, topic?: string, chapterIndex?: number) {
-    // If already playing this podcast â€” toggle pause/play (unless regenerating or switching topic)
+    // If already playing this podcast — toggle pause/play (unless regenerating or switching topic)
     if (!regenerate && !topic && chapterIndex === undefined && podcastPlayingDocId === doc.id) {
       if (audioRef.current?.paused) {
         audioRef.current.play().catch(() => setPodcastPlayingDocId(null));
@@ -949,7 +952,7 @@ export default function Dashboard() {
       const isNotFound = msg.toLowerCase().includes("not found") || msg.includes("404");
       setUploadError(
         isNotFound
-          ? "Document not found on server â€” try re-uploading your file."
+          ? "Document not found on server — try re-uploading your file."
           : msg.includes("Script generation") || msg.includes("empty")
           ? "AI script generation failed. Is Ollama running? (ollama serve)"
           : msg
@@ -965,7 +968,8 @@ export default function Dashboard() {
     let lastReady = 0;
     const startedAt = Date.now();
     const poll = async (): Promise<void> => {
-      while (Date.now() - startedAt < 240_000) {
+      // 90s ceiling — fail fast and surface a real error instead of a 4-min spinner.
+      while (Date.now() - startedAt < 90_000) {
         const tickStart = Date.now();
         try {
           const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });
@@ -992,7 +996,10 @@ export default function Dashboard() {
         }
       }
       clearInterval(msgInterval);
-      setUploadError("Podcast took too long â€” please try again.");
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      setUploadError(
+        `Podcast didn't start within ${elapsed}s. Backend may be cold (Render free tier sleeps after 15min) — try again in 30s, or check Render logs for errors.`
+      );
       setIsAudioLoading(false);
       setPodcastGenerating(null);
     };
