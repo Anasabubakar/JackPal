@@ -968,8 +968,9 @@ export default function Dashboard() {
     let lastReady = 0;
     const startedAt = Date.now();
     const poll = async (): Promise<void> => {
-      // 90s ceiling — fail fast and surface a real error instead of a 4-min spinner.
-      while (Date.now() - startedAt < 90_000) {
+      // 150s ceiling — Render free tier cold-start can be 30-50s alone, then
+      // Groq 8-15s + TTS pipeline. Need headroom on a freshly-deployed container.
+      while (Date.now() - startedAt < 150_000) {
         const tickStart = Date.now();
         try {
           const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });

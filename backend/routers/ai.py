@@ -276,13 +276,23 @@ async def generate_podcast(
                 except Exception as e:
                     print(f"[Podcast] Chunk count check failed: {e}")
 
-            if (
-                not force_regen
-                and existing_script
-                and existing_status == "ready"
-                and existing_chunks_count >= len(existing_script)
-            ):
-                print(f"[Podcast] Cached + complete ({existing_chunks_count} chunks) — skipping regen for {doc_id}")
+            # Serve what we have. If even ONE chunk is in storage we let
+            # the frontend start playback immediately — better partial audio
+            # than a full regenerate that risks the same Supabase flakiness.
+            # Only rebuild when storage is empty or user forced regenerate.
+            if not force_regen and existing_script and existing_chunks_count > 0:
+                print(f"[Podcast] Reusing existing audio ({existing_chunks_count}/{len(existing_script)} chunks) for {doc_id}")
+                if existing_chunks_count < len(existing_script):
+                    print(f"[Podcast] Note: {len(existing_script) - existing_chunks_count} chunk(s) missing — playback will skip them")
+                # Make sure status flips to 'ready' so the long-poll exits.
+                try:
+                    supabase.table("documents").update({
+                        "podcast_status": "ready",
+                        "podcast_ready": existing_chunks_count,
+                        "podcast_total": len(existing_script),
+                    }).eq("id", doc_id).execute()
+                except Exception as e:
+                    print(f"[Podcast] Status sync failed: {e}")
                 return
 
             if existing_script and existing_status in ("ready", "generating") and existing_chunks_count == 0:
