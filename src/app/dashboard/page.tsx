@@ -928,12 +928,16 @@ export default function Dashboard() {
     try {
       await generatePodcast(doc.id, regenerate || !!topic || chapterIndex !== undefined, podcastMode, topic, chapterIndex);
 
+      let lastScriptLen = 0;
       const poll = async (): Promise<void> => {
         for (let i = 0; i < 90; i++) {
           await new Promise(r => setTimeout(r, 2000));
           try {
             const res = await getPodcastChunks(doc.id);
-            if (res.script?.length > 0) setPodcastScript(res.script);
+            if (res.script?.length && res.script.length !== lastScriptLen) {
+              lastScriptLen = res.script.length;
+              setPodcastScript(res.script);
+            }
             if (res.chunks.length > 0) {
               clearInterval(msgInterval);
               podcastQueueRef.current = res.chunks.map(c => ({ url: c.url, speaker: c.speaker }));
