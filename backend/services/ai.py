@@ -186,6 +186,95 @@ async def _gemini_stream_podcast(content: str, mode: str = "standard"):
             yield line
 
 
+# ── Listen-mode narration (Speechify-style explainer) ────────────────────────
+
+_LISTEN_NARRATION_PROMPT = """\
+You are turning a Nigerian university student's lecture notes into a smooth \
+audio narration — like Speechify or a great YouTube explainer voice. The \
+listener will hear this read aloud while walking, in a danfo, or before bed. \
+They cannot scroll back. They cannot pause to re-read. So your version must \
+be CLEARER than the original — not a transcript of the original.
+
+WHAT TO PRODUCE:
+A continuous spoken-style narration of the document. ONE flowing piece of \
+prose, no headings, no bullet points, no markers like "Section 1." It should \
+read aloud naturally for ~6-15 minutes depending on doc length.
+
+WHAT TO DO TO THE CONTENT:
+1. Add a 1-2 sentence opening that names the topic concretely. NOT "today \
+   we'll discuss" — instead: "This material is about how databases keep data \
+   consistent when many users edit at the same time" or similar topic-specific \
+   hook from the actual document.
+2. Explain every concept the document defines — but in plain spoken English. \
+   Where the doc says "the ACID properties consist of...", you say "there are \
+   four properties — atomicity, consistency, isolation, durability — and \
+   they each handle a different problem."
+3. When the document introduces a term, define it the moment it appears. \
+   Don't make the listener wait.
+4. Use light Nigerian warmth occasionally ("the thing is", "you see", \
+   "so basically") — not heavy slang. Most listeners want clarity.
+5. Connect ideas with audible bridges: "now this is where it gets \
+   interesting", "the reason this matters is", "here's the part students miss".
+6. End with a 1-2 sentence wrap-up that names the 2-3 biggest takeaways.
+
+WHAT TO AVOID:
+- Don't paraphrase line-by-line. Restructure for ear, not eye.
+- No "let me read you this", no "the document states", no meta-talk.
+- No invented facts, stats, or sources. Stay grounded in the document.
+- No headings, bullet points, numbered lists. Pure spoken prose.
+- No markdown, no asterisks, no parentheticals like "(see figure 2)".
+
+DOCUMENT:
+{content}
+
+Begin the narration now (just the spoken text — nothing else):
+"""
+
+
+async def generate_listen_narration(text: str) -> str:
+    """Run document text through Groq to produce a narrated explainer.
+    Cached by content hash so the same doc is only narrated once across
+    all users."""
+    c_hash = content_hash(text)
+    cache_k = key_listen_by_hash(c_hash)
+    cached = get_json(cache_k)
+    if cached and isinstance(cached, str):
+        print(f"[AI] Listen-narration cache HIT ({c_hash})")
+        return cached
+
+    words = text.split()
+    if len(words) > 35_000:
+        # Cap input — past this, narration drifts and quality drops.
+        # Cheaper than map-reduce for listen mode; users mostly upload
+        # single lectures (~5-15k words).
+        text = " ".join(words[:35_000])
+
+    prompt = _LISTEN_NARRATION_PROMPT.format(content=text)
+
+    if USE_GROQ:
+        try:
+            result = await _groq_complete(prompt, max_tokens=4000, timeout=60)
+            if result:
+                set_json(cache_k, result, TTL_SCRIPT_HASH)
+                return result
+        except Exception as e:
+            print(f"[AI] Listen narration Groq failed: {e}")
+
+    if USE_GEMINI:
+        try:
+            result = await _gemini_complete(prompt, max_tokens=4000, timeout=60)
+            if result:
+                set_json(cache_k, result, TTL_SCRIPT_HASH)
+                return result
+        except Exception as e:
+            print(f"[AI] Listen narration Gemini failed: {e}")
+
+    # Last-resort fallback: return cleaned doc text. Worse listen experience
+    # but avoids 500 if every LLM is down.
+    print("[AI] Listen narration: all LLMs failed, falling back to raw doc text")
+    return text
+
+
 # ── Summarize ─────────────────────────────────────────────────────────────────
 
 async def summarize_document(text: str) -> str:
@@ -240,52 +329,67 @@ async def summarize_document(text: str) -> str:
 # ── Nigerian podcast prompt ───────────────────────────────────────────────────
 
 _STANDARD_PODCAST_PROMPT = """\
-Write a study-podcast script for two Nigerian university students discussing the \
-document below. They MUST teach the actual content of THIS document. The \
-listener should finish understanding the real ideas, terms, and frameworks in \
-the material — not just hear vibes.
+You are writing a study podcast that feels like a YouTube documentary breakdown — \
+two sharp Nigerian university students arguing through the actual content of \
+the document below until the listener understands it. Not a lecture. Not a quiz. \
+A conversation worth eavesdropping on.
 
 HOSTS:
-- Ezinne: Curious, sharp. Asks the questions students actually have. Names \
-  specific terms from the document. When Abeo gets vague she pushes: "wait, \
-  what exactly does that mean?"
-- Abeo: The patient teacher. He explains the actual concepts in the document \
-  using clear plain English. He uses ONE Nigerian analogy when it genuinely \
-  helps clarify a hard concept — not as decoration. Most of his explanation \
-  is direct teaching of what the document actually says.
+- Ezinne: Sharp, slightly skeptical. Asks the question the listener is actually \
+  thinking. Pushes back when Abeo oversimplifies — "wait, that's not quite right" \
+  or "okay but the document specifically says X." Names exact terms from the doc.
+- Abeo: The one who's been teaching himself this material for a week. Confident \
+  but earns it — quotes the document, gives concrete examples, uses ONE Nigerian \
+  analogy in the whole episode if the concept genuinely needs one. Otherwise \
+  direct teaching.
+
+THE OPENING (Turn 1) IS NON-NEGOTIABLE:
+Ezinne does NOT say "hi" or "today we're talking about" or "welcome." She \
+opens with a hook — a surprising fact, a specific question from the document, \
+or a confusion she's actually wrestling with. Examples of openers:
+- "Okay Abeo, the document says X causes Y — but how can that be when..."
+- "Wait — I've been reading this thing for an hour and I still don't get \
+  what they mean by [specific term from doc]."
+- "Abeo, real quick — between [concept A] and [concept B] from this material, \
+  which one do you think actually shows up in the exam?"
+The listener should hear turn 1 and want to know the answer.
 
 LANGUAGE:
 - Plain Standard English with light Nigerian warmth — not heavy slang.
-- Short spoken sentences, easy to follow when listening.
-- Conversational bridges: "right, so", "okay so", "the key thing is", \
-  "good question", "exactly", "that connects to", "the reason this matters is".
-- AT MOST 2 Nigerian analogies in the whole script — only when the concept is \
-  abstract enough to need one. Programming, math, science: usually direct \
-  teaching beats forced metaphors.
+- Short spoken sentences. Listenable, not readable.
+- Real disagreement is allowed and good. Ezinne should challenge Abeo at \
+  least twice across the script.
+- Conversational bridges: "right so", "okay but", "exactly", "that's the part \
+  I missed", "wait — that connects to", "yeah but the doc actually says".
+- AT MOST one Nigerian analogy in the whole script. Programming/math/science \
+  almost never need them.
 
-CONTENT FIDELITY (most important rule):
+CONTENT FIDELITY (the rule that everything else serves):
 - Every turn must reference SPECIFIC content from the document — actual terms, \
   definitions, classifications, examples, dates, names, equations.
-- DO NOT invent facts. If the document says something, use it. Don't replace \
-  document concepts with generic ones.
-- Cover the FULL document, not just the opening sections. By turn 8 you \
-  should be discussing material from the middle/end.
+- DO NOT invent facts, stats, or sources. If it's not in the doc, don't say it.
+- Cover the FULL document. By turn 8 you should be in the middle/end material, \
+  not still on chapter 1.
 
-STRUCTURE — exactly 14 turns, alternating Ezinne then Abeo:
-Turn 1  Ezinne — opens with a specific confusion about a real term/concept from the doc
-Turn 2  Abeo   — defines it precisely, using the document's own framing
-Turn 3  Ezinne — asks how it differs from a related concept (also from the doc)
-Turn 4  Abeo   — distinguishes them clearly with examples FROM the document
-Turn 5  Ezinne — surfaces a common student misconception about this topic
-Turn 6  Abeo   — corrects it, gives the precise reason
-Turn 7  Ezinne — moves to the next major concept covered in the document
-Turn 8  Abeo   — explains it with the specifics the document gives
-Turn 9  Ezinne — asks about a concrete example or application
-Turn 10 Abeo   — uses examples FROM the document, or one Nigerian analogy if helpful
-Turn 11 Ezinne — asks "what is most likely to come up in exams from this material?"
-Turn 12 Abeo   — gives 2-3 sharp specific points students MUST know from this doc
-Turn 13 Ezinne — summarises the 3 biggest takeaways in her own words
-Turn 14 Abeo   — closes with WHY this topic matters in the real world
+NARRATIVE ARC (18 turns, alternating Ezinne then Abeo):
+Turn 1  Ezinne — cold-open hook (see above). Names a specific term from the doc.
+Turn 2  Abeo   — addresses the hook directly, defines the term using the doc's framing.
+Turn 3  Ezinne — pushes: "okay but how is that different from [related concept]?"
+Turn 4  Abeo   — distinguishes them with concrete examples FROM the document.
+Turn 5  Ezinne — surfaces the misconception students always have here.
+Turn 6  Abeo   — corrects it precisely, gives the reason.
+Turn 7  Ezinne — challenges him on something he just said: "wait, the doc actually says X — that's not the same."
+Turn 8  Abeo   — concedes the nuance, refines his answer using the doc's exact framing.
+Turn 9  Ezinne — moves to the next big concept, asks why it matters.
+Turn 10 Abeo   — explains, anchored in the doc's specifics.
+Turn 11 Ezinne — "give me a concrete case from the document."
+Turn 12 Abeo   — gives the specific example/case the doc uses.
+Turn 13 Ezinne — callback to turn 5: "so does that connect to what we said earlier about [misconception]?"
+Turn 14 Abeo   — yes — explains the connection, ties two ideas together.
+Turn 15 Ezinne — "what's the one thing on this most likely to show up in the exam?"
+Turn 16 Abeo   — names 2-3 sharp testable points from the document.
+Turn 17 Ezinne — summarises in her own words: "okay so what I'm hearing is..."
+Turn 18 Abeo   — closes with why this matters beyond the exam — real world stake.
 
 FORMAT RULES:
 - Each turn: 2-4 sentences. Substantive but not bloated.

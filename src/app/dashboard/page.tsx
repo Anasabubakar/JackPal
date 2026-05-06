@@ -784,6 +784,42 @@ export default function Dashboard() {
     }
   }
 
+  // Global keyboard shortcuts for the player
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore when user is typing in an input/textarea
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (!currentDocId && !podcastPlayingDocId) return;
+      const audio = audioRef.current;
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        if (!audio) return;
+        if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        skipBy(-10);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        skipBy(10);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const i = SPEED_OPTIONS.indexOf(playbackRate);
+        const next = SPEED_OPTIONS[Math.min(SPEED_OPTIONS.length - 1, i + 1)];
+        setPlaybackRate(next);
+        if (audio) audio.playbackRate = next;
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const i = SPEED_OPTIONS.indexOf(playbackRate);
+        const next = SPEED_OPTIONS[Math.max(0, i - 1)];
+        setPlaybackRate(next);
+        if (audio) audio.playbackRate = next;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [currentDocId, podcastPlayingDocId, playbackRate]);
+
   // Save chunk progress whenever the active chunk advances
   useEffect(() => {
     if (!currentDocId || activeChunk === 0) return;
@@ -1608,95 +1644,146 @@ export default function Dashboard() {
   const PlayerBar = () => {
     if (!currentDocId && !podcastPlayingDocId && !isAudioLoading) return null;
     const isPodcast = !!podcastPlayingDocId;
-    const chunkTotal = isPodcast ? podcastScript.length : textChunks.length;
-    const chunkCurrent = isPodcast ? podcastChunkIndex : activeChunk;
     const isPlaying = isPodcast ? !!podcastPlayingDocId : !!playingDocId;
+    const accent = isPodcast ? "var(--teal)" : "var(--blue)";
+    const accentInk = isPodcast ? "var(--ink)" : "white";
+    const togglePlay = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+    };
     return (
       <div
-        className="fixed bottom-0 z-50 flex items-center gap-2 px-2 sm:gap-4 sm:px-5 max-sm:flex-wrap max-sm:py-1.5"
+        className="fixed bottom-0 z-50 flex flex-col"
         style={{
           left: isMobileLayout ? 0 : 96,
           right: 0,
-          minHeight: 64,
           paddingBottom: "max(0px, env(safe-area-inset-bottom))",
-          background: "var(--surface)",
+          background: "linear-gradient(180deg, var(--surface) 0%, var(--ink) 100%)",
           borderTop: "1px solid var(--border)",
         }}
       >
-        <div className="flex items-center gap-2 sm:gap-3 w-32 min-w-0 flex-shrink-0 sm:w-48 max-sm:order-1">
-          <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold" style={isPodcast ? { background: "var(--teal)", color: "var(--ink)" } : { background: "var(--blue)", color: "white" }}>
-            {isPodcast ? currentSpeaker?.[0] ?? "E" : <AudioLines size={13} strokeWidth={1.75} />}
-          </div>
-          <div className="min-w-0">
-            <div className="text-[11px] font-semibold truncate" style={{ color: "var(--text-1)" }}>{currentTitle}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 max-sm:order-2 flex-shrink-0">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => skipBy(-10)} style={{ color: "var(--text-3)" }}><SkipBack size={16} strokeWidth={1.75} /></motion.button>
-          <SpringScale>
-            <motion.button whileTap={{ scale: 0.88 }} onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }} className="w-9 h-9 flex items-center justify-center rounded-full" style={{ background: isPodcast ? "var(--teal)" : "var(--blue)", color: isPodcast ? "var(--ink)" : "white" }}>
-              <AnimatePresence mode="wait">
-                {isAudioLoading ? <motion.span key="spin" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Loader2 size={15} className="animate-spin" /></motion.span> : isPlaying ? <motion.span key="pause" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Pause size={15} strokeWidth={2} /></motion.span> : <motion.span key="play" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Play size={15} strokeWidth={2} /></motion.span>}
-              </AnimatePresence>
-            </motion.button>
-          </SpringScale>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => skipBy(10)} style={{ color: "var(--text-3)" }}><SkipForward size={16} strokeWidth={1.75} /></motion.button>
-        </div>
-        {/* Progress bar */}
-        <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0 max-sm:order-4 max-sm:basis-full max-sm:px-1">
-          <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: "var(--text-3)" }}>
-            {formatTime(currentTime)}
-          </span>
+        {/* Progress bar — full-width, top edge */}
+        <div
+          className="relative h-1.5 cursor-pointer group"
+          style={{ background: "var(--surface-3)" }}
+          onClick={e => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            seekWithinCurrent(pct * 100);
+          }}
+        >
           <div
-            className="relative flex-1 h-2.5 rounded-full cursor-pointer group overflow-hidden"
+            className="h-full"
             style={{
-              background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.015)), var(--surface-3)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -8px 18px rgba(0,0,0,0.28)",
+              width: `${playerProgress}%`,
+              background: accent,
+              transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
-            onClick={e => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const pct = (e.clientX - rect.left) / rect.width;
-              seekWithinCurrent(pct * 100);
-            }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${playerProgress}%`,
-                background: isPodcast
-                  ? "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)"
-                  : "linear-gradient(90deg, var(--blue) 0%, #61E3F0 100%)",
-                boxShadow: isPodcast
-                  ? "0 0 16px rgba(42, 154, 120, 0.45)"
-                  : "0 0 16px rgba(44, 123, 229, 0.45)",
-                transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
-              }}
-            />
-            <div
-              className="absolute inset-0 pointer-events-none opacity-30"
-              style={{
-                background: "linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.28) 48%, transparent 68%)",
-                animation: "shimmer 2.6s linear infinite",
-              }}
-            />
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 opacity-100 transition-transform group-hover:scale-110"
-              style={{
-                left: `calc(${playerProgress}% - 8px)`,
-                background: isPodcast
-                  ? "radial-gradient(circle at 35% 30%, #fff 0 10%, #61E3F0 24%, var(--teal) 72%)"
-                  : "radial-gradient(circle at 35% 30%, #fff 0 10%, #61E3F0 24%, var(--blue) 72%)",
-                borderColor: "rgba(255,255,255,0.88)",
-                boxShadow: "0 0 0 4px rgba(97,227,240,0.11), 0 0 18px rgba(97,227,240,0.6)",
-              }}
-            />
-          </div>
-          <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: "var(--text-3)" }}>
-            {formatTime(duration)}
-          </span>
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ left: `calc(${playerProgress}% - 6px)`, background: accent, boxShadow: `0 0 0 4px ${accent}33` }}
+          />
         </div>
-        <button onClick={() => { const next = SPEED_OPTIONS[(SPEED_OPTIONS.indexOf(playbackRate) + 1) % SPEED_OPTIONS.length]; setPlaybackRate(next); if (audioRef.current) audioRef.current.playbackRate = next; }} className="text-[10px] font-bold w-9 sm:w-10 text-center transition-colors flex-shrink-0 max-sm:order-3" style={{ color: "var(--text-3)" }}>{playbackRate}x</button>
-        {currentDocId && <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDownload(currentDocId)} className="max-sm:order-5 flex-shrink-0" style={{ color: "var(--text-3)" }}><Download size={15} strokeWidth={1.75} /></motion.button>}
+
+        {/* Main controls row */}
+        <div className="flex items-center gap-3 sm:gap-5 px-3 sm:px-6 py-2.5 sm:py-3">
+          {/* Title + speaker */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0 w-32 sm:w-56">
+            <div
+              className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold"
+              style={{ background: accent, color: accentInk }}
+            >
+              {isPodcast ? (currentSpeaker?.[0] ?? "E") : <AudioLines size={14} strokeWidth={1.75} />}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[12px] font-semibold truncate" style={{ color: "var(--text-1)" }}>{currentTitle}</div>
+              <div className="text-[10px] truncate" style={{ color: "var(--text-3)" }}>
+                {isPodcast ? (currentSpeaker ? `${currentSpeaker} · podcast` : "Podcast") : "Listening"}
+              </div>
+            </div>
+          </div>
+
+          {/* Center transport controls */}
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => skipBy(-10)}
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: "var(--text-2)" }}
+              title="Skip back 10s (←)"
+            >
+              <SkipBack size={18} strokeWidth={1.75} />
+              <span className="text-[10px] font-bold tabular-nums max-sm:hidden">10</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.86 }}
+              onClick={togglePlay}
+              className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full transition-shadow"
+              style={{
+                background: accent,
+                color: accentInk,
+                boxShadow: `0 4px 24px ${isPodcast ? "rgba(42,154,120,0.4)" : "rgba(44,123,229,0.4)"}`,
+              }}
+              title="Play / pause (Space)"
+            >
+              {isAudioLoading ? <Loader2 size={22} className="animate-spin" /> : isPlaying ? <Pause size={22} strokeWidth={2} /> : <Play size={22} strokeWidth={2} className="ml-0.5" />}
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => skipBy(10)}
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: "var(--text-2)" }}
+              title="Skip forward 10s (→)"
+            >
+              <span className="text-[10px] font-bold tabular-nums max-sm:hidden">10</span>
+              <SkipForward size={18} strokeWidth={1.75} />
+            </motion.button>
+          </div>
+
+          {/* Time */}
+          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4 min-w-0">
+            <div className="text-[11px] tabular-nums flex-shrink-0 max-sm:hidden" style={{ color: "var(--text-3)" }}>
+              <span style={{ color: "var(--text-1)" }}>{formatTime(currentTime)}</span>
+              <span className="mx-1.5">/</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+
+            {/* Speed picker — pills */}
+            <div className="flex items-center rounded-full overflow-hidden flex-shrink-0" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              {SPEED_OPTIONS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setPlaybackRate(s); if (audioRef.current) audioRef.current.playbackRate = s; }}
+                  className="text-[10px] font-bold px-2 sm:px-2.5 py-1 transition-colors tabular-nums"
+                  style={{
+                    background: playbackRate === s ? accent : "transparent",
+                    color: playbackRate === s ? accentInk : "var(--text-3)",
+                  }}
+                  title={`${s}x speed`}
+                >
+                  {s}×
+                </button>
+              ))}
+            </div>
+
+            {/* Download — only for Listen */}
+            {currentDocId && !isPodcast && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleDownload(currentDocId)}
+                className="flex-shrink-0 transition-colors max-sm:hidden"
+                style={{ color: "var(--text-3)" }}
+                title="Download audio"
+              >
+                <Download size={16} strokeWidth={1.75} />
+              </motion.button>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
