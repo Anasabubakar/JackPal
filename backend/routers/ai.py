@@ -1,6 +1,6 @@
 import os
 import asyncio
-from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Request, Query
 from pydantic import BaseModel
 from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines, answer_question
 from services.cache import (
@@ -376,30 +376,127 @@ async def generate_podcast(
     }
 
 
+def _serialize_chunks_from_cache(cached: dict, doc_id: str, base: str, token: str) -> dict:
+    return {
+        "status": cached.get("status") or "none",
+        "ready_lines": cached.get("ready_lines", 0),
+        "total_lines": cached.get("total_lines", 0),
+        "script": cached.get("script", []),
+        "chunks": [
+            {
+                "index": idx,
+                "speaker": speaker,
+                "url": f"{base}/audio/{doc_id}/podcast/{idx}?token={token}",
+            }
+            for idx, speaker in cached.get("chunk_entries", [])
+        ],
+    }
+
+
+async def _build_podcast_chunks_payload(doc_id: str, user_id: str, base: str, token: str) -> dict:
+    """Compute fresh payload + write Redis cache. Used on cache miss and as
+    the long-poll inner loop tick."""
+    cache_key = key_podcast_chunks(user_id, doc_id)
+    if not USE_LOCAL:
+        from services.supabase import get_supabase_admin
+        supabase = get_supabase_admin()
+        doc = supabase.table("documents") \
+            .select("podcast_status, podcast_ready, podcast_total, podcast_script") \
+            .eq("id", doc_id).eq("user_id", user_id).single().execute()
+        if not doc.data:
+            raise HTTPException(status_code=404, detail="Document not found.")
+        chunks = list_audio_chunks_supabase(user_id, doc_id, "podcast")
+        script = doc.data.get("podcast_script") or []
+        payload = {
+            "status": doc.data.get("podcast_status") or "none",
+            "ready_lines": len(chunks),
+            "total_lines": doc.data.get("podcast_total", len(script)),
+            "script": script,
+            "chunks": [
+                {
+                    "index": c["chunk_index"],
+                    "speaker": (script[c["chunk_index"]]["speaker"] if c["chunk_index"] < len(script) else "Ezinne"),
+                    "url": f"{base}/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
+                }
+                for c in chunks
+            ],
+        }
+        set_json(cache_key, {
+            "status": payload["status"],
+            "ready_lines": payload["ready_lines"],
+            "total_lines": payload["total_lines"],
+            "script": script,
+            "chunk_entries": [
+                (c["chunk_index"], (script[c["chunk_index"]]["speaker"] if c["chunk_index"] < len(script) else "Ezinne"))
+                for c in chunks
+            ],
+        }, 5)
+        return payload
+
+    from services.local_storage import get_document, list_podcast_chunks, get_podcast_script
+    doc = get_document(doc_id, user_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    chunks = list_podcast_chunks(doc_id, user_id)
+    script = get_podcast_script(doc_id) or []
+    payload = {
+        "status": doc.get("podcast_status") or "none",
+        "ready_lines": len(chunks),
+        "total_lines": doc.get("podcast_total", len(script)),
+        "script": script,
+        "chunks": [
+            {
+                "index": c["chunk_index"],
+                "speaker": c["speaker"],
+                "url": f"{base}/audio/{doc_id}/podcast/{c['chunk_index']}?token={token}",
+            }
+            for c in chunks
+        ],
+    }
+    set_json(cache_key, {
+        "status": doc.get("podcast_status") or "none",
+        "ready_lines": len(chunks),
+        "total_lines": doc.get("podcast_total", len(script)),
+        "script": script,
+        "chunk_entries": [(c["chunk_index"], c["speaker"]) for c in chunks],
+    }, 5)
+    return payload
+
+
 @router.get("/podcast/{doc_id}/chunks")
-async def get_podcast_chunks(doc_id: str, request: Request, authorization: str = Header(...)):
-    """Return list of ready podcast chunk URLs."""
+async def get_podcast_chunks(
+    doc_id: str,
+    request: Request,
+    authorization: str = Header(...),
+    since_ready: int = Query(-1, description="Long-poll until ready_lines exceeds this. -1 disables waiting."),
+    wait: int = Query(0, ge=0, le=25, description="Max seconds to wait for change. 0 returns immediately."),
+):
+    """Return list of ready podcast chunk URLs.
+
+    Long-poll: pass `?since_ready=<last_known_count>&wait=20` and the
+    request blocks until a new chunk lands or status terminalizes
+    (ready/failed). Cuts perceived latency vs fixed-interval client polling.
+    """
     user_id = get_user_id(authorization)
+    token = authorization.split(" ")[1]
+    base = str(request.base_url).rstrip("/")
+
+    if wait > 0 and since_ready >= 0:
+        deadline = asyncio.get_event_loop().time() + wait
+        while True:
+            payload = await _build_podcast_chunks_payload(doc_id, user_id, base, token)
+            status = payload.get("status") or "none"
+            ready = payload.get("ready_lines", 0)
+            if ready > since_ready or status in ("ready", "failed", "error"):
+                return payload
+            if asyncio.get_event_loop().time() >= deadline:
+                return payload
+            await asyncio.sleep(0.5)
 
     cache_key = key_podcast_chunks(user_id, doc_id)
     cached = get_json(cache_key)
     if cached is not None:
-        token = authorization.split(" ")[1]
-        base = str(request.base_url).rstrip("/")
-        return {
-            "status": cached.get("status") or "none",
-            "ready_lines": cached.get("ready_lines", 0),
-            "total_lines": cached.get("total_lines", 0),
-            "script": cached.get("script", []),
-            "chunks": [
-                {
-                    "index": idx,
-                    "speaker": speaker,
-                    "url": f"{base}/audio/{doc_id}/podcast/{idx}?token={token}",
-                }
-                for idx, speaker in cached.get("chunk_entries", [])
-            ],
-        }
+        return _serialize_chunks_from_cache(cached, doc_id, base, token)
 
     if not USE_LOCAL:
         from services.supabase import get_supabase_admin

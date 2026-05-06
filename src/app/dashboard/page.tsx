@@ -275,44 +275,50 @@ export default function Dashboard() {
   const hasGenerating = documents.some(d => d.status === "generating" || d.status === "streaming");
 
   useEffect(() => {
-    if (!hasGenerating) {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-      return;
-    }
+    if (!hasGenerating) return;
+    let cancelled = false;
 
-    pollRef.current = setInterval(async () => {
-      let anyUpdated = false;
-      const updated = await Promise.all(
-        documentsRef.current.map(async (doc) => {
-          if (doc.status !== "generating" && doc.status !== "streaming") return doc;
-          try {
-            const s = await getAudioStatus(doc.id);
-            if (s.status !== doc.status || s.ready_chunks !== doc.ready_chunks) {
-              anyUpdated = true;
-              return {
-                ...doc,
-                status: s.status as Document["status"],
-                ready_chunks: s.ready_chunks,
-                total_chunks: s.total_chunks,
-                audio_voice: s.audio_voice ?? doc.audio_voice,
-              };
-            }
-          } catch { /* ignore */ }
-          return doc;
-        })
-      );
-      if (anyUpdated) setDocuments(updated);
-    }, 3000);
+    const tickOne = async (doc: Document): Promise<Document> => {
+      if (doc.status !== "generating" && doc.status !== "streaming") return doc;
+      try {
+        const s = await getAudioStatus(doc.id, {
+          sinceReady: doc.ready_chunks ?? 0,
+          waitSeconds: 20,
+        });
+        if (s.status !== doc.status || s.ready_chunks !== doc.ready_chunks) {
+          return {
+            ...doc,
+            status: s.status as Document["status"],
+            ready_chunks: s.ready_chunks,
+            total_chunks: s.total_chunks,
+            audio_voice: s.audio_voice ?? doc.audio_voice,
+          };
+        }
+      } catch { /* network blip — loop will retry */ }
+      return doc;
+    };
 
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
+    const loop = async () => {
+      while (!cancelled) {
+        const current = documentsRef.current;
+        const generating = current.filter(d => d.status === "generating" || d.status === "streaming");
+        if (!generating.length) return;
+        const updates = await Promise.all(generating.map(tickOne));
+        if (cancelled) return;
+        const byId = new Map(updates.map(u => [u.id, u]));
+        let anyChanged = false;
+        const next = documentsRef.current.map(d => {
+          const u = byId.get(d.id);
+          if (!u) return d;
+          if (u.status !== d.status || u.ready_chunks !== d.ready_chunks) anyChanged = true;
+          return u;
+        });
+        if (anyChanged) setDocuments(next);
       }
     };
+    loop();
+
+    return () => { cancelled = true; };
   }, [hasGenerating]);
 
   async function fetchDocuments() {
@@ -431,6 +437,7 @@ export default function Dashboard() {
     podcastIndexRef.current = 0;
     setPlayingDocId(null);
     setPodcastPlayingDocId(null);
+    setPodcastGenerating(null);
     setCurrentSpeaker(null);
     setCurrentDocId(null);
     setCurrentTitle("No audio selected");
@@ -848,7 +855,7 @@ export default function Dashboard() {
     setCurrentSpeaker(entry.speaker);
     setPodcastChunkIndex(podcastIndexRef.current);
     setIsAudioLoading(true);
-    setCurrentDocId(docId);
+    setPodcastPlayingDocId(docId);
     setCurrentTitle(documents.find(d => d.id === docId)?.filename ?? "Podcast");
 
     lastTimeUpdateRef.current = 0;
@@ -929,11 +936,14 @@ export default function Dashboard() {
       await generatePodcast(doc.id, regenerate || !!topic || chapterIndex !== undefined, podcastMode, topic, chapterIndex);
 
       let lastScriptLen = 0;
+      let lastReady = 0;
+      const startedAt = Date.now();
       const poll = async (): Promise<void> => {
-        for (let i = 0; i < 90; i++) {
-          await new Promise(r => setTimeout(r, 2000));
+        // Long-poll: each request blocks server-side for up to 20s waiting
+        // for ready_lines to advance. Loop until first chunk lands or 4 min total.
+        while (Date.now() - startedAt < 240_000) {
           try {
-            const res = await getPodcastChunks(doc.id);
+            const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });
             if (res.script?.length && res.script.length !== lastScriptLen) {
               lastScriptLen = res.script.length;
               setPodcastScript(res.script);
@@ -945,7 +955,11 @@ export default function Dashboard() {
               playNextPodcastChunk(doc.id);
               return;
             }
-          } catch { /* keep polling */ }
+            lastReady = res.ready_lines || 0;
+            if ((res.status as string) === "failed" || (res.status as string) === "error") break;
+          } catch {
+            await new Promise(r => setTimeout(r, 1500));
+          }
         }
         clearInterval(msgInterval);
         setUploadError("Podcast took too long â€” please try again.");
@@ -1311,24 +1325,38 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <motion.button
-                      whileTap={{ scale: 0.93 }}
-                      onClick={e => { e.stopPropagation(); setShowTranscript(true); handleGenerateAudio(doc); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-all"
-                      style={{ background: playingDocId === doc.id ? "var(--teal)" : "var(--blue)" }}
-                    >
-                      {playingDocId === doc.id ? <Pause size={11} strokeWidth={2} /> : <Play size={11} strokeWidth={2} />}
-                      {playingDocId === doc.id ? "Playing" : "Listen"}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.93 }}
-                      onClick={e => { e.stopPropagation(); handlePodcast(doc); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
-                      style={{ border: "1px solid var(--teal)", color: "var(--teal)" }}
-                    >
-                      <Mic2 size={11} strokeWidth={2} />
-                      Podcast
-                    </motion.button>
+                    {(() => {
+                      const isThisListenLoading = isAudioLoading && currentDocId === doc.id && !podcastPlayingDocId && !podcastGenerating;
+                      const isThisListenPlaying = playingDocId === doc.id;
+                      const listenBusy = isThisListenLoading || isThisListenPlaying;
+                      const isThisPodcastLoading = podcastGenerating === doc.id && !podcastPlayingDocId;
+                      const isThisPodcastPlaying = podcastPlayingDocId === doc.id;
+                      const podcastBusy = isThisPodcastLoading || isThisPodcastPlaying;
+                      return (
+                        <>
+                          <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            disabled={isThisListenLoading || podcastBusy}
+                            onClick={e => { e.stopPropagation(); handleGenerateAudio(doc); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ background: listenBusy ? "var(--teal)" : "var(--blue)" }}
+                          >
+                            {isThisListenLoading ? <Loader2 size={11} className="animate-spin" /> : isThisListenPlaying ? <Pause size={11} strokeWidth={2} /> : <Play size={11} strokeWidth={2} />}
+                            {isThisListenLoading ? "Loading" : isThisListenPlaying ? "Playing" : "Listen"}
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            disabled={isThisPodcastLoading || (listenBusy && !isThisPodcastPlaying)}
+                            onClick={e => { e.stopPropagation(); handlePodcast(doc); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={ podcastBusy ? { background: "var(--teal)", color: "var(--ink)", border: "1px solid var(--teal)" } : { border: "1px solid var(--teal)", color: "var(--teal)" } }
+                          >
+                            {isThisPodcastLoading ? <Loader2 size={11} className="animate-spin" /> : isThisPodcastPlaying ? <Pause size={11} strokeWidth={2} /> : <Mic2 size={11} strokeWidth={2} />}
+                            {isThisPodcastLoading ? "Loading" : isThisPodcastPlaying ? "Playing" : "Podcast"}
+                          </motion.button>
+                        </>
+                      );
+                    })()}
                     <motion.button
                       whileTap={{ scale: 0.93 }}
                       onClick={e => { e.stopPropagation(); if (confirm("Delete this document?")) handleDeleteDoc(doc.id); }}
@@ -1368,7 +1396,31 @@ export default function Dashboard() {
   );
 
   const PodcastTheater = () => (
-    <motion.div key="theater" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col items-center overflow-hidden">
+    <motion.div key="theater" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0 w-full" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <button
+          onClick={() => { stopPodcast(); stopAudio(); }}
+          className="p-1 rounded-lg transition-colors"
+          style={{ color: "var(--text-3)" }}
+          title={podcastGenerating && !podcastPlayingDocId ? "Cancel" : "Back to library"}
+        >
+          <ChevronRight size={16} strokeWidth={1.75} className="rotate-180" />
+        </button>
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--teal)", fontFamily: "var(--font-syne)" }}>
+          {podcastGenerating && !podcastPlayingDocId ? "Generating podcast" : "Podcast"}
+        </span>
+        <span className="text-[12px] truncate flex-1" style={{ color: "var(--text-2)" }}>{currentTitle}</span>
+        {podcastGenerating && !podcastPlayingDocId && (
+          <button
+            onClick={() => { stopPodcast(); stopAudio(); }}
+            className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-colors"
+            style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      <div className="flex-1 flex flex-col items-center overflow-y-auto studio-scroll w-full">
       {podcastGenerating && !podcastPlayingDocId && (
         <div className="w-full max-w-lg mx-auto mt-10 px-4">
           <FadeUp>
@@ -1422,6 +1474,7 @@ export default function Dashboard() {
           </div>
         </SlideIn>
       )}
+      </div>
     </motion.div>
   );
 
@@ -1642,8 +1695,8 @@ export default function Dashboard() {
               : 0,
         }}
       >
-        {activeTab === "home" && !currentDocId && !podcastPlayingDocId && LibraryView()}
-        {currentDocId && !podcastPlayingDocId && SyncReader()}
+        {activeTab === "home" && !currentDocId && !podcastPlayingDocId && !podcastGenerating && LibraryView()}
+        {currentDocId && !podcastPlayingDocId && !podcastGenerating && SyncReader()}
         {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
       </main>
       {RightPanel()}

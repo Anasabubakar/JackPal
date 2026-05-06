@@ -157,9 +157,16 @@ export async function getAudioChunks(docId: string) {
   }>(`/audio/${docId}/chunks`);
 }
 
-export async function getAudioStatus(docId: string) {
+export async function getAudioStatus(
+  docId: string,
+  opts?: { sinceReady?: number; waitSeconds?: number },
+) {
+  const params = new URLSearchParams();
+  if (opts?.sinceReady !== undefined) params.set("since_ready", String(opts.sinceReady));
+  if (opts?.waitSeconds !== undefined) params.set("wait", String(opts.waitSeconds));
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return request<{ status: string; ready_chunks: number; total_chunks: number; audio_voice?: string | null; audio_engine?: "fast" | "premium" | null }>(
-    `/audio/${docId}/status`
+    `/audio/${docId}/status${qs}`,
   );
 }
 
@@ -230,8 +237,15 @@ export async function generatePodcast(
   });
 }
 
-export async function getPodcastChunks(docId: string) {
-  return request<PodcastStatus>(`/ai/podcast/${docId}/chunks`);
+export async function getPodcastChunks(
+  docId: string,
+  opts?: { sinceReady?: number; waitSeconds?: number },
+) {
+  const params = new URLSearchParams();
+  if (opts?.sinceReady !== undefined) params.set("since_ready", String(opts.sinceReady));
+  if (opts?.waitSeconds !== undefined) params.set("wait", String(opts.waitSeconds));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return request<PodcastStatus>(`/ai/podcast/${docId}/chunks${qs}`);
 }
 
 export async function getDocumentText(docId: string): Promise<string> {

@@ -573,21 +573,8 @@ async def stream_podcast_chunk(
     return StreamingResponse(iter([data]), media_type=mime)
 
 
-@router.get("/{doc_id}/status")
-async def get_audio_status(
-    doc_id: str,
-    authorization: Optional[str] = Header(None),
-    token: Optional[str] = Query(None),
-):
-    auth_header = authorization or (f"Bearer {token}" if token else None)
-    if not auth_header:
-        raise HTTPException(status_code=401, detail="Missing token.")
-    user_id = get_user_id(auth_header)
+async def _build_audio_status_payload(doc_id: str, user_id: str) -> dict:
     cache_key = key_audio_status(user_id, doc_id)
-    cached = get_json(cache_key)
-    if cached is not None:
-        return cached
-
     if USE_LOCAL:
         from services.local_storage import get_document
         doc = get_document(doc_id, user_id)
@@ -617,4 +604,37 @@ async def get_audio_status(
         "audio_engine": doc.data.get("audio_engine"),
     }
     set_json(cache_key, payload, 3)
+    return payload
+
+
+@router.get("/{doc_id}/status")
+async def get_audio_status(
+    doc_id: str,
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    since_ready: int = Query(-1, description="Long-poll until ready_chunks exceeds this. -1 disables waiting."),
+    wait: int = Query(0, ge=0, le=25, description="Max seconds to wait for change."),
+):
+    auth_header = authorization or (f"Bearer {token}" if token else None)
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing token.")
+    user_id = get_user_id(auth_header)
+
+    if wait > 0 and since_ready >= 0:
+        deadline = asyncio.get_event_loop().time() + wait
+        while True:
+            payload = await _build_audio_status_payload(doc_id, user_id)
+            status = payload.get("status") or "ready"
+            ready = payload.get("ready_chunks", 0)
+            if ready > since_ready or status in ("ready", "audio_ready", "failed", "error"):
+                return payload
+            if asyncio.get_event_loop().time() >= deadline:
+                return payload
+            await asyncio.sleep(0.5)
+
+    cache_key = key_audio_status(user_id, doc_id)
+    cached = get_json(cache_key)
+    if cached is not None:
+        return cached
+    payload = await _build_audio_status_payload(doc_id, user_id)
     return payload
