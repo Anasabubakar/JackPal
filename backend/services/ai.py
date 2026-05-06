@@ -213,52 +213,60 @@ async def summarize_document(text: str) -> str:
 # ── Nigerian podcast prompt ───────────────────────────────────────────────────
 
 _STANDARD_PODCAST_PROMPT = """\
-Write a script for "JackPal" — a Nigerian university study podcast. Two \
-300-level students have a real conversation that builds genuine understanding, \
-not just surface coverage. The listener should finish knowing WHY things work, \
-not just WHAT they are.
+Write a study-podcast script for two Nigerian university students discussing the \
+document below. They MUST teach the actual content of THIS document. The \
+listener should finish understanding the real ideas, terms, and frameworks in \
+the material — not just hear vibes.
 
 HOSTS:
-- Ezinne: Curious, quick. Asks the question everyone is too embarrassed to ask. \
-  When Abeo says something confusing she pushes back: "hold on, say that again." \
-  She never lets him get away with textbook language.
-- Abeo: The natural teacher. He explains by connecting new ideas to things \
-  students already know from Nigerian life. His analogies are specific and vivid: \
-  NEPA cuts and power generation, Danfo routes and algorithms, market pricing and \
-  economics, okada shortcuts and network paths, eba texture and material states. \
-  He never lectures — he converses.
+- Ezinne: Curious, sharp. Asks the questions students actually have. Names \
+  specific terms from the document. When Abeo gets vague she pushes: "wait, \
+  what exactly does that mean?"
+- Abeo: The patient teacher. He explains the actual concepts in the document \
+  using clear plain English. He uses ONE Nigerian analogy when it genuinely \
+  helps clarify a hard concept — not as decoration. Most of his explanation \
+  is direct teaching of what the document actually says.
 
 LANGUAGE:
-- Standard Nigerian English: warm, confident, educated, culturally grounded
-- Short spoken sentences. No clause-heavy textbook prose.
-- Natural bridges: "right, so", "here is the thing", "think of it this way", \
-  "that is actually the key", "most people miss this part", "good question", \
-  "exactly, and that connects to", "so the reason that works is"
-- ONE vivid Nigerian analogy per major concept. Make it land.
+- Plain Standard English with light Nigerian warmth — not heavy slang.
+- Short spoken sentences, easy to follow when listening.
+- Conversational bridges: "right, so", "okay so", "the key thing is", \
+  "good question", "exactly", "that connects to", "the reason this matters is".
+- AT MOST 2 Nigerian analogies in the whole script — only when the concept is \
+  abstract enough to need one. Programming, math, science: usually direct \
+  teaching beats forced metaphors.
 
-STRUCTURE — 14 turns, always alternating Ezinne then Abeo:
-Turn 1  Ezinne — opening question that shows she is confused about something specific
-Turn 2  Abeo   — core concept 1, explained with one tight analogy
-Turn 3  Ezinne — probes deeper or surfaces a misconception students commonly have
-Turn 4  Abeo   — corrects it clearly, adds the "why it actually works" layer
-Turn 5  Ezinne — connects to something related, or asks about an edge case
-Turn 6  Abeo   — concept 2, another analogy, builds on turn 4
-Turn 7  Ezinne — "wait so does that mean..." — testing her own understanding
-Turn 8  Abeo   — confirms, sharpens, adds the nuance that separates good students
-Turn 9  Ezinne — real-world question: where does this actually show up?
-Turn 10 Abeo   — real application with a concrete Nigerian example
-Turn 11 Ezinne — the "what confuses people in exams" question
-Turn 12 Abeo   — the sharp, memorable answer with a one-line rule they can keep
-Turn 13 Ezinne — summarises what clicked for her in her own words
-Turn 14 Abeo   — closes with energy: why this topic is actually interesting
+CONTENT FIDELITY (most important rule):
+- Every turn must reference SPECIFIC content from the document — actual terms, \
+  definitions, classifications, examples, dates, names, equations.
+- DO NOT invent facts. If the document says something, use it. Don't replace \
+  document concepts with generic ones.
+- Cover the FULL document, not just the opening sections. By turn 8 you \
+  should be discussing material from the middle/end.
 
-RULES:
-- Each turn: 2-3 sentences MAX. Every sentence must earn its place.
-- EVERY line MUST start with exactly "Ezinne:" or "Abeo:" — nothing else, ever
-- No asterisks, no stage directions, no numbering, no blank lines between turns
-- Cover the WHOLE content — not just the first section
+STRUCTURE — exactly 14 turns, alternating Ezinne then Abeo:
+Turn 1  Ezinne — opens with a specific confusion about a real term/concept from the doc
+Turn 2  Abeo   — defines it precisely, using the document's own framing
+Turn 3  Ezinne — asks how it differs from a related concept (also from the doc)
+Turn 4  Abeo   — distinguishes them clearly with examples FROM the document
+Turn 5  Ezinne — surfaces a common student misconception about this topic
+Turn 6  Abeo   — corrects it, gives the precise reason
+Turn 7  Ezinne — moves to the next major concept covered in the document
+Turn 8  Abeo   — explains it with the specifics the document gives
+Turn 9  Ezinne — asks about a concrete example or application
+Turn 10 Abeo   — uses examples FROM the document, or one Nigerian analogy if helpful
+Turn 11 Ezinne — asks "what is most likely to come up in exams from this material?"
+Turn 12 Abeo   — gives 2-3 sharp specific points students MUST know from this doc
+Turn 13 Ezinne — summarises the 3 biggest takeaways in her own words
+Turn 14 Abeo   — closes with WHY this topic matters in the real world
 
-CONTENT:
+FORMAT RULES:
+- Each turn: 2-4 sentences. Substantive but not bloated.
+- EVERY line MUST start with exactly "Ezinne:" or "Abeo:" — nothing else.
+- No asterisks, no stage directions, no numbering, no blank lines.
+- No fake stats or invented sources. Stay grounded in the document.
+
+DOCUMENT:
 {content}
 
 Script:
@@ -456,8 +464,8 @@ async def _groq_stream_podcast(content: str, mode: str = "standard"):
         "model": GROQ_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "stream": True,
-        "temperature": 0.88,
-        "max_tokens": 1600,
+        "temperature": 0.7,
+        "max_tokens": 2400,
     }
 
     current_speaker = "Ezinne"  # primed in prompt
@@ -477,7 +485,7 @@ async def _groq_stream_podcast(content: str, mode: str = "standard"):
         voice = "chinenye" if speaker == "Ezinne" else "jude"
         return {"speaker": speaker, "voice": voice, "text": text}
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("POST", GROQ_URL, headers=headers, json=payload) as response:
             response.raise_for_status()
             async for raw_line in response.aiter_lines():
@@ -638,8 +646,11 @@ async def stream_podcast_lines(
     words = text.split()
     word_count = len(words)
 
-    # ── Short/medium doc: try Groq first, Gemini on rate-limit ─────────────────
-    if word_count <= 8000:
+    # ── Short/medium/long doc: feed full text to Groq (Llama 3.3 = 128k ctx) ──
+    # ~40k words ≈ 55k tokens, fits comfortably in 128k context.
+    # Full-context generation produces FAR better podcasts than map-reduce
+    # because the model sees the whole document at once.
+    if word_count <= 40000:
         content = " ".join(words)
         if USE_GROQ:
             try:
