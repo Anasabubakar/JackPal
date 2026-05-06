@@ -177,17 +177,36 @@ async def _run_supabase_podcast(doc_id: str, user_id: str, text: str, mode: str 
 
     async def _synth_and_upload(idx: int, line: dict):
         async with sem:
+            audio = None
             try:
                 try:
                     audio = await synthesize_chunk(line["text"], line["voice"], engine, lang=lang)
-                except Exception:
+                except Exception as tts_err:
+                    print(f"[Podcast] Line {idx} {engine} TTS failed: {type(tts_err).__name__}: {tts_err} — falling back to fast")
                     audio = await synthesize_chunk(line["text"], line["voice"], "fast", lang=lang)
-                upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
-                supabase.table("documents").update({"podcast_ready": idx + 1}).eq("id", doc_id).execute()
+                if not audio:
+                    print(f"[Podcast] Line {idx} TTS returned empty bytes — skipping upload")
+                    return
+                print(f"[Podcast] Line {idx} TTS OK ({len(audio)} bytes), uploading...")
+                try:
+                    path = upload_audio_chunk(user_id, doc_id, idx, audio, "podcast")
+                    print(f"[Podcast] Line {idx} uploaded to {path}")
+                except Exception as up_err:
+                    print(f"[Podcast] Line {idx} UPLOAD FAILED: {type(up_err).__name__}: {up_err}")
+                    raise
+                try:
+                    supabase.table("documents").update({"podcast_ready": idx + 1}).eq("id", doc_id).execute()
+                except Exception as db_err:
+                    print(f"[Podcast] Line {idx} DB ready-counter update failed: {db_err}")
             except Exception as e:
-                print(f"[Podcast] Line {idx} TTS failed: {e}")
+                import traceback
+                print(f"[Podcast] Line {idx} TTS pipeline failed: {type(e).__name__}: {e}")
+                print(traceback.format_exc())
 
-    await asyncio.gather(*[_synth_and_upload(i, line) for i, line in enumerate(script)])
+    results = await asyncio.gather(*[_synth_and_upload(i, line) for i, line in enumerate(script)], return_exceptions=True)
+    failed = sum(1 for r in results if isinstance(r, Exception))
+    if failed:
+        print(f"[Podcast] WARNING: {failed}/{len(script)} TTS uploads failed for {doc_id}")
 
     try:
         supabase.table("documents").update({

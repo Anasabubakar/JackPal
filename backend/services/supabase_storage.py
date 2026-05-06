@@ -26,7 +26,23 @@ def upload_audio_chunk(
     ext = "wav" if audio_bytes[:4] == b"RIFF" and audio_bytes[8:12] == b"WAVE" else "mp3"
     filename = f"{kind}_{chunk_index:04d}.{ext}"
     path = _make_path(user_id, doc_id, filename)
-    _bucket().upload(path, audio_bytes, {"content-type": "audio/wav" if ext == "wav" else "audio/mpeg"})
+    mime = "audio/wav" if ext == "wav" else "audio/mpeg"
+    # supabase-py is picky about file_options keys across versions; pass both
+    # casings, and use upsert=true so re-runs don't 409 on existing objects.
+    file_options = {
+        "content-type": mime,
+        "contentType": mime,
+        "upsert": "true",
+    }
+    try:
+        _bucket().upload(path, audio_bytes, file_options)
+    except Exception as e:
+        # Common: bucket missing, RLS denied, object already exists. Surface
+        # the real reason so logs show what to fix instead of generic 500s.
+        msg = str(e)
+        raise RuntimeError(
+            f"Storage upload failed for {path} (mime={mime}, {len(audio_bytes)} bytes): {msg}"
+        ) from e
     return path
 
 
