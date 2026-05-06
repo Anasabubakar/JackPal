@@ -189,45 +189,54 @@ async def _gemini_stream_podcast(content: str, mode: str = "standard"):
 # ── Listen-mode narration (Speechify-style explainer) ────────────────────────
 
 _LISTEN_NARRATION_PROMPT = """\
-You are turning a Nigerian university student's lecture notes into a smooth \
-audio narration — like Speechify or a great YouTube explainer voice. The \
-listener will hear this read aloud while walking, in a danfo, or before bed. \
-They cannot scroll back. They cannot pause to re-read. So your version must \
-be CLEARER than the original — not a transcript of the original.
+You are the best teacher this Nigerian student has ever heard explain this \
+material. Not summarising. Not reading. EXPLAINING — like a brilliant tutor \
+who has thought about why this stuff matters, where students get stuck, and \
+how the ideas actually connect. The student is hearing this in audio. They \
+have one shot to understand it.
 
 WHAT TO PRODUCE:
-A continuous spoken-style narration of the document. ONE flowing piece of \
-prose, no headings, no bullet points, no markers like "Section 1." It should \
-read aloud naturally for ~6-15 minutes depending on doc length.
+A continuous spoken-style explanation. Cover the real substance of the \
+document — but TEACH it, don't transcribe it. For every meaningful concept \
+in the document:
+1. Name it concretely.
+2. Explain what it actually means in plain words.
+3. Say WHY it matters or where it comes up.
+4. If it's the kind of thing students confuse, name the confusion and clear it up.
+5. Connect it to other ideas in the document where it links.
 
-WHAT TO DO TO THE CONTENT:
-1. Add a 1-2 sentence opening that names the topic concretely. NOT "today \
-   we'll discuss" — instead: "This material is about how databases keep data \
-   consistent when many users edit at the same time" or similar topic-specific \
-   hook from the actual document.
-2. Explain every concept the document defines — but in plain spoken English. \
-   Where the doc says "the ACID properties consist of...", you say "there are \
-   four properties — atomicity, consistency, isolation, durability — and \
-   they each handle a different problem."
-3. When the document introduces a term, define it the moment it appears. \
-   Don't make the listener wait.
-4. Use light Nigerian warmth occasionally ("the thing is", "you see", \
-   "so basically") — not heavy slang. Most listeners want clarity.
-5. Connect ideas with audible bridges: "now this is where it gets \
-   interesting", "the reason this matters is", "here's the part students miss".
-6. End with a 1-2 sentence wrap-up that names the 2-3 biggest takeaways.
+This should feel like a great YouTube explainer essay — substantive, insight- \
+dense, paced. Not a dry summary. Not a restatement.
 
-WHAT TO AVOID:
-- Don't paraphrase line-by-line. Restructure for ear, not eye.
-- No "let me read you this", no "the document states", no meta-talk.
+LENGTH:
+- Roughly 50-70% of the original document length, measured in spoken words.
+- A 1000-word doc → ~500-700 word explanation (~3-4 min audio).
+- A 5000-word doc → ~2500-3500 word explanation (~12-18 min audio).
+- A 20000-word doc → cap at ~5000 words; pick the meaty concepts and \
+  teach them properly rather than racing through everything.
+
+VOICE:
+- Plain spoken English with light Nigerian warmth ("the thing is", "you see", \
+  "here's the part that catches people"). Not heavy slang.
+- Short, listenable sentences — not academic prose.
+- Use "the reason this matters is", "the part students miss is", "this \
+  connects to what we just said about", "now here's where it gets clever".
+- ONE Nigerian analogy MAX, only if it genuinely clarifies a hard concept.
+
+NEVER:
+- Don't paraphrase line-by-line. Restructure for understanding, not for \
+  fidelity to the original order.
+- No "let me tell you about", "the document states", "in this document". \
+  Just teach.
+- No headings, bullets, numbered lists, markdown, asterisks, parentheticals.
 - No invented facts, stats, or sources. Stay grounded in the document.
-- No headings, bullet points, numbered lists. Pure spoken prose.
-- No markdown, no asterisks, no parentheticals like "(see figure 2)".
+- Don't open with "today" or "welcome." Open with a concrete hook from the \
+  actual material — a question, a surprising fact, or the core idea named directly.
 
 DOCUMENT:
 {content}
 
-Begin the narration now (just the spoken text — nothing else):
+Write the explanation now (just the spoken text — nothing else):
 """
 
 
@@ -253,7 +262,7 @@ async def generate_listen_narration(text: str) -> str:
 
     if USE_GROQ:
         try:
-            result = await _groq_complete(prompt, max_tokens=4000, timeout=60)
+            result = await _groq_complete(prompt, max_tokens=6500, timeout=90)
             if result:
                 set_json(cache_k, result, TTL_SCRIPT_HASH)
                 return result
@@ -262,7 +271,7 @@ async def generate_listen_narration(text: str) -> str:
 
     if USE_GEMINI:
         try:
-            result = await _gemini_complete(prompt, max_tokens=4000, timeout=60)
+            result = await _gemini_complete(prompt, max_tokens=6500, timeout=90)
             if result:
                 set_json(cache_k, result, TTL_SCRIPT_HASH)
                 return result
