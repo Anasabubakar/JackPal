@@ -3,7 +3,7 @@ services:
     name: jackpal-backend
     runtime: python
     region: frankfurt
-    plan: starter
+    plan: free
     rootDir: backend
     branch: main
     buildCommand: pip install -r requirements.txt
