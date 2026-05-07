@@ -196,24 +196,28 @@ how the ideas actually connect. The student is hearing this in audio. They \
 have one shot to understand it.
 
 WHAT TO PRODUCE:
-A continuous spoken-style explanation. Cover the real substance of the \
-document — but TEACH it, don't transcribe it. For every meaningful concept \
-in the document:
-1. Name it concretely.
+A continuous spoken-style explanation that walks the listener THROUGH the \
+document IN THE ORDER IT IS PRESENTED. If the document has an introduction, \
+start by explaining what the topic is and why it's worth their attention. \
+Then go module by module / chapter by chapter / section by section. Don't \
+jump around. Don't restructure into your own framework. Follow the document's \
+flow but TEACH each part instead of reciting it.
+
+For every meaningful concept the document covers:
+1. Name it concretely (use the document's own term).
 2. Explain what it actually means in plain words.
 3. Say WHY it matters or where it comes up.
 4. If it's the kind of thing students confuse, name the confusion and clear it up.
-5. Connect it to other ideas in the document where it links.
+5. Connect it to other ideas in the document when it links.
 
 This should feel like a great YouTube explainer essay — substantive, insight- \
-dense, paced. Not a dry summary. Not a restatement.
+dense, paced. Walking the listener forward through the material.
 
 LENGTH:
-- Roughly 50-70% of the original document length, measured in spoken words.
-- A 1000-word doc → ~500-700 word explanation (~3-4 min audio).
-- A 5000-word doc → ~2500-3500 word explanation (~12-18 min audio).
-- A 20000-word doc → cap at ~5000 words; pick the meaty concepts and \
-  teach them properly rather than racing through everything.
+- Be substantive. Don't truncate to a stub. A long, dense document deserves \
+  a long, dense explanation. Aim for 50-70% of the original word count.
+- Hard cap: ~5000 words for very long docs. If the document is longer, \
+  prioritise the conceptually important sections and teach those properly.
 
 VOICE:
 - Plain spoken English with light Nigerian warmth ("the thing is", "you see", \
@@ -224,19 +228,21 @@ VOICE:
 - ONE Nigerian analogy MAX, only if it genuinely clarifies a hard concept.
 
 NEVER:
-- Don't paraphrase line-by-line. Restructure for understanding, not for \
-  fidelity to the original order.
+- Don't skip the introduction or jump to the middle.
 - No "let me tell you about", "the document states", "in this document". \
   Just teach.
 - No headings, bullets, numbered lists, markdown, asterisks, parentheticals.
 - No invented facts, stats, or sources. Stay grounded in the document.
-- Don't open with "today" or "welcome." Open with a concrete hook from the \
-  actual material — a question, a surprising fact, or the core idea named directly.
+- Don't open with "today" or "welcome." Open by naming the topic and one \
+  concrete reason it's worth understanding.
+- Do not stop early. If the document covers many sections, walk through them \
+  all (within the word cap). A truncated 200-word reply is a failure.
 
 DOCUMENT:
 {content}
 
-Write the explanation now (just the spoken text — nothing else):
+Write the explanation now (just the spoken text — start with the introduction \
+and walk the listener through the material in order):
 """
 
 
@@ -248,39 +254,49 @@ async def generate_listen_narration(text: str) -> str:
     cache_k = key_listen_by_hash(c_hash)
     cached = get_json(cache_k)
     if cached and isinstance(cached, str):
-        print(f"[AI] Listen-narration cache HIT ({c_hash})")
-        return cached
+        wc = len(cached.split())
+        print(f"[AI] Listen-narration cache HIT ({c_hash}) — {wc} words")
+        # Defensive: if a tiny stub got cached by a prior buggy run, ignore it
+        # and regenerate. A real explanation is at least 100 words.
+        if wc >= 100:
+            return cached
+        print(f"[AI] Cached narration too short ({wc} words) — regenerating")
 
     words = text.split()
-    if len(words) > 35_000:
-        # Cap input — past this, narration drifts and quality drops.
-        # Cheaper than map-reduce for listen mode; users mostly upload
-        # single lectures (~5-15k words).
+    original_wc = len(words)
+    if original_wc > 35_000:
         text = " ".join(words[:35_000])
+        print(f"[AI] Listen narration input truncated {original_wc} -> 35000 words")
+    print(f"[AI] Listen narration starting — input {min(original_wc, 35_000)} words ({c_hash})")
 
     prompt = _LISTEN_NARRATION_PROMPT.format(content=text)
 
     if USE_GROQ:
         try:
-            result = await _groq_complete(prompt, max_tokens=6500, timeout=90)
-            if result:
+            result = await _groq_complete(prompt, max_tokens=6500, timeout=120)
+            wc = len(result.split()) if result else 0
+            print(f"[AI] Listen narration Groq returned {wc} words")
+            if result and wc >= 50:
                 set_json(cache_k, result, TTL_SCRIPT_HASH)
                 return result
+            print(f"[AI] Groq narration too short ({wc} words) — trying fallback")
         except Exception as e:
-            print(f"[AI] Listen narration Groq failed: {e}")
+            print(f"[AI] Listen narration Groq failed: {type(e).__name__}: {e}")
 
     if USE_GEMINI:
         try:
-            result = await _gemini_complete(prompt, max_tokens=6500, timeout=90)
-            if result:
+            result = await _gemini_complete(prompt, max_tokens=6500, timeout=120)
+            wc = len(result.split()) if result else 0
+            print(f"[AI] Listen narration Gemini returned {wc} words")
+            if result and wc >= 50:
                 set_json(cache_k, result, TTL_SCRIPT_HASH)
                 return result
         except Exception as e:
-            print(f"[AI] Listen narration Gemini failed: {e}")
+            print(f"[AI] Listen narration Gemini failed: {type(e).__name__}: {e}")
 
     # Last-resort fallback: return cleaned doc text. Worse listen experience
     # but avoids 500 if every LLM is down.
-    print("[AI] Listen narration: all LLMs failed, falling back to raw doc text")
+    print("[AI] Listen narration: all LLMs failed or returned too little — falling back to raw doc text")
     return text
 
 
