@@ -232,6 +232,7 @@ async def generate_audio(
     token: Optional[str] = Query(None),
     voice: str = Query(DEFAULT_VOICE),
     engine: str = Query(DEFAULT_ENGINE),
+    explain: bool = Query(True, description="Run text through Groq for narrated explainer (Speechify-style) before TTS. Off = raw doc reading."),
 ):
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:
@@ -255,6 +256,14 @@ async def generate_audio(
         text = clean_text(raw_text)
         if not text.strip():
             text = raw_text  # fallback if cleaner strips too much
+
+        if explain:
+            from services.ai import generate_listen_narration
+            try:
+                text = await generate_listen_narration(text)
+                print(f"[Audio] Listen narration ready ({len(text.split())} words) for {doc_id}")
+            except Exception as e:
+                print(f"[Audio] Narration failed, using raw text: {e}")
 
         chunks = split_into_chunks(text)
         total_chunks = len(chunks)
@@ -307,6 +316,14 @@ async def generate_audio(
 
     from services.rag import clean_text
     text = clean_text(raw_text) or raw_text
+
+    if explain:
+        from services.ai import generate_listen_narration
+        try:
+            text = await generate_listen_narration(text)
+            print(f"[Audio] Listen narration ready ({len(text.split())} words) for {doc_id}")
+        except Exception as e:
+            print(f"[Audio] Narration failed, using raw text: {e}")
 
     chunks = split_into_chunks(text)
     total_chunks = len(chunks)
