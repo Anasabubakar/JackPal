@@ -372,7 +372,7 @@ export default function Dashboard() {
     lastTimeUpdateRef.current = 0;
     audio.ontimeupdate = () => {
       const now = audio.currentTime || 0;
-      if (Math.abs(now - lastTimeUpdateRef.current) < 0.25) return;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 1) return;
       lastTimeUpdateRef.current = now;
       setCurrentTime(now);
     };
@@ -854,7 +854,7 @@ export default function Dashboard() {
     lastTimeUpdateRef.current = 0;
     audio.ontimeupdate = () => {
       const now = audio.currentTime || 0;
-      if (Math.abs(now - lastTimeUpdateRef.current) < 0.25) return;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 1) return;
       lastTimeUpdateRef.current = now;
       setCurrentTime(now);
     };
@@ -1246,12 +1246,9 @@ export default function Dashboard() {
                   {hasSearch && ` · "${searchQuery}"`}
                 </span>
               </div>
-              {filteredDocuments.map((doc, index) => (
-                <motion.div
+              {filteredDocuments.map((doc) => (
+                <div
                   key={doc.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: dur.smooth, ease: ease.out, delay: index * 0.03 }}
                   className="group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all"
                   style={{ background: selectedDocId === doc.id ? "var(--surface-2)" : "transparent" }}
                   onMouseEnter={e => { if (selectedDocId !== doc.id) e.currentTarget.style.background = "var(--surface)"; }}
@@ -1343,7 +1340,7 @@ export default function Dashboard() {
                       <Trash2 size={13} strokeWidth={1.75} />
                     </motion.button>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
@@ -1414,13 +1411,13 @@ export default function Dashboard() {
         <SlideIn className="w-full max-w-xl mx-auto flex-1 overflow-y-auto studio-scroll px-4 py-6 space-y-1">
           <div ref={transcriptRef}>
             {(visiblePodcastLines.length ? visiblePodcastLines : podcastScript.map((line, index) => ({ line, index }))).map(({ line, index }) => (
-              <motion.div key={index} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: dur.quick, ease: ease.out }} className="flex gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors" style={index === podcastChunkIndex ? { background: "var(--teal-dim)", borderLeft: "2px solid var(--teal)" } : { borderLeft: "2px solid transparent" }} onClick={() => jumpToPodcastLine(index)}>
+              <div key={index} className="flex gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors" style={index === podcastChunkIndex ? { background: "var(--teal-dim)", borderLeft: "2px solid var(--teal)" } : { borderLeft: "2px solid transparent" }} onClick={() => jumpToPodcastLine(index)}>
                 <div className="w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-[9px] font-bold mt-0.5" style={line.speaker === "Ezinne" ? { background: "var(--teal)", color: "var(--ink)" } : { background: "var(--blue)", color: "white" }}>{line.speaker?.[0] ?? "E"}</div>
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-3)" }}>{line.speaker}</div>
                   <div className="text-[13px] leading-relaxed" style={{ color: index === podcastChunkIndex ? "var(--text-1)" : "var(--text-2)" }}>{line.text}</div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </SlideIn>
@@ -1645,11 +1642,9 @@ export default function Dashboard() {
               : 0,
         }}
       >
-        <AnimatePresence mode="wait">
-          {activeTab === "home" && !currentDocId && !podcastPlayingDocId && LibraryView()}
-          {currentDocId && !podcastPlayingDocId && SyncReader()}
-          {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
-        </AnimatePresence>
+        {activeTab === "home" && !currentDocId && !podcastPlayingDocId && LibraryView()}
+        {currentDocId && !podcastPlayingDocId && SyncReader()}
+        {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
       </main>
       {RightPanel()}
       {PlayerBar()}
