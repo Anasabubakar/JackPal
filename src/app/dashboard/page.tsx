@@ -303,6 +303,7 @@ export default function Dashboard() {
         const current = documentsRef.current;
         const generating = current.filter(d => d.status === "generating" || d.status === "streaming");
         if (!generating.length) return;
+        const tickStart = Date.now();
         const updates = await Promise.all(generating.map(tickOne));
         if (cancelled) return;
         const byId = new Map(updates.map(u => [u.id, u]));
@@ -314,6 +315,11 @@ export default function Dashboard() {
           return u;
         });
         if (anyChanged) setDocuments(next);
+        // Backend may not support ?wait=N (older deploys) — sleep before
+        // next iteration to avoid a busy loop hammering the API.
+        if (!anyChanged && Date.now() - tickStart < 1500) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
       }
     };
     loop();
@@ -454,6 +460,14 @@ export default function Dashboard() {
     if (playingDocId === doc.id) { stopAudio(); return; }
     stopAudio();
 
+    // Immediate UI ack — flips button to Loading and shows SyncReader so
+    // the user sees their click landed instead of staring at a frozen
+    // library while we wait for the backend.
+    setCurrentDocId(doc.id);
+    setCurrentTitle(doc.filename);
+    setIsAudioLoading(true);
+    loadDocumentText(doc.id);
+
     // If pre-generated chunks exist → instant chunk playlist
     const hasMatchingReadyAudio = ((doc.ready_chunks ?? 0) > 0 || doc.status === "audio_ready")
       && doc.audio_voice === selectedVoice;
@@ -461,7 +475,6 @@ export default function Dashboard() {
       try {
         const { chunks } = await getAudioChunks(doc.id);
         if (chunks.length > 0) {
-          loadDocumentText(doc.id);
           await handlePlayChunks(doc.id, 0, doc.filename);
           return;
         }
@@ -473,9 +486,6 @@ export default function Dashboard() {
         ? { ...item, status: "generating" }
         : item
     )));
-
-    setIsAudioLoading(true);
-    loadDocumentText(doc.id);
     try {
       const status = await generateAudio(doc.id, selectedVoice, "fast");
       setDocuments((prev) => prev.map((item) => (
@@ -934,38 +944,6 @@ export default function Dashboard() {
 
     try {
       await generatePodcast(doc.id, regenerate || !!topic || chapterIndex !== undefined, podcastMode, topic, chapterIndex);
-
-      let lastScriptLen = 0;
-      let lastReady = 0;
-      const startedAt = Date.now();
-      const poll = async (): Promise<void> => {
-        // Long-poll: each request blocks server-side for up to 20s waiting
-        // for ready_lines to advance. Loop until first chunk lands or 4 min total.
-        while (Date.now() - startedAt < 240_000) {
-          try {
-            const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });
-            if (res.script?.length && res.script.length !== lastScriptLen) {
-              lastScriptLen = res.script.length;
-              setPodcastScript(res.script);
-            }
-            if (res.chunks.length > 0) {
-              clearInterval(msgInterval);
-              podcastQueueRef.current = res.chunks.map(c => ({ url: c.url, speaker: c.speaker }));
-              podcastIndexRef.current = 0;
-              playNextPodcastChunk(doc.id);
-              return;
-            }
-            lastReady = res.ready_lines || 0;
-            if ((res.status as string) === "failed" || (res.status as string) === "error") break;
-          } catch {
-            await new Promise(r => setTimeout(r, 1500));
-          }
-        }
-        clearInterval(msgInterval);
-        setUploadError("Podcast took too long â€” please try again.");
-        setIsAudioLoading(false);
-      };
-      poll();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Podcast generation failed.";
       const isNotFound = msg.toLowerCase().includes("not found") || msg.includes("404");
@@ -978,12 +956,47 @@ export default function Dashboard() {
       );
       clearInterval(msgInterval);
       setIsAudioLoading(false);
-      if (isNotFound) {
-        fetchDocuments();
-      }
-    } finally {
       setPodcastGenerating(null);
+      if (isNotFound) fetchDocuments();
+      return;
     }
+
+    let lastScriptLen = 0;
+    let lastReady = 0;
+    const startedAt = Date.now();
+    const poll = async (): Promise<void> => {
+      while (Date.now() - startedAt < 240_000) {
+        const tickStart = Date.now();
+        try {
+          const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });
+          if (res.script?.length && res.script.length !== lastScriptLen) {
+            lastScriptLen = res.script.length;
+            setPodcastScript(res.script);
+          }
+          if (res.chunks.length > 0) {
+            clearInterval(msgInterval);
+            podcastQueueRef.current = res.chunks.map(c => ({ url: c.url, speaker: c.speaker }));
+            podcastIndexRef.current = 0;
+            playNextPodcastChunk(doc.id);
+            return;
+          }
+          lastReady = res.ready_lines || 0;
+          if ((res.status as string) === "failed" || (res.status as string) === "error") break;
+          // Backend returned fast with no progress — likely doesn't support
+          // ?wait=N (older deploys). Sleep before retrying to avoid busy loop.
+          if (Date.now() - tickStart < 1500) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        } catch {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      clearInterval(msgInterval);
+      setUploadError("Podcast took too long â€” please try again.");
+      setIsAudioLoading(false);
+      setPodcastGenerating(null);
+    };
+    poll();
   }
 
   async function handleLogout() {
