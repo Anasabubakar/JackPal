@@ -354,7 +354,7 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: linear-gradient(180deg, #00166e 0%, #00092f 100%);
+  background: linear-gradient(180deg, #002080 0%, #000d3e 100%);
   overflow: hidden;
 }
 
@@ -378,7 +378,13 @@ h1, h2, h3, h4 {
 
 @media (max-width: 640px) {
   .jp-hero-bg {
-    opacity: 0.1;
+    /* Stronger opacity so the sketch reads through the dark gradient,
+       and reframe the image around its center so the workstation scene
+       sits behind the copy instead of being pushed off the top. */
+    opacity: 0.32;
+    transform: scale(1.25);
+    transform-origin: center center;
+    object-position: center center;
   }
 }
 
@@ -446,21 +452,75 @@ h1, h2, h3, h4 {
   margin-top: 40px;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Glassmorphism buttons
+   - rgba background + heavy backdrop-blur(17px)
+   - 1px white outline + layered inset shadows for inner glow
+   - ::before = horizontal sheen across the top
+   - ::after  = vertical sheen down the left edge
+   ────────────────────────────────────────────────────────────── */
 .jp-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-height: 47px;
   padding: 0 30px;
-  border-radius: 40px;
-  border: 1px solid transparent;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   font-size: 18px;
   font-weight: 500;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
+  isolation: isolate;
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.18s ease;
+}
+
+/* Edge highlights (pseudo-elements live behind the label/triangle) */
+.jp-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.jp-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.8),
+    transparent,
+    rgba(255, 255, 255, 0.3)
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep label and triangle above the edge highlights */
+.jp-button > * {
+  position: relative;
+  z-index: 1;
 }
 
 button.jp-button {
@@ -473,31 +533,63 @@ button.jp-button {
   transform: translateY(-1px);
 }
 
+.jp-button:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+/* Primary — blue-tinted glass */
 .jp-button-primary {
-  background: var(--jp-blue);
   color: #fff;
-  box-shadow: 0 4px 6.3px rgba(0, 146, 255, 0.33);
+  background: rgba(20, 100, 230, 0.35);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 20px 10px rgba(255, 255, 255, 0.7);
 }
 
-/* Glass primary button — hero context only */
-.jp-hero .jp-button-primary {
-  background: rgba(0, 40, 100, 0.52);
-  border-color: rgba(45, 107, 255, 0.5);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 80, 200, 0.3);
+.jp-button-primary:hover {
+  background: rgba(20, 100, 230, 0.44);
 }
 
+/* Ghost — clear glass over the dark hero */
 .jp-button-ghost {
-  border-color: rgba(255, 255, 255, 0.22);
-  color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 20px 10px rgba(255, 255, 255, 0.18);
 }
 
+.jp-button-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Dark — used in the referral band */
 .jp-button-dark {
-  background: #171717;
-  border-color: #162141;
   color: #fff;
-  box-shadow: 0 4px 8.25px rgba(0, 0, 0, 0.68);
+  background: rgba(15, 20, 35, 0.5);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    inset 0 0 20px 10px rgba(40, 60, 100, 0.35);
+}
+
+/* Triangle indicator — rendered as a child element when triangle prop is set */
+.jp-button-tri {
+  display: block;
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid currentColor;
+  opacity: 0.95;
 }
 
 .jp-hero-demo {
@@ -1098,6 +1190,12 @@ button.jp-button {
 }
 
 /* Mobile carousel: one card visible at a time, fades between */
+/* Mobile testimonial slider — touch-driven carousel with perspective tilt
+   ──────────────────────────────────────────────────────────────────────
+   Hidden by default; revealed on ≤640px (see media query below). The
+   track is a flex row of full-width slides; each slide is translated by
+   negative active-index plus a live drag delta. Cards apply their own
+   `perspective() rotateY()` so the off-axis cards angle into space. */
 .jp-testimonial-mobile {
   display: none;
   position: relative;
@@ -1105,24 +1203,41 @@ button.jp-button {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.jp-testimonial-track {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  will-change: transform;
+}
+
+.jp-testimonial-slide {
+  flex: 0 0 100%;
+  width: 100%;
   padding: 0 max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
 }
 
 .jp-testimonial-mobile .jp-testimonial {
-  position: absolute;
-  inset: 0 max(16px, env(safe-area-inset-left));
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
-  pointer-events: none;
-}
-
-.jp-testimonial-mobile .jp-testimonial.is-active {
   position: relative;
   inset: auto;
-  opacity: 1;
-  transform: none;
+  width: 100%;
+  margin: 0;
   pointer-events: auto;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Slightly stronger inactive-card readability shift on top of the
+   inline scale/rotate (kept low — doesn't interfere with inline transform) */
+.jp-testimonial-mobile .jp-testimonial:not(.is-active) {
+  filter: saturate(0.92);
 }
 
 .jp-testimonial-dots {
@@ -1340,7 +1455,7 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #00166e 0%, #00092f 100%);
+  background: linear-gradient(180deg, #002080 0%, #000d3e 100%);
   overflow: hidden;
 }
 
@@ -1967,33 +2082,7 @@ button.jp-button {
   border-radius: 999px;
 }
 
-.jp-final .jp-button-primary {
-  background: var(--jp-final-accent);
-  box-shadow:
-    0 4px 14px rgba(45, 107, 255, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-}
-
-.jp-final .jp-button-primary::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-}
-
-.jp-final .jp-button-ghost {
-  border-color: rgba(255, 255, 255, 0.45);
-  color: #fff;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.jp-final .jp-button-ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.55);
-}
+/* FinalCta inherits the global glassmorphism — no per-section override */
 
 .jp-final-cta-arrow {
   flex-shrink: 0;
@@ -2327,7 +2416,8 @@ button.jp-button {
   }
 
   .jp-hero {
-    padding-top: 72px;
+    padding-top: 96px;
+    padding-bottom: 112px;
   }
 
   .jp-hero h1 {

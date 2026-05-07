@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
@@ -197,22 +197,35 @@ function CtaButton({
   href = "#pricing",
   variant = "primary",
   openWaitlist,
+  triangle = false,
 }: {
   children: React.ReactNode;
   href?: string;
   variant?: "primary" | "ghost" | "dark";
   openWaitlist?: () => void;
+  triangle?: boolean;
 }) {
+  // Decorative triangle indicator. ::before/::after are reserved for
+  // glassmorphism edge highlights, so this is a real DOM element.
+  const tri = triangle ? <span className="jp-button-tri" aria-hidden="true" /> : null;
+  const inner = (
+    <>
+      {variant === "primary" ? tri : null}
+      <span className="jp-button-label">{children}</span>
+      {variant === "ghost" ? tri : null}
+    </>
+  );
+
   if (openWaitlist) {
     return (
       <button type="button" className={`jp-button jp-button-${variant}`} onClick={openWaitlist}>
-        <span>{children}</span>
+        {inner}
       </button>
     );
   }
   return (
     <a className={`jp-button jp-button-${variant}`} href={href}>
-      <span>{children}</span>
+      {inner}
     </a>
   );
 }
@@ -456,8 +469,10 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
             Turn any document type or link, into audio in a Nigerian voice. Listen on the bus, between classes, even offline.
           </p>
           <div className="jp-actions">
-            <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
-            <CtaButton href="#how-it-works" variant="ghost">
+            <CtaButton openWaitlist={openWaitlist} triangle>
+              Join the Waitlist
+            </CtaButton>
+            <CtaButton href="#how-it-works" variant="ghost" triangle>
               See How It Works
             </CtaButton>
           </div>
@@ -474,13 +489,72 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
 
 function SocialProof() {
   const [active, setActive] = useState(0);
+  const [dragDelta, setDragDelta] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const directionRef = useRef<"horizontal" | "vertical" | null>(null);
 
+  // Auto-advance — pauses while the user is interacting
   useEffect(() => {
+    if (isDragging) return;
     const id = window.setInterval(() => {
       setActive((i) => (i + 1) % testimonials.length);
-    }, 5000);
+    }, 6000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [isDragging]);
+
+  const handleTouchStart: React.TouchEventHandler<HTMLDivElement> = (e) => {
+    startXRef.current = e.touches[0].clientX;
+    startYRef.current = e.touches[0].clientY;
+    directionRef.current = null;
+    setIsDragging(true);
+    setDragDelta(0);
+  };
+
+  const handleTouchMove: React.TouchEventHandler<HTMLDivElement> = (e) => {
+    const dx = e.touches[0].clientX - startXRef.current;
+    const dy = e.touches[0].clientY - startYRef.current;
+    if (directionRef.current === null) {
+      if (Math.hypot(dx, dy) > 6) {
+        directionRef.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+      } else {
+        return;
+      }
+    }
+    if (directionRef.current === "horizontal") {
+      const atStart = active === 0 && dx > 0;
+      const atEnd = active === testimonials.length - 1 && dx < 0;
+      // Rubber-band resistance at the edges
+      setDragDelta(atStart || atEnd ? dx * 0.35 : dx);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (directionRef.current === "horizontal") {
+      const w = containerRef.current?.offsetWidth ?? 320;
+      const threshold = Math.max(40, w * 0.18);
+      if (dragDelta > threshold) {
+        setActive((i) => Math.max(0, i - 1));
+      } else if (dragDelta < -threshold) {
+        setActive((i) => Math.min(testimonials.length - 1, i + 1));
+      }
+    }
+    directionRef.current = null;
+    setDragDelta(0);
+    setIsDragging(false);
+  };
+
+  const containerWidth = containerRef.current?.offsetWidth ?? 360;
+  const dragPercent = (dragDelta / containerWidth) * 100;
+  const trackOffset = -active * 100 + dragPercent;
+  const cardTransition = isDragging
+    ? "none"
+    : "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease";
+  const trackTransition = isDragging
+    ? "none"
+    : "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)";
 
   return (
     <section className="jp-proof">
@@ -503,24 +577,49 @@ function SocialProof() {
         ))}
       </div>
 
-      <div className="jp-testimonial-mobile" aria-live="polite">
-        {testimonials.map((item, index) => (
-          <article
-            className={`jp-testimonial${active === index ? " is-active" : ""}`}
-            key={item.name}
-            aria-hidden={active !== index}
-          >
-            <span className="jp-quote-mark">“</span>
-            <p>“{item.quote}”</p>
-            <div className="jp-person">
-              <span className={`avatar avatar-${index}`}>{item.initials}</span>
-              <div>
-                <strong>{item.name}</strong>
-                <small>{item.meta}</small>
+      <div ref={containerRef} className="jp-testimonial-mobile" aria-live="polite">
+        <div
+          className="jp-testimonial-track"
+          style={{
+            transform: `translate3d(${trackOffset}%, 0, 0)`,
+            transition: trackTransition,
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        >
+          {testimonials.map((item, index) => {
+            const distance = index - active - dragPercent / 100;
+            const absDist = Math.min(2, Math.abs(distance));
+            const rotateY = -distance * 18;
+            const scale = 1 - absDist * 0.08;
+            const opacity = 1 - absDist * 0.4;
+            return (
+              <div className="jp-testimonial-slide" key={item.name}>
+                <article
+                  className={`jp-testimonial${active === index ? " is-active" : ""}`}
+                  style={{
+                    transform: `perspective(1200px) rotateY(${rotateY}deg) scale(${scale})`,
+                    opacity,
+                    transition: cardTransition,
+                  }}
+                  aria-hidden={active !== index}
+                >
+                  <span className="jp-quote-mark">“</span>
+                  <p>“{item.quote}”</p>
+                  <div className="jp-person">
+                    <span className={`avatar avatar-${index}`}>{item.initials}</span>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <small>{item.meta}</small>
+                    </div>
+                  </div>
+                </article>
               </div>
-            </div>
-          </article>
-        ))}
+            );
+          })}
+        </div>
       </div>
 
       <div className="jp-testimonial-dots" role="tablist">
