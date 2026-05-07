@@ -23,6 +23,7 @@ def upload_audio_chunk(
     audio_bytes: bytes,
     kind: str = "chunk",
 ) -> str:
+    import time
     ext = "wav" if audio_bytes[:4] == b"RIFF" and audio_bytes[8:12] == b"WAVE" else "mp3"
     filename = f"{kind}_{chunk_index:04d}.{ext}"
     path = _make_path(user_id, doc_id, filename)
@@ -34,16 +35,24 @@ def upload_audio_chunk(
         "contentType": mime,
         "upsert": "true",
     }
-    try:
-        _bucket().upload(path, audio_bytes, file_options)
-    except Exception as e:
-        # Common: bucket missing, RLS denied, object already exists. Surface
-        # the real reason so logs show what to fix instead of generic 500s.
-        msg = str(e)
-        raise RuntimeError(
-            f"Storage upload failed for {path} (mime={mime}, {len(audio_bytes)} bytes): {msg}"
-        ) from e
-    return path
+    # Retry on transient errors. Supabase Storage occasionally drops the
+    # connection mid-upload (httpx RemoteProtocolError 'Server disconnected'),
+    # which produces a UnboundLocalError inside storage3 and kills the line.
+    # Three attempts with linear backoff handles 99% of these.
+    last_err: Exception | None = None
+    for attempt in range(3):
+        try:
+            _bucket().upload(path, audio_bytes, file_options)
+            return path
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                wait = 1.0 * (attempt + 1)
+                print(f"[storage] upload {path} attempt {attempt + 1} failed: {type(e).__name__} — retrying in {wait}s")
+                time.sleep(wait)
+    raise RuntimeError(
+        f"Storage upload failed for {path} (mime={mime}, {len(audio_bytes)} bytes) after 3 attempts: {last_err}"
+    ) from last_err
 
 
 def list_audio_chunks(user_id: str, doc_id: str, kind: str = "chunk") -> list[dict]:
