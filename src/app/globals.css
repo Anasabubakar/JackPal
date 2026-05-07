@@ -354,7 +354,7 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: linear-gradient(180deg, #002676 0%, #000a3c 100%);
+  background: #01092d;
   overflow: hidden;
 }
 
@@ -369,26 +369,8 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
-/* The hero/dark background art is a light line drawing of a workstation.
-   `multiply` would wipe it out on a dark blue field (white × dark = dark),
-   so we use `screen` to let the bright strokes glow through the gradient. */
 .jp-hero-bg {
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  transform: scale(1.04);
-  transform-origin: center center;
   object-position: center;
-}
-
-@media (max-width: 640px) {
-  .jp-hero-bg {
-    /* On mobile the copy stretches across the full width, so dial the
-       sketch back a touch (still using `screen` for visibility). */
-    opacity: 0.42;
-    transform: scale(1.15);
-    transform-origin: center center;
-    object-position: center center;
-  }
 }
 
 .jp-hero-grid {
@@ -1458,7 +1440,7 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #002676 0%, #000a3c 100%);
+  background: linear-gradient(180deg, #011257 0%, #01092d 100%);
   overflow: hidden;
 }
 

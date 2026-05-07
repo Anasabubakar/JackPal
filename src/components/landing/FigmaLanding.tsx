@@ -452,7 +452,10 @@ function Navbar({ openWaitlist }: { openWaitlist: () => void }) {
 function Hero({ openWaitlist }: { openWaitlist: () => void }) {
   return (
     <section className="jp-hero">
-      <img className="jp-hero-bg" src="/images/Whisk_c70ae977c0feb5492014aa58127a071fdr 1.png" alt="" aria-hidden="true" />
+      <picture aria-hidden="true">
+        <source media="(max-width: 640px)" srcSet="/images/mobilelanding.jpg" />
+        <img className="jp-hero-bg" src="/images/landing.jpg" alt="" />
+      </picture>
       <div className="jp-container jp-hero-grid">
         <div className="jp-hero-copy">
           <div className="jp-kicker">
@@ -546,7 +549,10 @@ function SocialProof() {
     setIsDragging(false);
   };
 
-  const containerWidth = containerRef.current?.offsetWidth ?? 360;
+  // `??` only falls back on null/undefined — when the carousel is hidden
+  // on desktop, offsetWidth is 0 and we'd divide by zero, producing NaN
+  // for every transform/opacity downstream. Use `||` so 0 also falls back.
+  const containerWidth = containerRef.current?.offsetWidth || 360;
   const dragPercent = (dragDelta / containerWidth) * 100;
   const trackOffset = -active * 100 + dragPercent;
   const cardTransition = isDragging
