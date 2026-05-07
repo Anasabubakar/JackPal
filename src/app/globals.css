@@ -1111,18 +1111,6 @@ button.jp-button {
   filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.35));
 }
 
-.jp-launch-note {
-  position: relative;
-  z-index: 1;
-  width: min(410px, calc(100% - max(48px, env(safe-area-inset-left) + env(safe-area-inset-right))));
-  margin: 44px max(24px, env(safe-area-inset-right)) 0 auto;
-  padding-right: env(safe-area-inset-right);
-  color: #1d397b;
-  font-size: 11px;
-  line-height: 30px;
-  text-align: right;
-}
-
 .jp-pill {
   display: inline-flex;
   align-items: center;
@@ -2254,15 +2242,6 @@ button.jp-button {
     margin-inline: auto;
     margin-bottom: 110px;
     overflow: visible;
-  }
-
-  .jp-launch-note {
-    width: min(32rem, calc(100% - max(32px, env(safe-area-inset-left) + env(safe-area-inset-right))));
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 32px;
-    text-align: center;
-    padding-right: 0;
   }
 
   .jp-hero-grid {

@@ -485,7 +485,6 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
           <Image className="jp-mascot" src="/images/JackPal 2.png" alt="Jackpals mascot" width={105} height={136} priority />
         </div>
       </div>
-      <p className="jp-launch-note">Launching Q2 2026 · ₦1,000/month · No credit card required</p>
     </section>
   );
 }
