@@ -35,3 +35,35 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/dev_storage/
+backend/test_output.mp3
+backend/test_yarngpt.wav
+backend/.env
+backend/*.wav
+backend/data/
+
+# logs
+*.log
+*.err.log
+
+# claude
+.claude/
+
+# agent coordination (internal only)
+agents/
+AGENTS.md
+CLAUDE.md
+
+# launch scripts (internal only)
+launch-claude.ps1
+launch-codex.ps1
+launch-dashboard.ps1
+agents-dashboard.ps1
+
+# demo audio files
+backend/*.mp3

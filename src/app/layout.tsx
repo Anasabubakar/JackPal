@@ -1,24 +1,57 @@
-import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, Inter, Syne } from "next/font/google";
+import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
+  preload: true,
 });
 
-const body = Inter({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-syne",
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "JackPal — Your Audio Study Companion",
+  title: "JackPals — Study audio in Nigerian voices",
   description:
-    "Convert your readings, PDFs, and notes into high-quality audio you can listen to anywhere. Offline-first, student-focused.",
+    "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices. Learn on commutes, offline, without staring at a screen.",
   icons: {
-    icon: "/images/logo.svg",
+    icon: "/icon.png",
   },
+  openGraph: {
+    title: "JackPals — Study audio in Nigerian voices",
+    description:
+      "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices. Learn on commutes, offline, without staring at a screen.",
+    siteName: "JackPals",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "JackPals — Study audio in Nigerian voices" }],
+    type: "website",
+    locale: "en_NG",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "JackPals — Study audio in Nigerian voices",
+    description: "JackPals converts any document, PDF, or link into study audio narrated by Nigerian AI voices.",
+    images: ["/og-image.png"],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -27,8 +60,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="en" className={`${display.variable} ${syne.variable} ${inter.variable}`}>
+      <head>
+        {/* Anti-flash: apply saved theme before paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('jp-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="antialiased">
+        <AudioPlayerProvider>
+          {children}
+        </AudioPlayerProvider>
+      </body>
     </html>
   );
 }

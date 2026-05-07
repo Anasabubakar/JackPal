@@ -1,23 +1,24 @@
-'use client';
+﻿'use client';
 
-import { 
-  Home, 
-  Library, 
-  CloudUpload, 
-  FolderOpen, 
-  User, 
-  Play, 
-  Clock, 
-  Search, 
-  Bell, 
-  MoreHorizontal,
-  Flame,
+import {
+  Home,
+  Library,
+  CloudUpload,
+  FolderOpen,
+  User,
+  Play,
+  Clock,
+  Search,
+  Bell,
   ChevronRight,
+  ArrowRight,
   LogOut,
   TrendingUp,
   ShieldCheck,
   CheckCircle2,
   Plus,
+  Flame,
+  Mic2,
   FileText,
   Video,
   Link2,
@@ -26,21 +27,1026 @@ import {
   Cloud,
   Globe,
   LayoutGrid,
-  Grid
+  Loader2,
+  Pause,
+  Download,
+  SkipBack,
+  SkipForward,
+  AudioLines,
+  Trash2,
+  RotateCcw,
+  FastForward,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ease, dur } from "@/lib/motion";
+import { FadeUp, SlideIn, SpringScale } from "@/components/ui/MotionPrimitives";
+import {
+  getUser,
+  logout,
+  listDocuments,
+  uploadDocument,
+  generateAudio,
+  getAudioChunks,
+  getAudioStatus,
+  downloadAudioArchive,
+  deleteDocument,
+  summarizeDocument,
+  getDocumentChapters,
+  generatePodcast,
+  getPodcastChunks,
+  getDocumentText,
+  askDocument,
+  type Document,
+  type Chapter,
+  type PodcastLine,
+} from "@/lib/api";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const VOICE_OPTIONS = [
+  { value: "chinenye", label: "Ezinne", desc: "Female · Nigerian English" },
+  { value: "jude",     label: "Abeo",   desc: "Male · Nigerian English" },
+];
+const PODCAST_HOSTS = [
+  { voice: "chinenye", name: "Ezinne", role: "Asks the questions" },
+  { voice: "jude",     name: "Abeo",   role: "Breaks it down" },
+];
 
 export default function Dashboard() {
+  const SPEED_OPTIONS = [0.9, 1, 1.25, 1.5, 1.75];
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isOthersModalOpen, setIsOthersModalOpen] = useState(false);
 
+  // Auth
+  const user = mounted ? getUser() : null;
+
+  // Documents
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [docsLoading, setDocsLoading] = useState(true);
+
+  // Upload
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Audio player
+  const [playingDocId, setPlayingDocId] = useState<string | null>(null);
+  const [currentDocId, setCurrentDocId] = useState<string | null>(null);
+  const [currentTitle, setCurrentTitle] = useState("No audio selected");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playerMode, setPlayerMode] = useState<"idle" | "stream" | "chunks">("idle");
+  const [activeChunk, setActiveChunk] = useState(0);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState("chinenye");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const chunkQueueRef = useRef<string[]>([]);
+  const chunkIndexRef = useRef(0);
+  const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isPreloadingRef = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Chapters
+  const [chaptersDocId, setChaptersDocId] = useState<string | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
+
+  // AI Summary — per-doc
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const [summaryLoadingId, setSummaryLoadingId] = useState<string | null>(null);
+
+  // Q&A
+  const [qaDocId, setQaDocId] = useState<string | null>(null);
+  const [qaQuestion, setQaQuestion] = useState<Record<string, string>>({});
+  const [qaAnswer, setQaAnswer] = useState<Record<string, string>>({});
+  const [qaLoading, setQaLoading] = useState<string | null>(null);
+
+  // Podcast mode
+  const [docMode, setDocMode] = useState<Record<string, "listen" | "podcast">>({});
+  const [podcastGenerating, setPodcastGenerating] = useState<string | null>(null);
+  const [podcastLoadingMsg, setPodcastLoadingMsg] = useState("");
+  const [podcastPlayingDocId, setPodcastPlayingDocId] = useState<string | null>(null);
+  const [podcastScript, setPodcastScript] = useState<PodcastLine[]>([]);
+  const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
+  const [podcastChunkIndex, setPodcastChunkIndex] = useState(0);
+  const podcastQueueRef = useRef<{ url: string; speaker: string }[]>([]);
+  const podcastIndexRef = useRef(0);
+  const [podcastMode, setPodcastMode] = useState<"standard" | "pidgin">("standard");
+  const [podcastTopic, setPodcastTopic] = useState<string | null>(null); // section text being podcasted
+
+  // Resume playback — chunk index per document
+  const [savedProgress, setSavedProgress] = useState<Record<string, number>>({});
+
+  // Transcript / seeking
+  const [docText, setDocText] = useState<string>("");
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [showFullTranscript, setShowFullTranscript] = useState(false);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+
+  // 80-word chunks matching backend split — enables click-to-seek
+  const textChunks = useMemo(() => {
+    if (!docText) return [];
+    const words = docText.split(/\s+/).filter(Boolean);
+    const result: string[] = [];
+    for (let i = 0; i < words.length; i += 80) {
+      result.push(words.slice(i, i + 80).join(" "));
+    }
+    return result;
+  }, [docText]);
+
+  const visibleTextChunks = useMemo(() => {
+    if (!showTranscript) return [];
+    if (showFullTranscript) {
+      return textChunks.map((chunk, index) => ({ chunk, index }));
+    }
+    if (!textChunks.length) return [];
+    const windowSize = 25;
+    const start = Math.max(0, activeChunk - windowSize);
+    const end = Math.min(textChunks.length, activeChunk + windowSize + 1);
+    return textChunks.slice(start, end).map((chunk, offset) => ({
+      chunk,
+      index: start + offset,
+    }));
+  }, [textChunks, activeChunk, showFullTranscript, showTranscript]);
+
+  const visiblePodcastLines = useMemo(() => {
+    if (!showTranscript) return [];
+    if (showFullTranscript) {
+      return podcastScript.map((line, index) => ({ line, index }));
+    }
+    if (!podcastScript.length) return [];
+    const windowSize = 25;
+    const start = Math.max(0, podcastChunkIndex - windowSize);
+    const end = Math.min(podcastScript.length, podcastChunkIndex + windowSize + 1);
+    return podcastScript.slice(start, end).map((line, offset) => ({
+      line,
+      index: start + offset,
+    }));
+  }, [podcastScript, podcastChunkIndex, showFullTranscript, showTranscript]);
+
+  // Course subject labels (stored locally per docId)
+  const [subjects, setSubjects] = useState<Record<string, string>>({});
+
+  // Real Stats
+  const [userStats, setUserStats] = useState<any>(null);
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const lastTimeUpdateRef = useRef(0);
+  const documentsRef = useRef<Document[]>([]);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
+
+  const filteredDocuments = useMemo(() => {
+    if (!searchQuery.trim()) return documents;
+    const q = searchQuery.toLowerCase();
+    return documents.filter(doc => 
+      doc.filename.toLowerCase().includes(q) || 
+      (subjects[doc.id] && subjects[doc.id].toLowerCase().includes(q))
+    );
+  }, [documents, searchQuery, subjects]);
   useEffect(() => {
     setMounted(true);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const syncLayout = () => setIsMobileLayout(mq.matches);
+    syncLayout();
+    mq.addEventListener("change", syncLayout);
+
+    const u = getUser();
+    const savedVoice = localStorage.getItem("jackpal_voice");
+    if (savedVoice && VOICE_OPTIONS.find(v => v.value === savedVoice)) setSelectedVoice(savedVoice);
+    const savedSubjects = localStorage.getItem("jackpal_subjects");
+    if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
+    const rawProgress = localStorage.getItem("jackpal_progress");
+    if (rawProgress) setSavedProgress(JSON.parse(rawProgress));
+    if (!u) {
+      router.push("/login");
+      return () => mq.removeEventListener("change", syncLayout);
+    }
+    fetchDocuments();
+    // Warm up Render backend so user's first Listen/Podcast click hits an
+    // awake container instead of paying 30-50s cold-start.
+    fetch(`${API_URL}/audio/capabilities`).catch(() => {});
+    return () => mq.removeEventListener("change", syncLayout);
+  }, [router]);
+
+  function saveSubject(docId: string, subject: string) {
+    const updated = { ...subjects, [docId]: subject };
+    setSubjects(updated);
+    localStorage.setItem("jackpal_subjects", JSON.stringify(updated));
+  }
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem("jackpal_voice", selectedVoice);
+  }, [mounted, selectedVoice]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+      if (preloadAudioRef.current) {
+        preloadAudioRef.current.pause();
+        preloadAudioRef.current.src = "";
+        preloadAudioRef.current = null;
+      }
+    };
   }, []);
+
+  // Poll status for docs that are still generating
+  const hasGenerating = documents.some(d => d.status === "generating" || d.status === "streaming");
+
+  useEffect(() => {
+    if (!hasGenerating) return;
+    let cancelled = false;
+
+    const tickOne = async (doc: Document): Promise<Document> => {
+      if (doc.status !== "generating" && doc.status !== "streaming") return doc;
+      try {
+        const s = await getAudioStatus(doc.id, {
+          sinceReady: doc.ready_chunks ?? 0,
+          waitSeconds: 20,
+        });
+        if (s.status !== doc.status || s.ready_chunks !== doc.ready_chunks) {
+          return {
+            ...doc,
+            status: s.status as Document["status"],
+            ready_chunks: s.ready_chunks,
+            total_chunks: s.total_chunks,
+            audio_voice: s.audio_voice ?? doc.audio_voice,
+          };
+        }
+      } catch { /* network blip — loop will retry */ }
+      return doc;
+    };
+
+    const loop = async () => {
+      while (!cancelled) {
+        const current = documentsRef.current;
+        const generating = current.filter(d => d.status === "generating" || d.status === "streaming");
+        if (!generating.length) return;
+        const tickStart = Date.now();
+        const updates = await Promise.all(generating.map(tickOne));
+        if (cancelled) return;
+        const byId = new Map(updates.map(u => [u.id, u]));
+        let anyChanged = false;
+        const next = documentsRef.current.map(d => {
+          const u = byId.get(d.id);
+          if (!u) return d;
+          if (u.status !== d.status || u.ready_chunks !== d.ready_chunks) anyChanged = true;
+          return u;
+        });
+        if (anyChanged) setDocuments(next);
+        // Backend may not support ?wait=N (older deploys) — sleep before
+        // next iteration to avoid a busy loop hammering the API.
+        if (!anyChanged && Date.now() - tickStart < 1500) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+    };
+    loop();
+
+    return () => { cancelled = true; };
+  }, [hasGenerating]);
+
+  async function fetchDocuments() {
+    setDocsLoading(true);
+    try {
+      const docs = await listDocuments();
+      setDocuments(docs);
+    } catch {
+      // token expired or backend down
+    } finally {
+      setDocsLoading(false);
+    }
+  }
+
+  function formatTime(value: number) {
+    if (!Number.isFinite(value) || value < 0) return "00:00";
+    const totalSeconds = Math.floor(value);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  function getDocumentTitle(docId: string) {
+    return documents.find((doc) => doc.id === docId)?.filename || "Study Audio";
+  }
+
+  function getVoiceMeta(voice = selectedVoice) {
+    return VOICE_OPTIONS.find((option) => option.value === voice) ?? VOICE_OPTIONS[0];
+  }
+
+  function attachAudio(
+    audio: HTMLAudioElement,
+    docId: string,
+    title: string,
+    mode: "stream" | "chunks",
+    chunkIndex: number,
+    onEnded?: () => void
+  ) {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+    }
+
+    audio.preload = "auto";
+    audio.playbackRate = playbackRate;
+    audioRef.current = audio;
+    setCurrentDocId(docId);
+    setCurrentTitle(title);
+    setPlayerMode(mode);
+    setActiveChunk(chunkIndex);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsAudioLoading(true);
+
+    lastTimeUpdateRef.current = 0;
+    audio.ontimeupdate = () => {
+      const now = audio.currentTime || 0;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 1) return;
+      lastTimeUpdateRef.current = now;
+      setCurrentTime(now);
+    };
+    audio.onloadedmetadata = () => setDuration(audio.duration || 0);
+    audio.onwaiting = () => setIsAudioLoading(true);
+    audio.oncanplay = () => setIsAudioLoading(false);
+    audio.onplaying = () => {
+      setPlayingDocId(docId);
+      setIsAudioLoading(false);
+    };
+    audio.onerror = () => {
+      setPlayingDocId(null);
+      setIsAudioLoading(false);
+    };
+    audio.onended = () => {
+      setCurrentTime(0);
+      onEnded?.();
+    };
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    setIsOthersModalOpen(false);
+    setIsAddMenuOpen(false);
+    try {
+      await uploadDocument(file);
+      await fetchDocuments();
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function stopAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+    }
+    // Clean up preloaded audio
+    if (preloadAudioRef.current) {
+      preloadAudioRef.current.pause();
+      preloadAudioRef.current.src = "";
+      preloadAudioRef.current = null;
+    }
+    isPreloadingRef.current = false;
+    chunkQueueRef.current = [];
+    chunkIndexRef.current = 0;
+    podcastQueueRef.current = [];
+    podcastIndexRef.current = 0;
+    setPlayingDocId(null);
+    setPodcastPlayingDocId(null);
+    setPodcastGenerating(null);
+    setCurrentSpeaker(null);
+    setCurrentDocId(null);
+    setCurrentTitle("No audio selected");
+    setCurrentTime(0);
+    setDuration(0);
+    setPlayerMode("idle");
+    setActiveChunk(0);
+    setPodcastChunkIndex(0);
+    setIsAudioLoading(false);
+  }
+
+  async function handleGenerateAudio(doc: Document) {
+    // Toggle off if already playing
+    if (playingDocId === doc.id) { stopAudio(); return; }
+    stopAudio();
+
+    // Immediate UI ack — flips button to Loading and shows SyncReader so
+    // the user sees their click landed instead of staring at a frozen
+    // library while we wait for the backend.
+    setCurrentDocId(doc.id);
+    setCurrentTitle(doc.filename);
+    setIsAudioLoading(true);
+    loadDocumentText(doc.id);
+
+    // If pre-generated chunks exist → instant chunk playlist
+    const hasMatchingReadyAudio = ((doc.ready_chunks ?? 0) > 0 || doc.status === "audio_ready")
+      && doc.audio_voice === selectedVoice;
+    if (hasMatchingReadyAudio) {
+      try {
+        const { chunks } = await getAudioChunks(doc.id);
+        if (chunks.length > 0) {
+          await handlePlayChunks(doc.id, 0, doc.filename);
+          return;
+        }
+      } catch { /* chunks not ready yet, fall through to stream */ }
+    }
+
+    setDocuments((prev) => prev.map((item) => (
+      item.id === doc.id && item.status === "ready"
+        ? { ...item, status: "generating" }
+        : item
+    )));
+    try {
+      const status = await generateAudio(doc.id, selectedVoice, "fast");
+      setDocuments((prev) => prev.map((item) => (
+        item.id === doc.id
+          ? {
+              ...item,
+              status: status.status as Document["status"],
+              ready_chunks: status.ready_chunks,
+              total_chunks: status.total_chunks,
+              audio_voice: status.audio_voice ?? selectedVoice,
+            }
+          : item
+      )));
+      await handlePlayChunks(doc.id, 0, doc.filename);
+    } catch (err: unknown) {
+      setPlayingDocId(null);
+      setIsAudioLoading(false);
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.toLowerCase().includes("not found") || msg.includes("404")) {
+        setUploadError("Document not found on server — try re-uploading your file.");
+        fetchDocuments();
+      } else {
+        setUploadError("Audio generation failed. Is the backend running?");
+      }
+    }
+  }
+
+  async function waitForChunkAndContinue(docId: string, nextChunkIndex: number, title: string) {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      try {
+        const { chunks, status } = await getAudioChunks(docId);
+        if (chunks.length > nextChunkIndex) {
+          await handlePlayChunks(docId, nextChunkIndex, title);
+          return;
+        }
+        if (status === "audio_ready" && chunks.length <= nextChunkIndex) {
+          stopAudio();
+          return;
+        }
+      } catch {
+        // Keep polling briefly before giving up.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    setPlayingDocId(null);
+    setIsAudioLoading(false);
+  }
+
+  async function handlePlayChunks(docId: string, startChunk = 0, title = getDocumentTitle(docId)) {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+    // Cancel any preloading
+    if (preloadAudioRef.current) {
+      preloadAudioRef.current.pause();
+      preloadAudioRef.current.src = "";
+      preloadAudioRef.current = null;
+    }
+    isPreloadingRef.current = false;
+    
+    const { chunks } = await getAudioChunks(docId);
+    if (!chunks.length || !chunks[startChunk]) return;
+    chunkQueueRef.current = chunks.map(c => c.url);
+    chunkIndexRef.current = startChunk;
+    setPlayingDocId(docId);
+    
+    // Preload the next chunk immediately
+    preloadNextChunk(docId, title);
+    playNextChunk(docId, title);
+  }
+
+  function preloadNextChunk(docId: string, title: string) {
+    const nextIndex = chunkIndexRef.current + 1;
+    if (nextIndex >= chunkQueueRef.current.length) return; // No more chunks
+    if (isPreloadingRef.current && preloadAudioRef.current) return; // Already preloading
+    
+    const nextUrl = chunkQueueRef.current[nextIndex];
+    if (!nextUrl) return;
+    
+    isPreloadingRef.current = true;
+    const preloadAudio = new Audio(nextUrl);
+    preloadAudio.preload = "auto";
+    
+    preloadAudio.oncanplaythrough = () => {
+      preloadAudioRef.current = preloadAudio;
+      isPreloadingRef.current = false;
+    };
+    
+    preloadAudio.onerror = () => {
+      isPreloadingRef.current = false;
+    };
+    
+    // Start loading
+    preloadAudio.load();
+  }
+
+  function playNextChunk(docId: string, title: string) {
+    const url = chunkQueueRef.current[chunkIndexRef.current];
+    if (!url) { setPlayingDocId(null); return; }
+    const audio = new Audio(url);
+    attachAudio(audio, docId, title, "chunks", chunkIndexRef.current, async () => {
+      chunkIndexRef.current += 1;
+      
+      // Use preloaded audio if available
+      if (preloadAudioRef.current && preloadAudioRef.current.src === chunkQueueRef.current[chunkIndexRef.current]) {
+        // Use the preloaded audio - swap refs
+        const preloaded = preloadAudioRef.current;
+        preloadAudioRef.current = null;
+        
+        // Transfer the preloaded audio to audioRef
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        }
+        audioRef.current = preloaded;
+        
+        // Attach the onended handler to the preloaded audio
+        preloaded.onended = async () => {
+          chunkIndexRef.current += 1;
+          const { chunks } = await getAudioChunks(docId);
+          chunkQueueRef.current = chunks.map(c => c.url);
+          if (chunkQueueRef.current[chunkIndexRef.current]) {
+            preloadNextChunk(docId, title);
+            playNextChunk(docId, title);
+            return;
+          }
+          await waitForChunkAndContinue(docId, chunkIndexRef.current, title);
+        };
+        
+        // Update state for preloaded audio
+        setActiveChunk(chunkIndexRef.current);
+        setCurrentTime(0);
+        setIsAudioLoading(false);
+        setPlayingDocId(docId);
+        
+        preloaded.oncanplay = () => setIsAudioLoading(false);
+        preloaded.onplaying = () => { setPlayingDocId(docId); setIsAudioLoading(false); };
+        preloaded.onerror = () => { setPlayingDocId(null); setIsAudioLoading(false); };
+        
+        preloaded.play().catch(() => setPlayingDocId(null));
+        
+        // Preload the next one
+        preloadNextChunk(docId, title);
+        return;
+      }
+      
+      // No preloaded audio - normal path
+      const { chunks } = await getAudioChunks(docId);
+      chunkQueueRef.current = chunks.map(c => c.url);
+      if (chunkQueueRef.current[chunkIndexRef.current]) {
+        preloadNextChunk(docId, title);
+        playNextChunk(docId, title);
+        return;
+      }
+      await waitForChunkAndContinue(docId, chunkIndexRef.current, title);
+    });
+    audio.play().catch(() => setPlayingDocId(null));
+  }
+
+  function toggleCurrentPlayback() {
+    const audio = audioRef.current;
+    if (!audio || !currentDocId) return;
+    if (audio.paused) {
+      audio.play().catch(() => setPlayingDocId(null));
+      return;
+    }
+    audio.pause();
+    setPlayingDocId(null);
+  }
+
+  async function handleChunkNavigation(direction: -1 | 1) {
+    if (!currentDocId) return;
+
+    const targetChunk = Math.max(0, activeChunk + direction);
+    if (direction < 0 && playerMode === "stream") {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        setCurrentTime(0);
+      }
+      return;
+    }
+
+    try {
+      const { chunks, status } = await getAudioChunks(currentDocId);
+      chunkQueueRef.current = chunks.map((chunk) => chunk.url);
+
+      if (chunks[targetChunk]) {
+        await handlePlayChunks(currentDocId, targetChunk, currentTitle);
+        return;
+      }
+
+      const currentDocStatus = currentDoc?.status ?? status;
+      if (direction > 0 && (currentDocStatus === "generating" || currentDocStatus === "streaming")) {
+        setIsAudioLoading(true);
+        await waitForChunkAndContinue(currentDocId, targetChunk, currentTitle);
+      }
+    } catch {
+      setIsAudioLoading(false);
+    }
+  }
+
+  function seekWithinCurrent(progress: number) {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const nextTime = (progress / 100) * audio.duration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  }
+
+  function skipBy(delta: number) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const maxDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    const nextTime = Math.max(0, Math.min(maxDuration, audio.currentTime + delta));
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  }
+
+  async function handleDownload(docId: string) {
+    setDownloadingDocId(docId);
+    setUploadError("");
+    try {
+      const { blob, filename } = await downloadAudioArchive(docId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Download failed.");
+    } finally {
+      setDownloadingDocId(null);
+    }
+  }
+
+  async function handleViewChapters(doc: Document) {
+    if (chaptersDocId === doc.id) { setChaptersDocId(null); setChapters([]); return; }
+    setChaptersDocId(doc.id);
+    setChapters([]);
+    setChaptersLoading(true);
+    try {
+      const res = await getDocumentChapters(doc.id);
+      setChapters(res.chapters);
+    } catch { /* ignore */ }
+    finally { setChaptersLoading(false); }
+  }
+
+  async function handleJumpToChapter(docId: string, chapterIndex: number) {
+    // Each chapter maps to roughly (start_word / 80) chunk index
+    const chapter = chapters[chapterIndex];
+    if (!chapter) return;
+    const chunkIndex = Math.floor(chapter.start_word / 80);
+    await handlePlayChunks(docId, chunkIndex);
+  }
+
+  async function handleSummarize(doc: Document) {
+    // Toggle off if already loaded
+    if (summaries[doc.id] && summaryLoadingId !== doc.id) {
+      setSummaries(prev => { const n = { ...prev }; delete n[doc.id]; return n; });
+      return;
+    }
+    if (summaryLoadingId === doc.id) return;
+    setSummaryLoadingId(doc.id);
+    try {
+      const result = await summarizeDocument(doc.id);
+      setSummaries(prev => ({ ...prev, [doc.id]: result.summary }));
+    } catch {
+      setSummaries(prev => ({ ...prev, [doc.id]: "Could not generate summary. Please check that your API keys (GROQ_API_KEY or GOOGLE_AI_API_KEY) are set in the backend." }));
+    } finally {
+      setSummaryLoadingId(null);
+    }
+  }
+
+  async function handleAsk(docId: string, e: React.FormEvent) {
+    e.preventDefault();
+    const q = (qaQuestion[docId] ?? "").trim();
+    if (!q || qaLoading === docId) return;
+    setQaDocId(docId);
+    setQaLoading(docId);
+    setQaAnswer(prev => ({ ...prev, [docId]: "" }));
+    try {
+      const result = await askDocument(docId, q);
+      setQaAnswer(prev => ({ ...prev, [docId]: result.answer }));
+    } catch {
+      setQaAnswer(prev => ({ ...prev, [docId]: "Could not answer. Please try again." }));
+    } finally {
+      setQaLoading(null);
+    }
+  }
+
+  // Global keyboard shortcuts for the player
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore when user is typing in an input/textarea
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (!currentDocId && !podcastPlayingDocId) return;
+      const audio = audioRef.current;
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        if (!audio) return;
+        if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        skipBy(-10);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        skipBy(10);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const i = SPEED_OPTIONS.indexOf(playbackRate);
+        const next = SPEED_OPTIONS[Math.min(SPEED_OPTIONS.length - 1, i + 1)];
+        setPlaybackRate(next);
+        if (audio) audio.playbackRate = next;
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const i = SPEED_OPTIONS.indexOf(playbackRate);
+        const next = SPEED_OPTIONS[Math.max(0, i - 1)];
+        setPlaybackRate(next);
+        if (audio) audio.playbackRate = next;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [currentDocId, podcastPlayingDocId, playbackRate]);
+
+  // Save chunk progress whenever the active chunk advances
+  useEffect(() => {
+    if (!currentDocId || activeChunk === 0) return;
+    setSavedProgress(prev => {
+      const next = { ...prev, [currentDocId]: activeChunk };
+      localStorage.setItem("jackpal_progress", JSON.stringify(next));
+      return next;
+    });
+  }, [activeChunk, currentDocId]);
+
+  async function handleDeleteDoc(docId: string) {
+    // Optimistic: remove from UI immediately
+    setDocuments(prev => prev.filter(d => d.id !== docId));
+    if (currentDocId === docId) stopAudio();
+    if (podcastPlayingDocId === docId) stopPodcast();
+    try {
+      await deleteDocument(docId);
+      // Clear saved progress for this doc
+      setSavedProgress(prev => {
+        const next = { ...prev };
+        delete next[docId];
+        localStorage.setItem("jackpal_progress", JSON.stringify(next));
+        return next;
+      });
+    } catch {
+      fetchDocuments(); // Restore if delete failed
+    }
+  }
+
+  async function loadDocumentText(docId: string) {
+    try {
+      const text = await getDocumentText(docId);
+      setDocText(text);
+    } catch { /* non-fatal — transcript just won't show */ }
+  }
+
+  function jumpToPodcastLine(index: number) {
+    if (!podcastPlayingDocId) return;
+    if (!podcastQueueRef.current[index]) return;
+    podcastIndexRef.current = index;
+    playNextPodcastChunk(podcastPlayingDocId);
+  }
+
+  // Auto-scroll active transcript line into view
+  useEffect(() => {
+    if (!showTranscript || !transcriptRef.current) return;
+    const active = transcriptRef.current.querySelector("[data-active='true']");
+    active?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [activeChunk, podcastChunkIndex, showTranscript]);
+
+  function stopPodcast() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.onended = null;
+    }
+    podcastQueueRef.current = [];
+    podcastIndexRef.current = 0;
+    setPodcastPlayingDocId(null);
+    setCurrentSpeaker(null);
+    setPodcastChunkIndex(0);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsAudioLoading(false);
+  }
+
+  function playNextPodcastChunk(docId: string) {
+    const entry = podcastQueueRef.current[podcastIndexRef.current];
+    if (!entry) { setPodcastPlayingDocId(null); setCurrentSpeaker(null); return; }
+
+    const audio = new Audio(entry.url);
+    audio.playbackRate = playbackRate;
+    audio.preload = "auto";
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.onended = null;
+    }
+    audioRef.current = audio;
+
+    setCurrentSpeaker(entry.speaker);
+    setPodcastChunkIndex(podcastIndexRef.current);
+    setIsAudioLoading(true);
+    setPodcastPlayingDocId(docId);
+    setCurrentTitle(documents.find(d => d.id === docId)?.filename ?? "Podcast");
+
+    lastTimeUpdateRef.current = 0;
+    audio.ontimeupdate = () => {
+      const now = audio.currentTime || 0;
+      if (Math.abs(now - lastTimeUpdateRef.current) < 1) return;
+      lastTimeUpdateRef.current = now;
+      setCurrentTime(now);
+    };
+    audio.onloadedmetadata = () => setDuration(audio.duration || 0);
+    audio.oncanplay = () => setIsAudioLoading(false);
+    audio.onplaying = () => { setPodcastPlayingDocId(docId); setIsAudioLoading(false); };
+    audio.onerror = () => { setPodcastPlayingDocId(null); setIsAudioLoading(false); };
+    audio.onended = async () => {
+      setCurrentTime(0);
+      podcastIndexRef.current += 1;
+      if (podcastQueueRef.current[podcastIndexRef.current]) {
+        playNextPodcastChunk(docId);
+      } else {
+        // Poll for more chunks if podcast is still generating
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await new Promise(r => setTimeout(r, 1500));
+          try {
+            const res = await getPodcastChunks(docId);
+            podcastQueueRef.current = res.chunks.map(c => ({ url: c.url, speaker: c.speaker }));
+            if (podcastQueueRef.current[podcastIndexRef.current]) {
+              playNextPodcastChunk(docId);
+              return;
+            }
+            if (res.status === "ready") break;
+          } catch { break; }
+        }
+        setPodcastPlayingDocId(null);
+        setCurrentSpeaker(null);
+      }
+    };
+
+    audio.play().catch(() => setPodcastPlayingDocId(null));
+  }
+
+  async function handlePodcast(doc: Document, regenerate = false, topic?: string, chapterIndex?: number) {
+    // If already playing this podcast — toggle pause/play (unless regenerating or switching topic)
+    if (!regenerate && !topic && chapterIndex === undefined && podcastPlayingDocId === doc.id) {
+      if (audioRef.current?.paused) {
+        audioRef.current.play().catch(() => setPodcastPlayingDocId(null));
+        setPodcastPlayingDocId(doc.id);
+      } else {
+        audioRef.current?.pause();
+        setPodcastPlayingDocId(null);
+      }
+      return;
+    }
+
+    // Stop whatever is playing
+    stopPodcast();
+    stopAudio();
+    setIsAudioLoading(true);
+    setPodcastGenerating(doc.id);
+    setPodcastTopic(topic ?? null);
+    setShowTranscript(true);
+
+    const loadingMsgs = [
+      "Reading your notes...",
+      "Ezinne and Abeo are prepping...",
+      "Writing the script...",
+      "Recording the episode...",
+      "Adding the finishing touches...",
+      "Almost ready to play...",
+    ];
+    let msgIdx = 0;
+    setPodcastLoadingMsg(loadingMsgs[0]);
+    const msgInterval = setInterval(() => {
+      msgIdx = (msgIdx + 1) % loadingMsgs.length;
+      setPodcastLoadingMsg(loadingMsgs[msgIdx]);
+    }, 4000);
+
+    try {
+      await generatePodcast(doc.id, regenerate || !!topic || chapterIndex !== undefined, podcastMode, topic, chapterIndex);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Podcast generation failed.";
+      const isNotFound = msg.toLowerCase().includes("not found") || msg.includes("404");
+      setUploadError(
+        isNotFound
+          ? "Document not found on server — try re-uploading your file."
+          : msg.includes("Script generation") || msg.includes("empty")
+          ? "AI script generation failed. Is Ollama running? (ollama serve)"
+          : msg
+      );
+      clearInterval(msgInterval);
+      setIsAudioLoading(false);
+      setPodcastGenerating(null);
+      if (isNotFound) fetchDocuments();
+      return;
+    }
+
+    let lastScriptLen = 0;
+    let lastReady = 0;
+    const startedAt = Date.now();
+    const poll = async (): Promise<void> => {
+      // 150s ceiling — Render free tier cold-start can be 30-50s alone, then
+      // Groq 8-15s + TTS pipeline. Need headroom on a freshly-deployed container.
+      while (Date.now() - startedAt < 150_000) {
+        const tickStart = Date.now();
+        try {
+          const res = await getPodcastChunks(doc.id, { sinceReady: lastReady, waitSeconds: 20 });
+          if (res.script?.length && res.script.length !== lastScriptLen) {
+            lastScriptLen = res.script.length;
+            setPodcastScript(res.script);
+          }
+          if (res.chunks.length > 0) {
+            clearInterval(msgInterval);
+            podcastQueueRef.current = res.chunks.map(c => ({ url: c.url, speaker: c.speaker }));
+            podcastIndexRef.current = 0;
+            playNextPodcastChunk(doc.id);
+            return;
+          }
+          lastReady = res.ready_lines || 0;
+          if ((res.status as string) === "failed" || (res.status as string) === "error") break;
+          // Backend returned fast with no progress — likely doesn't support
+          // ?wait=N (older deploys). Sleep before retrying to avoid busy loop.
+          if (Date.now() - tickStart < 1500) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        } catch {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      clearInterval(msgInterval);
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      setUploadError(
+        `Podcast didn't start within ${elapsed}s. Backend may be cold (Render free tier sleeps after 15min) — try again in 30s, or check Render logs for errors.`
+      );
+      setIsAudioLoading(false);
+      setPodcastGenerating(null);
+    };
+    poll();
+  }
+
+  async function handleLogout() {
+    await logout();
+    router.push("/");
+  }
 
   const mainUploadOptions = [
     { label: "File", icon: FileText, color: "#2585C7" },
@@ -49,12 +1055,12 @@ export default function Dashboard() {
   ];
 
   const allUploadOptions = [
-    { label: "File", icon: FileText, color: "#2585C7", desc: "Upload PDFs, Word, or TXT" },
-    { label: "Link/URL", icon: Link2, color: "#61E3F0", desc: "Import from any website" },
-    { label: "Google Drive", icon: Cloud, color: "#0F1774", desc: "Connect your cloud library" },
-    { label: "Web/External", icon: Globe, color: "#2261B9", desc: "External cloud platforms" },
-    { label: "Image/Note", icon: ImageIcon, color: "#02013D", desc: "OCR for images and notes" },
-    { label: "Video", icon: Video, color: "#2585C7", desc: "Extract audio from videos" },
+    { label: "File", icon: FileText, color: "#2585C7", desc: "Upload PDFs, Word, or TXT", action: "file" },
+    { label: "Link/URL", icon: Link2, color: "#61E3F0", desc: "Import from any website", action: null },
+    { label: "Google Drive", icon: Cloud, color: "#0F1774", desc: "Connect your cloud library", action: null },
+    { label: "Web/External", icon: Globe, color: "#2261B9", desc: "External cloud platforms", action: null },
+    { label: "Image/Note", icon: ImageIcon, color: "#02013D", desc: "OCR for images and notes", action: null },
+    { label: "Video", icon: Video, color: "#2585C7", desc: "Extract audio from videos", action: null },
   ];
 
   const recentAudios = [
@@ -65,435 +1071,744 @@ export default function Dashboard() {
 
   if (!mounted) return null;
 
-  return (
-    <div className="flex h-screen bg-[#F7F7F7] text-[#02013D] font-sans overflow-hidden">
-      
-      {/* ========================================== */}
-      {/* DESKTOP SIDEBAR NAVIGATION (md:flex)      */}
-      {/* ========================================== */}
-      <aside className="hidden md:flex flex-col w-60 bg-[#02013D] text-white p-6 border-r-4 border-[#2585C7] h-full relative z-[150]">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#2585C7]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
-        <Link href="/" className="flex items-center gap-3 mb-12 group relative z-10">
-          <Image src="/images/logo.svg" alt="JackPal" width={32} height={32} className="brightness-0 invert group-hover:rotate-12 transition-transform" />
-          <span className="text-xl font-black italic tracking-tighter uppercase">JackPal</span>
-        </Link>
+  const firstName = user?.full_name?.split(" ")[0] || "Winner";
+  const activeDocId = podcastPlayingDocId || currentDocId;
+  const currentDoc = activeDocId ? documents.find((doc) => doc.id === activeDocId) ?? null : null;
+  const playerProgress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const canGoPrevChunk = playerMode === "chunks" ? activeChunk > 0 : currentTime > 0;
+  const canGoNextChunk = !podcastPlayingDocId && currentDoc
+    ? (currentDoc.ready_chunks ?? 0) > activeChunk + 1 || currentDoc.status === "generating" || currentDoc.status === "streaming"
+    : false;
 
-        <nav className="flex-1 space-y-1 relative z-10">
-          {[
-            { id: 'home', icon: Home, label: 'Dashboard' },
-            { id: 'library', icon: Library, label: 'Audio Library' },
-            { id: 'files', icon: FolderOpen, label: 'Study Materials' },
-            { id: 'profile', icon: User, label: 'Account Profile' },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                activeTab === item.id 
-                  ? 'bg-[#2585C7] text-white shadow-lg shadow-[#2585C7]/20' 
-                  : 'text-white/40 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </button>
-          ))}
-        </nav>
+  const selectedDoc = selectedDocId
+    ? documents.find((doc) => doc.id === selectedDocId) ?? null
+    : null;
 
-        <div className="mt-auto pt-6 border-t border-white/5 relative z-10">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#61E3F0] transition-colors">
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* ========================================== */}
-      {/* MAIN CONTENT AREA                          */}
-      {/* ========================================== */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        
-        {/* DESKTOP TOP BAR (md:flex) */}
-        <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
-          <div className="relative w-80 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#02013D]/20 group-focus-within:text-[#2585C7] transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search your library..." 
-              className="w-full bg-[#F7F7F7] border-2 border-transparent rounded-xl py-2 pl-10 pr-4 font-bold text-[10px] focus:outline-none focus:border-[#2585C7] focus:bg-white transition-all"
+  const LeftRail = () => (
+    <nav
+      className="w-24 flex-shrink-0 flex flex-col items-center py-5 gap-1 z-40"
+      style={{ background: "var(--surface)", borderRight: "1px solid var(--border)" }}
+    >
+      <div className="mb-5 px-1 w-full flex justify-center">
+        <JackpalsLogo variant="wordmark" priority className="h-8 w-auto max-w-[5.5rem]" />
+      </div>
+      {[
+        { id: "home", Icon: Library, label: "Library" },
+        { id: "upload", Icon: Plus, label: "Upload" },
+      ].map(({ id, Icon, label }) => (
+        <button
+          key={id}
+          title={label}
+          onClick={() => {
+            if (id === "upload") {
+              setActiveTab("home");
+              fileInputRef.current?.click();
+              return;
+            }
+            setActiveTab(id);
+          }}
+          className="relative w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+          style={{
+            color: activeTab === id ? "var(--text-1)" : "var(--text-3)",
+            background: activeTab === id ? "var(--surface-2)" : "transparent",
+          }}
+        >
+          {activeTab === id && (
+            <motion.div
+              layoutId="nav-pill"
+              className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-full"
+              style={{ background: "var(--blue)" }}
             />
-          </div>
-          <div className="flex items-center gap-4">
-             <button className="relative bg-white p-2 rounded-lg border border-[#EFEFEF] hover:border-[#2585C7] transition-all">
-                <Bell className="h-4 w-4 text-[#02013D]/60" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2585C7] rounded-full border-2 border-white" />
-             </button>
-             <div className="h-8 w-[1px] bg-[#EFEFEF]" />
-             <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-tighter">Winner Adamu</div>
-                  <div className="text-[9px] font-bold text-[#2585C7] uppercase">Elite Member</div>
-                </div>
-                <div className="h-8 w-8 bg-[#2585C7] rounded-lg flex items-center justify-center text-white font-black italic text-xs">WA</div>
-             </div>
-          </div>
-        </header>
+          )}
+          <Icon size={18} strokeWidth={1.75} />
+        </button>
+      ))}
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <button
+          title="Sign out"
+          onClick={handleLogout}
+          className="w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+          style={{ color: "var(--text-3)" }}
+        >
+          <LogOut size={16} strokeWidth={1.75} />
+        </button>
+      </div>
+    </nav>
+  );
 
-        {/* MOBILE TOP BAR (block md:hidden) */}
-        <header className="md:hidden flex items-center justify-between px-6 py-3 bg-white/50 backdrop-blur-md border-b border-[#EFEFEF]">
-           <div className="flex items-center gap-2">
-             <Image src="/images/logo.svg" alt="JackPal" width={24} height={24} />
-             <span className="text-base font-black italic tracking-tighter uppercase">JackPal</span>
-           </div>
-           <button className="bg-[#2585C7] p-2 rounded-lg text-white shadow-lg shadow-[#2585C7]/20">
-              <Bell className="h-4 w-4" />
-           </button>
-        </header>
-
-        {/* SCROLLABLE VIEWPORT */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 pb-32 md:pb-8">
-            
-            {/* HERO SECTION (Split Desktop/Mobile styles) */}
-            <section className="bg-[#02013D] rounded-3xl md:rounded-[2rem] p-6 md:p-10 text-white relative overflow-hidden border-b-4 border-[#2585C7] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#2585C7]/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
-              <div className="space-y-3 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-[#2585C7]/20 text-[#2585C7] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/5">
-                   <TrendingUp className="h-3 w-3" />
-                   Performance Peak
-                </div>
-                <h1 className="text-2xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
-                  Welcome back, <br />
-                  <span className="text-[#2585C7] underline decoration-[#2585C7]/20 decoration-4 underline-offset-4">Top 1% Winner.</span>
-                </h1>
-                <p className="text-xs md:text-base text-white/50 font-bold max-w-md leading-relaxed">
-                  Your study consistency is higher than 95% of users in Nigeria this week. Keep winning.
-                </p>
-              </div>
-              <div className="flex gap-3 relative z-10">
-                 <div className="bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 text-center min-w-[100px]">
-                    <div className="text-[9px] font-black uppercase text-[#2585C7] mb-1 tracking-widest">Streak</div>
-                    <div className="text-3xl font-black italic leading-none">14</div>
-                    <div className="text-[9px] font-bold text-white/30 uppercase mt-1">Days</div>
-                 </div>
-                 <div className="bg-[#2585C7] p-4 rounded-2xl text-center min-w-[100px] shadow-xl shadow-[#2585C7]/20 flex flex-col justify-center">
-                    <div className="text-[9px] font-black uppercase text-white/60 mb-1 tracking-widest">Status</div>
-                    <div className="text-xl font-black italic leading-none uppercase">Active</div>
-                    <div className="text-[9px] font-bold text-white/60 uppercase mt-1">Season 1</div>
-                 </div>
-              </div>
-            </section>
-
-            <div className="grid lg:grid-cols-[1fr_280px] gap-8">
-               {/* MAIN FEED */}
-               <div className="space-y-8">
-                  <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-black uppercase tracking-tighter flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-[#2585C7]" />
-                        Resume Learning
-                      </h3>
-                      <button className="text-[9px] font-black uppercase tracking-widest text-[#2585C7] flex items-center gap-1 hover:underline">
-                        View History <ChevronRight className="h-3 w-3" />
-                      </button>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4">
-                       {recentAudios.map((audio) => (
-                         <div key={audio.id} className="bg-white p-5 rounded-2xl border-2 border-[#EFEFEF] shadow-sm hover:border-[#2585C7] hover:shadow-lg transition-all group active:scale-95 cursor-pointer flex flex-col justify-between min-h-[150px]">
-                            <div className="flex items-start justify-between gap-2">
-                               <div className="space-y-1">
-                                  <h4 className="font-black text-sm tracking-tight leading-tight group-hover:text-[#2585C7] transition-colors line-clamp-2">{audio.title}</h4>
-                                  <div className="text-[9px] font-bold text-[#02013D]/40 uppercase tracking-widest">{audio.chapter}</div>
-                               </div>
-                               <div className="bg-[#F7F7F7] p-2.5 rounded-xl text-[#2585C7] border border-[#EFEFEF] group-hover:bg-[#2585C7] group-hover:text-white transition-all shrink-0">
-                                  <Play className="h-4 w-4 fill-current" />
-                               </div>
-                            </div>
-                            <div className="space-y-2">
-                               <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter text-[#02013D]/40">
-                                  <span>Progress</span>
-                                  <span>{audio.progress}%</span>
-                               </div>
-                               <div className="w-full h-1.5 bg-[#F7F7F7] rounded-full overflow-hidden border border-[#EFEFEF]">
-                                  <div 
-                                    className="h-full bg-[#2585C7] rounded-full relative overflow-hidden" 
-                                    style={{ width: `${audio.progress}%` }}
-                                  >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ width: '200%' }} />
-                                  </div>
-                               </div>
-                            </div>
-                         </div>
-                       ))}
-                    </div>
-                  </section>
-
-                  {/* DESKTOP CONTENT ADDITIONS */}
-                  <section className="hidden md:grid grid-cols-2 gap-4">
-                      <div className="bg-[#02013D] text-white p-6 rounded-2xl border-b-4 border-[#61E3F0] relative overflow-hidden group">
-                         <div className="absolute top-0 right-0 w-16 h-16 bg-[#61E3F0]/10 rounded-full blur-2xl" />
-                         <CloudUpload className="h-6 w-6 text-[#61E3F0] mb-3 group-hover:scale-110 transition-transform" />
-                         <h4 className="text-lg font-black uppercase tracking-tighter mb-1">New Import</h4>
-                         <p className="text-[10px] text-white/40 font-bold leading-relaxed mb-4">Drop a PDF, Word doc, or paste text to generate high-quality AI audio.</p>
-                         <button className="bg-[#61E3F0] text-[#02013D] px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:brightness-110 transition-all">Upload Now</button>
-                      </div>
-                      <div className="bg-white p-6 rounded-2xl border-2 border-[#EFEFEF] space-y-3">
-                         <div className="flex items-center gap-2">
-                            <ShieldCheck className="h-5 w-5 text-[#2585C7]" />
-                            <h4 className="text-xs font-black uppercase tracking-widest">DRM Security</h4>
-                         </div>
-                         <p className="text-[10px] text-[#02013D]/60 font-bold leading-relaxed">Your library is encrypted and locked to this device. No file sharing, no piracy. Pure focus.</p>
-                         <div className="flex items-center gap-2 text-[9px] font-black text-[#2585C7] uppercase">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Active Protection
-                         </div>
-                      </div>
-                  </section>
-               </div>
-
-               {/* RIGHT SIDEBAR (Desktop Only) */}
-               <aside className="hidden lg:block space-y-8">
-                  <section className="space-y-4">
-                     <h3 className="text-xs font-black uppercase tracking-widest text-[#02013D]/40">Active Voice Pack</h3>
-                     <div className="bg-white p-5 rounded-2xl border-2 border-[#EFEFEF] space-y-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-[#2585C7]/5 rounded-full blur-2xl" />
-                        <div className="flex items-center gap-3">
-                           <div className="h-10 w-10 bg-[#2585C7] rounded-xl flex items-center justify-center text-white font-black italic text-xs">NG</div>
-                           <div>
-                              <div className="text-[9px] font-black uppercase tracking-widest text-[#2585C7]">Lagos — Standard</div>
-                              <div className="text-[10px] font-black">Yoruba/English</div>
-                           </div>
-                        </div>
-                        <p className="text-[10px] text-[#02013D]/60 font-bold leading-relaxed">
-                           "Relatable accents for 10x better retention."
-                        </p>
-                        <button className="w-full bg-[#F7F7F7] text-[#02013D] py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#EFEFEF] transition-colors">Switch Model</button>
-                     </div>
-                  </section>
-
-                  <section className="space-y-4">
-                     <h3 className="text-xs font-black uppercase tracking-widest text-[#02013D]/40">Elite News</h3>
-                     <div className="space-y-3">
-                        {[
-                          "New Voice Models: Hausa & Igbo arriving Q2.",
-                          "Annual Winner's Challenge starts Monday.",
-                          "JackPal for Pro Exams now in Beta."
-                        ].map((news, i) => (
-                          <div key={i} className="flex gap-3 group cursor-pointer">
-                             <div className="h-1.5 w-1.5 bg-[#2585C7] rounded-full mt-1.5 flex-shrink-0" />
-                             <p className="text-[10px] font-bold text-[#02013D]/70 group-hover:text-[#2585C7] transition-colors">{news}</p>
-                          </div>
-                        ))}
-                     </div>
-                  </section>
-               </aside>
+  const LibraryView = () => {
+    const isEmpty = filteredDocuments.length === 0 && !docsLoading;
+    const hasSearch = searchQuery.trim().length > 0;
+    return (
+      <motion.div
+        key="library"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: dur.smooth, ease: ease.out }}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
+        {/* Top bar */}
+        <div
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
+          <div className="min-w-0 flex-1">
+            <div
+              className="text-[9px] font-bold uppercase tracking-[0.25em]"
+              style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}
+            >
+              Good day
+            </div>
+            <div
+              className="leading-none mt-0.5 truncate"
+              style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}
+            >
+              {firstName}
             </div>
           </div>
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:justify-end">
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search library..."
+              className="rounded-lg px-3 py-2 text-[11px] outline-none flex-1 min-w-0 sm:w-36 sm:flex-none transition-all"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+              onFocus={e => (e.currentTarget.style.borderColor = "var(--blue)")}
+              onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+            />
+            <label
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer transition-all"
+              style={{ background: "var(--blue)", color: "white" }}
+            >
+              {uploading
+                ? <Loader2 size={12} className="animate-spin" />
+                : <Plus size={12} strokeWidth={2} />}
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                {uploading ? "Uploading" : "Upload"}
+              </span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+              />
+            </label>
+          </div>
         </div>
 
-        {/* ========================================== */}
-        {/* MOBILE FLOATING DOCK (md:hidden)          */}
-        {/* ========================================== */}
-        <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-[#02013D]/95 backdrop-blur-2xl text-white rounded-[2rem] p-2 shadow-2xl z-[200] flex items-center justify-between border border-white/10 shadow-[#2585C7]/30 transition-all">
-          {[
-            { id: 'home', icon: Home, label: 'Home' },
-            { id: 'library', icon: Library, label: 'Library' },
-          ].map((item) => (
-            <button 
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}
-            >
-              <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'stroke-[2.5px]' : ''}`} />
-              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
-              {activeTab === item.id && (
-                <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />
-              )}
-            </button>
-          ))}
-
-          {/* Center Action Button (Upload) */}
-          <button 
-            onClick={() => {
-              setIsOthersModalOpen(true);
-              setIsAddMenuOpen(false);
-            }}
-            className="flex flex-col items-center -mt-12 group relative"
+        {uploadError && (
+          <div
+            className="mx-5 mt-3 px-4 py-2.5 rounded-xl text-[11px] flex items-center justify-between gap-3"
+            style={{ background: "rgba(248,113,113,0.08)", color: "#f87171", border: "1px solid rgba(248,113,113,0.15)" }}
           >
-            <div className="absolute inset-0 bg-[#2585C7] rounded-full blur-xl opacity-20 group-active:opacity-40 animate-pulse" />
-            <div className="w-16 h-16 bg-[#2585C7] rounded-full flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-[#F7F7F7] transform transition-all group-active:scale-90 z-[10] relative hover:scale-105">
-              <CloudUpload className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter text-[#2585C7] mt-1 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm">Upload</span>
-          </button>
-
-          {[
-            { id: 'files', icon: FolderOpen, label: 'Files' },
-            { id: 'profile', icon: User, label: 'Profile' },
-          ].map((item) => (
-            <button 
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 group w-14 py-2 transition-all duration-300 relative ${activeTab === item.id ? 'text-[#61E3F0] scale-110' : 'text-white/40'}`}
-            >
-              <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'stroke-[2.5px]' : ''}`} />
-              <span className={`text-[9px] font-black uppercase tracking-tighter transition-all ${activeTab === item.id ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{item.label}</span>
-              {activeTab === item.id && (
-                <div className="absolute -top-1 w-1 h-1 bg-[#61E3F0] rounded-full shadow-[0_0_8px_#61E3F0] animate-pulse" />
-              )}
+            <span>{uploadError}</span>
+            <button onClick={() => setUploadError("")} style={{ color: "#f87171", opacity: 0.6 }}>
+              <X size={12} />
             </button>
-          ))}
-        </nav>
-
-        {/* ========================================== */}
-        {/* DESKTOP FLOATING ACTION BUTTON (FAB)      */}
-        {/* ========================================== */}
-        <div className="hidden md:block fixed bottom-10 right-10 z-[300]">
-          <div className="relative">
-            {/* Animated Menu */}
-            <div className={`absolute bottom-20 right-0 space-y-4 transition-all duration-300 origin-bottom ${isAddMenuOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}`}>
-              {mainUploadOptions.map((option, index) => (
-                <button
-                  key={option.label}
-                  className="flex items-center gap-4 group"
-                  style={{ transitionDelay: `${index * 50}ms` }}
-                >
-                  <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">
-                    {option.label}
-                  </span>
-                  <div 
-                    className="h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-white"
-                    style={{ backgroundColor: option.color }}
-                  >
-                    <option.icon className="h-6 w-6" />
-                  </div>
-                </button>
-              ))}
-              
-              {/* Others Button */}
-              <button
-                onClick={() => {
-                  setIsOthersModalOpen(true);
-                  setIsAddMenuOpen(false);
-                }}
-                className="flex items-center gap-4 group"
-                style={{ transitionDelay: `150ms` }}
-              >
-                <span className="bg-[#02013D] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl border border-white/10">
-                  More Options
-                </span>
-                <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-white text-[#02013D] shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-[#02013D]">
-                  <LayoutGrid className="h-6 w-6" />
-                </div>
-              </button>
-            </div>
-
-            {/* Main FAB Button */}
-            <button 
-              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-              className={`h-20 w-20 rounded-3xl flex items-center justify-center shadow-2xl shadow-[#2585C7]/40 border-4 border-white transition-all duration-500 transform ${isAddMenuOpen ? 'bg-[#02013D] rotate-[135deg]' : 'bg-[#2585C7] hover:scale-105 active:scale-95'}`}
-            >
-              {isAddMenuOpen ? <Plus className="h-10 w-10 text-[#61E3F0]" /> : <Plus className="h-10 w-10 text-white" />}
-            </button>
-          </div>
-        </div>
-
-        {/* ========================================== */}
-        {/* OTHERS UPLOAD MODAL (Bouncy)              */}
-        {/* ========================================== */}
-        {isOthersModalOpen && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
-            <div 
-              className="absolute inset-0 bg-[#02013D]/80 backdrop-blur-md animate-in fade-in duration-300"
-              onClick={() => setIsOthersModalOpen(false)}
-            />
-            <div className="bg-[#F7F7F7] w-full max-w-2xl rounded-[3rem] border-8 border-[#02013D] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in spin-in-1 duration-500 hover:scale-[1.01] transition-transform">
-              <div className="p-10 md:p-12 space-y-10">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-3xl font-black tracking-tighter uppercase italic">Import Library</h3>
-                    <p className="text-xs font-bold text-[#02013D]/40 uppercase tracking-widest">Select your source to begin learning</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsOthersModalOpen(false)}
-                    className="bg-[#02013D] text-white p-3 rounded-2xl hover:bg-[#2585C7] transition-colors active:scale-90"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {allUploadOptions.map((option) => (
-                    <button
-                      key={option.label}
-                      className="bg-white p-6 rounded-[2rem] border-2 border-[#EFEFEF] hover:border-[#2585C7] hover:shadow-2xl hover:shadow-[#2585C7]/10 transition-all group text-left space-y-4"
-                    >
-                      <div 
-                        className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform"
-                        style={{ backgroundColor: option.color }}
-                      >
-                        <option.icon className="h-5 w-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-black uppercase tracking-tighter group-hover:text-[#2585C7] transition-colors">{option.label}</div>
-                        <p className="text-[9px] font-bold text-[#02013D]/40 uppercase leading-none">{option.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="pt-6 border-t border-[#EFEFEF] flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-[#02013D]/20">
-                   <span>JackPal Secure Import</span>
-                   <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      <span>Military-grade Encryption</span>
-                   </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
-      </main>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto studio-scroll">
+          {docsLoading ? (
+            <div className="px-4 pt-4 space-y-1">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-3 px-3 py-3 rounded-xl animate-pulse">
+                  <div className="w-9 h-9 rounded-lg flex-shrink-0" style={{ background: "var(--surface-2)" }} />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 rounded-lg w-44" style={{ background: "var(--surface-2)" }} />
+                    <div className="h-2 rounded-lg w-20" style={{ background: "var(--surface-2)" }} />
+                  </div>
+                  <div className="h-7 w-16 rounded-lg" style={{ background: "var(--surface-2)" }} />
+                  <div className="h-7 w-20 rounded-lg" style={{ background: "var(--surface-2)" }} />
+                </div>
+              ))}
+            </div>
+          ) : isEmpty ? (
+            /* â”€â”€ Empty state â”€â”€ */
+            <div className="flex flex-col items-center justify-center h-full px-6" style={{ gap: "28px" }}>
+              {/* Upload zone */}
+              <label
+                className="w-full cursor-pointer transition-all"
+                style={{ maxWidth: 400 }}
+                onDragOver={e => {
+                  e.preventDefault();
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "border-color:var(--blue);background:var(--blue-dim)");
+                }}
+                onDragLeave={e => {
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
+                }}
+                onDrop={async e => {
+                  e.preventDefault();
+                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
+                  const file = e.dataTransfer.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  setUploadError("");
+                  try {
+                    await uploadDocument(file);
+                    await fetchDocuments();
+                  } catch (err: unknown) {
+                    setUploadError(err instanceof Error ? err.message : "Upload failed.");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              >
+                <div
+                  className="upload-zone flex flex-col items-center gap-5 rounded-2xl py-12 px-8 transition-all"
+                  style={{ border: "1.5px dashed var(--border)", background: "var(--surface)" }}
+                >
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                  >
+                    {uploading
+                      ? <Loader2 size={22} className="animate-spin" style={{ color: "var(--blue)" }} />
+                      : <CloudUpload size={22} strokeWidth={1.5} style={{ color: "var(--blue)" }} />}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[14px] font-semibold mb-1" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>
+                      {uploading ? "Uploading…" : "Drop your notes here"}
+                    </div>
+                    <div className="text-[11px]" style={{ color: "var(--text-3)" }}>PDF · DOCX · TXT · up to 10 MB</div>
+                  </div>
+                  <div
+                    className="px-5 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest"
+                    style={{ background: "var(--blue)", color: "#fff" }}
+                  >
+                    Browse files
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </label>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #EFEFEF;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #2585C7;
-        }
-      ` }} />
-    </div>
+              {/* What happens next */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-[11px] text-center" style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}>
+                  Becomes a podcast in ~30 s, hosted by
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: "var(--teal)", color: "var(--ink)" }}>E</div>
+                    <span className="text-[11px] font-medium" style={{ color: "var(--text-2)", fontFamily: "var(--font-syne)" }}>Ezinne</span>
+                  </div>
+                  <span className="text-[10px]" style={{ color: "var(--text-3)" }}>&amp;</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style={{ background: "var(--blue)" }}>A</div>
+                    <span className="text-[11px] font-medium" style={{ color: "var(--text-2)", fontFamily: "var(--font-syne)" }}>Abeo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* â”€â”€ Document list â”€â”€ */
+            <div className="px-3 pt-3 pb-24 space-y-0.5">
+              <div className="px-3 pb-2">
+                <span className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--text-3)" }}>
+                  {filteredDocuments.length} {filteredDocuments.length === 1 ? "document" : "documents"}
+                  {hasSearch && ` · "${searchQuery}"`}
+                </span>
+              </div>
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all"
+                  style={{ background: selectedDocId === doc.id ? "var(--surface-2)" : "transparent" }}
+                  onMouseEnter={e => { if (selectedDocId !== doc.id) e.currentTarget.style.background = "var(--surface)"; }}
+                  onMouseLeave={e => { if (selectedDocId !== doc.id) e.currentTarget.style.background = selectedDocId === doc.id ? "var(--surface-2)" : "transparent"; }}
+                  onClick={() => {
+                    setSelectedDocId(doc.id);
+                    if (chaptersDocId !== doc.id) {
+                      setChaptersDocId(doc.id);
+                      setChaptersLoading(true);
+                      getDocumentChapters(doc.id).then(res => setChapters(res.chapters || [])).catch(() => {}).finally(() => setChaptersLoading(false));
+                    }
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg"
+                    style={{ background: "var(--surface-2)" }}
+                  >
+                    {(playingDocId === doc.id || podcastPlayingDocId === doc.id) ? (
+                      <div className="w-5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${(currentDocId === doc.id || podcastPlayingDocId === doc.id) ? playerProgress : 100}%`,
+                            background: "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)",
+                            boxShadow: "0 0 10px rgba(97, 227, 240, 0.45)",
+                            transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <FileText size={14} strokeWidth={1.5} style={{ color: "var(--text-3)" }} />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>
+                      {doc.filename}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                        {doc.word_count?.toLocaleString()} words
+                      </span>
+                      {(doc.status === "generating" || doc.status === "streaming") && (
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+                          style={{ background: "var(--blue-dim)", color: "var(--blue)" }}
+                        >
+                          Generating {doc.ready_chunks}/{doc.total_chunks}
+                        </span>
+                      )}
+                      {doc.status === "audio_ready" && (
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+                          style={{ background: "var(--teal-dim)", color: "var(--teal)" }}
+                        >
+                          Ready
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {(() => {
+                      const isThisListenLoading = isAudioLoading && currentDocId === doc.id && !podcastPlayingDocId && !podcastGenerating;
+                      const isThisListenPlaying = playingDocId === doc.id;
+                      const listenBusy = isThisListenLoading || isThisListenPlaying;
+                      const isThisPodcastLoading = podcastGenerating === doc.id && !podcastPlayingDocId;
+                      const isThisPodcastPlaying = podcastPlayingDocId === doc.id;
+                      const podcastBusy = isThisPodcastLoading || isThisPodcastPlaying;
+                      return (
+                        <>
+                          <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            disabled={isThisListenLoading || podcastBusy}
+                            onClick={e => { e.stopPropagation(); handleGenerateAudio(doc); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ background: listenBusy ? "var(--teal)" : "var(--blue)" }}
+                          >
+                            {isThisListenLoading ? <Loader2 size={11} className="animate-spin" /> : isThisListenPlaying ? <Pause size={11} strokeWidth={2} /> : <Play size={11} strokeWidth={2} />}
+                            {isThisListenLoading ? "Loading" : isThisListenPlaying ? "Playing" : "Listen"}
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.93 }}
+                            disabled={isThisPodcastLoading || (listenBusy && !isThisPodcastPlaying)}
+                            onClick={e => { e.stopPropagation(); handlePodcast(doc); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={ podcastBusy ? { background: "var(--teal)", color: "var(--ink)", border: "1px solid var(--teal)" } : { border: "1px solid var(--teal)", color: "var(--teal)" } }
+                          >
+                            {isThisPodcastLoading ? <Loader2 size={11} className="animate-spin" /> : isThisPodcastPlaying ? <Pause size={11} strokeWidth={2} /> : <Mic2 size={11} strokeWidth={2} />}
+                            {isThisPodcastLoading ? "Loading" : isThisPodcastPlaying ? "Playing" : "Podcast"}
+                          </motion.button>
+                        </>
+                      );
+                    })()}
+                    <motion.button
+                      whileTap={{ scale: 0.93 }}
+                      onClick={e => { e.stopPropagation(); if (confirm("Delete this document?")) handleDeleteDoc(doc.id); }}
+                      className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      style={{ color: "var(--text-3)" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--text-3)")}
+                    >
+                      <Trash2 size={13} strokeWidth={1.75} />
+                    </motion.button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const SyncReader = () => (
+    <motion.div key="reader" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <button onClick={() => { setCurrentDocId(null); setPlayingDocId(null); setPodcastPlayingDocId(null); }} className="p-1 rounded-lg transition-colors" style={{ color: "var(--text-3)" }}>
+          <ChevronRight size={16} strokeWidth={1.75} className="rotate-180" />
+        </button>
+        <span className="text-[12px] font-bold uppercase tracking-widest truncate" style={{ color: "var(--text-2)" }}>{currentTitle}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto studio-scroll px-8 py-10" style={{ background: "#15130F" }}>
+        <div className="max-w-[68ch] mx-auto space-y-5">
+          {(visibleTextChunks.length ? visibleTextChunks : textChunks.map((chunk, index) => ({ chunk, index }))).map(({ chunk, index }) => (
+            <div key={index} onClick={() => { if (currentDocId) handlePlayChunks(currentDocId, index, currentTitle); }} className="rounded-lg px-4 py-2 cursor-pointer transition-all duration-200" style={{ fontFamily: "var(--font-display), Georgia, serif", fontSize: "16px", lineHeight: "1.85", ...(index === activeChunk ? { background: "var(--blue-dim)", borderLeft: "2px solid var(--blue)", color: "#F5F1EA" } : index < activeChunk ? { color: "#5A5875", opacity: 0.7 } : { color: "#F5F1EA" }) }}>{chunk}</div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
   );
-}
 
-// Mic2 Proxy Icon
-function Mic2({ className }: { className?: string }) {
+  const PodcastTheater = () => (
+    <motion.div key="theater" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0 w-full" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <button
+          onClick={() => { stopPodcast(); stopAudio(); }}
+          className="p-1 rounded-lg transition-colors"
+          style={{ color: "var(--text-3)" }}
+          title={podcastGenerating && !podcastPlayingDocId ? "Cancel" : "Back to library"}
+        >
+          <ChevronRight size={16} strokeWidth={1.75} className="rotate-180" />
+        </button>
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--teal)", fontFamily: "var(--font-syne)" }}>
+          {podcastGenerating && !podcastPlayingDocId ? "Generating podcast" : "Podcast"}
+        </span>
+        <span className="text-[12px] truncate flex-1" style={{ color: "var(--text-2)" }}>{currentTitle}</span>
+        {podcastGenerating && !podcastPlayingDocId && (
+          <button
+            onClick={() => { stopPodcast(); stopAudio(); }}
+            className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-colors"
+            style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+      <div className="flex-1 flex flex-col items-center overflow-y-auto studio-scroll w-full">
+      {podcastGenerating && !podcastPlayingDocId && (
+        <div className="w-full max-w-lg mx-auto mt-10 px-4">
+          <FadeUp>
+            <div className="rounded-2xl p-8 flex flex-col items-center gap-6" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
+              <div className="w-full max-w-xs">
+                <div className="relative h-3 rounded-full overflow-hidden" style={{ background: "var(--surface-3)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: "78%",
+                      background: "linear-gradient(90deg, var(--teal) 0%, #61E3F0 100%)",
+                      boxShadow: "0 0 18px rgba(97, 227, 240, 0.45)",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.28) 48%, transparent 68%)",
+                      animation: "shimmer 2.2s linear infinite",
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2" style={{ color: "var(--teal)", fontFamily: "var(--font-syne)" }}>
+                  JackPal Studio
+                </div>
+                <div className="text-[18px] font-bold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>
+                  {podcastLoadingMsg || "Preparing episode..."}
+                </div>
+                <div className="text-[11px] mt-1" style={{ color: "var(--text-3)" }}>
+                  Ezinne &amp; Abeo · plays automatically
+                </div>
+              </div>
+            </div>
+          </FadeUp>
+        </div>
+      )}
+      {podcastScript.length > 0 && (
+        <SlideIn className="w-full max-w-xl mx-auto flex-1 overflow-y-auto studio-scroll px-4 py-6 space-y-1">
+          <div ref={transcriptRef}>
+            {(visiblePodcastLines.length ? visiblePodcastLines : podcastScript.map((line, index) => ({ line, index }))).map(({ line, index }) => (
+              <div key={index} className="flex gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors" style={index === podcastChunkIndex ? { background: "var(--teal-dim)", borderLeft: "2px solid var(--teal)" } : { borderLeft: "2px solid transparent" }} onClick={() => jumpToPodcastLine(index)}>
+                <div className="w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-[9px] font-bold mt-0.5" style={line.speaker === "Ezinne" ? { background: "var(--teal)", color: "var(--ink)" } : { background: "var(--blue)", color: "white" }}>{line.speaker?.[0] ?? "E"}</div>
+                <div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-3)" }}>{line.speaker}</div>
+                  <div className="text-[13px] leading-relaxed" style={{ color: index === podcastChunkIndex ? "var(--text-1)" : "var(--text-2)" }}>{line.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SlideIn>
+      )}
+      </div>
+    </motion.div>
+  );
+
+  const RightPanel = () => (
+    <AnimatePresence>
+      {selectedDocId && selectedDoc && (
+        <>
+          {isMobileLayout && (
+            <motion.button
+              key="panel-backdrop"
+              type="button"
+              aria-label="Close document panel"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[55] bg-black/45 md:hidden"
+              onClick={() => setSelectedDocId(null)}
+            />
+          )}
+          <motion.aside
+            key="panel"
+            initial={
+              isMobileLayout
+                ? { x: "100%", opacity: 1 }
+                : { width: 0, opacity: 0 }
+            }
+            animate={
+              isMobileLayout
+                ? { x: 0, opacity: 1 }
+                : { width: 304, opacity: 1 }
+            }
+            exit={isMobileLayout ? { x: "100%" } : { width: 0, opacity: 0 }}
+            transition={ease.spring}
+            className={
+              isMobileLayout
+                ? "fixed top-0 right-0 bottom-0 z-[60] flex w-full max-w-[304px] flex-shrink-0 flex-col overflow-hidden shadow-2xl md:hidden"
+                : "relative hidden h-full flex-shrink-0 overflow-hidden md:flex"
+            }
+            style={{ borderLeft: "1px solid var(--border)", background: "var(--surface)" }}
+          >
+            <div className="h-full min-h-0 overflow-y-auto studio-scroll p-5 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] font-semibold truncate" style={{ color: "var(--text-2)" }}>{selectedDoc.filename}</div>
+              <button className="p-1 rounded" style={{ color: "var(--text-3)" }} onClick={() => setSelectedDocId(null)}><X size={14} /></button>
+            </div>
+            <div className="flex gap-2">
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={() => { if (selectedDoc) { setShowTranscript(true); handleGenerateAudio(selectedDoc); } }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white"
+                style={{ background: "var(--blue)" }}
+              >
+                <Play size={11} strokeWidth={2} /> Listen
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={() => { if (selectedDoc) handlePodcast(selectedDoc); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                style={{ border: "1px solid var(--teal)", color: "var(--teal)" }}
+              >
+                <Mic2 size={11} strokeWidth={2} /> Podcast
+              </motion.button>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>AI Study Summary</span>
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleSummarize(selectedDoc)} disabled={summaryLoadingId === selectedDocId} className="p-1.5 rounded-lg transition-colors" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
+                  {summaryLoadingId === selectedDocId ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} strokeWidth={1.75} />}
+                </motion.button>
+              </div>
+              <AnimatePresence>
+                {summaries[selectedDocId] && <FadeUp><pre className="text-[11px] leading-relaxed whitespace-pre-wrap rounded-xl p-3" style={{ fontFamily: "var(--font-syne), monospace", background: "var(--surface-2)", color: "var(--text-2)" }}>{summaries[selectedDocId]}</pre></FadeUp>}
+              </AnimatePresence>
+            </div>
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-3)" }}>Chapters</div>
+              {chapters.length > 0 ? (
+                <div className="space-y-0.5">
+                  {chapters.map((ch, i) => (
+                    <div key={i} className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer transition-colors" style={{ color: "var(--text-2)" }} onClick={() => { setShowTranscript(true); handleJumpToChapter(selectedDoc.id, i); }}>
+                      <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full text-[9px] font-bold" style={{ background: "var(--surface-3)", color: "var(--text-3)" }}>{i + 1}</span>
+                      <span className="text-[11px] truncate">{ch.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <button onClick={() => handleViewChapters(selectedDoc)} className="text-[10px] rounded-lg px-3 py-2" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>Load chapters</button>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-3" style={{ color: "var(--text-3)" }}>
+                <Search size={10} strokeWidth={1.75} />
+                <span className="text-[9px] font-bold uppercase tracking-widest">Ask JackPal</span>
+              </div>
+              <form onSubmit={(e) => handleAsk(selectedDocId, e)} className="flex gap-2">
+                <input value={qaQuestion[selectedDocId] ?? ""} onChange={(e) => setQaQuestion((p) => ({ ...p, [selectedDocId]: e.target.value }))} placeholder="Ask anything about this doc..." className="flex-1 rounded-xl px-3 py-2 text-[11px] outline-none transition-colors" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                <motion.button whileTap={{ scale: 0.9 }} type="submit" disabled={qaLoading === selectedDocId || !(qaQuestion[selectedDocId] ?? "").trim()} className="px-3 py-2 rounded-xl text-white text-[10px] font-bold transition-all" style={{ background: "var(--blue)" }}>
+                  {qaLoading === selectedDocId ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} strokeWidth={2} />}
+                </motion.button>
+              </form>
+            </div>
+          </div>
+        </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  );
+
+  const PlayerBar = () => {
+    if (!currentDocId && !podcastPlayingDocId && !isAudioLoading) return null;
+    const isPodcast = !!podcastPlayingDocId;
+    const isPlaying = isPodcast ? !!podcastPlayingDocId : !!playingDocId;
+    const accent = isPodcast ? "var(--teal)" : "var(--blue)";
+    const accentInk = isPodcast ? "var(--ink)" : "white";
+    const togglePlay = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+    };
+    return (
+      <div
+        className="fixed bottom-0 z-50 flex flex-col"
+        style={{
+          left: isMobileLayout ? 0 : 96,
+          right: 0,
+          paddingBottom: "max(0px, env(safe-area-inset-bottom))",
+          background: "linear-gradient(180deg, var(--surface) 0%, var(--ink) 100%)",
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        {/* Progress bar — full-width, top edge */}
+        <div
+          className="relative h-1.5 cursor-pointer group"
+          style={{ background: "var(--surface-3)" }}
+          onClick={e => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width;
+            seekWithinCurrent(pct * 100);
+          }}
+        >
+          <div
+            className="h-full"
+            style={{
+              width: `${playerProgress}%`,
+              background: accent,
+              transition: "width 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+            }}
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ left: `calc(${playerProgress}% - 6px)`, background: accent, boxShadow: `0 0 0 4px ${accent}33` }}
+          />
+        </div>
+
+        {/* Main controls row */}
+        <div className="flex items-center gap-3 sm:gap-5 px-3 sm:px-6 py-2.5 sm:py-3">
+          {/* Title + speaker */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0 w-32 sm:w-56">
+            <div
+              className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold"
+              style={{ background: accent, color: accentInk }}
+            >
+              {isPodcast ? (currentSpeaker?.[0] ?? "E") : <AudioLines size={14} strokeWidth={1.75} />}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[12px] font-semibold truncate" style={{ color: "var(--text-1)" }}>{currentTitle}</div>
+              <div className="text-[10px] truncate" style={{ color: "var(--text-3)" }}>
+                {isPodcast ? (currentSpeaker ? `${currentSpeaker} · podcast` : "Podcast") : "Listening"}
+              </div>
+            </div>
+          </div>
+
+          {/* Center transport controls */}
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => skipBy(-10)}
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: "var(--text-2)" }}
+              title="Skip back 10s (←)"
+            >
+              <SkipBack size={18} strokeWidth={1.75} />
+              <span className="text-[10px] font-bold tabular-nums max-sm:hidden">10</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.86 }}
+              onClick={togglePlay}
+              className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full transition-shadow"
+              style={{
+                background: accent,
+                color: accentInk,
+                boxShadow: `0 4px 24px ${isPodcast ? "rgba(42,154,120,0.4)" : "rgba(44,123,229,0.4)"}`,
+              }}
+              title="Play / pause (Space)"
+            >
+              {isAudioLoading ? <Loader2 size={22} className="animate-spin" /> : isPlaying ? <Pause size={22} strokeWidth={2} /> : <Play size={22} strokeWidth={2} className="ml-0.5" />}
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => skipBy(10)}
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: "var(--text-2)" }}
+              title="Skip forward 10s (→)"
+            >
+              <span className="text-[10px] font-bold tabular-nums max-sm:hidden">10</span>
+              <SkipForward size={18} strokeWidth={1.75} />
+            </motion.button>
+          </div>
+
+          {/* Time */}
+          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4 min-w-0">
+            <div className="text-[11px] tabular-nums flex-shrink-0 max-sm:hidden" style={{ color: "var(--text-3)" }}>
+              <span style={{ color: "var(--text-1)" }}>{formatTime(currentTime)}</span>
+              <span className="mx-1.5">/</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+
+            {/* Speed picker — pills */}
+            <div className="flex items-center rounded-full overflow-hidden flex-shrink-0" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              {SPEED_OPTIONS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setPlaybackRate(s); if (audioRef.current) audioRef.current.playbackRate = s; }}
+                  className="text-[10px] font-bold px-2 sm:px-2.5 py-1 transition-colors tabular-nums"
+                  style={{
+                    background: playbackRate === s ? accent : "transparent",
+                    color: playbackRate === s ? accentInk : "var(--text-3)",
+                  }}
+                  title={`${s}x speed`}
+                >
+                  {s}×
+                </button>
+              ))}
+            </div>
+
+            {/* Download — only for Listen */}
+            {currentDocId && !isPodcast && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleDownload(currentDocId)}
+                className="flex-shrink-0 transition-colors max-sm:hidden"
+                style={{ color: "var(--text-3)" }}
+                title="Download audio"
+              >
+                <Download size={16} strokeWidth={1.75} />
+              </motion.button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="m12 8-9.04 9.06a2.82 2.82 0 1 0 3.98 3.98L16 12" />
-      <circle cx="17" cy="7" r="5" />
-    </svg>
+    <div className="studio flex h-screen max-h-[100dvh] min-h-0 overflow-hidden" style={{ background: "var(--ink)", color: "var(--text-1)" }}>
+      <audio ref={audioRef} />
+      {LeftRail()}
+      <main
+        className="flex-1 flex flex-col min-w-0 overflow-hidden"
+        style={{
+          paddingBottom:
+            currentDocId || podcastPlayingDocId || isAudioLoading
+              ? isMobileLayout
+                ? `max(72px, calc(56px + env(safe-area-inset-bottom, 0px)))`
+                : 64
+              : 0,
+        }}
+      >
+        {activeTab === "home" && !currentDocId && !podcastPlayingDocId && !podcastGenerating && LibraryView()}
+        {currentDocId && !podcastPlayingDocId && !podcastGenerating && SyncReader()}
+        {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
+      </main>
+      {RightPanel()}
+      {PlayerBar()}
+    </div>
   );
 }
