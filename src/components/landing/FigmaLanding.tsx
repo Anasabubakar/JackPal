@@ -546,7 +546,10 @@ function SocialProof() {
     setIsDragging(false);
   };
 
-  const containerWidth = containerRef.current?.offsetWidth ?? 360;
+  // `??` only falls back on null/undefined — when the carousel is hidden
+  // on desktop, offsetWidth is 0 and we'd divide by zero, producing NaN
+  // for every transform/opacity downstream. Use `||` so 0 also falls back.
+  const containerWidth = containerRef.current?.offsetWidth || 360;
   const dragPercent = (dragDelta / containerWidth) * 100;
   const trackOffset = -active * 100 + dragPercent;
   const cardTransition = isDragging
