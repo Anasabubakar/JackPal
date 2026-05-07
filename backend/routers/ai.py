@@ -263,10 +263,30 @@ async def generate_podcast(
             topic_text = body.topic if body.topic and body.topic.strip() else None
             force_regen = regenerate or bool(topic_text) or chapter is not None
             existing_script = doc.data.get("podcast_script") or []
+            existing_status = doc.data.get("podcast_status")
 
-            if not force_regen and existing_script and doc.data.get("podcast_status") in ("ready", "generating"):
-                print(f"[Podcast] Using cached script for {doc_id}")
+            # Verify audio chunks actually exist in storage before assuming
+            # cached-and-done. Prior failed attempts can leave podcast_status
+            # = "ready" with a saved script but zero chunks — without this
+            # check the doc would be stuck forever.
+            existing_chunks_count = 0
+            if existing_script and existing_status in ("ready", "generating"):
+                try:
+                    existing_chunks_count = len(list_audio_chunks_supabase(user_id, doc_id, "podcast"))
+                except Exception as e:
+                    print(f"[Podcast] Chunk count check failed: {e}")
+
+            if (
+                not force_regen
+                and existing_script
+                and existing_status == "ready"
+                and existing_chunks_count >= len(existing_script)
+            ):
+                print(f"[Podcast] Cached + complete ({existing_chunks_count} chunks) — skipping regen for {doc_id}")
                 return
+
+            if existing_script and existing_status in ("ready", "generating") and existing_chunks_count == 0:
+                print(f"[Podcast] Stale cache detected (status={existing_status}, script={len(existing_script)} lines, chunks=0) — regenerating {doc_id}")
 
             full_text = doc.data.get("extracted_text") or ""
             if not full_text.strip():
@@ -506,7 +526,13 @@ async def get_podcast_chunks(
             payload = await _build_podcast_chunks_payload(doc_id, user_id, base, token)
             status = payload.get("status") or "none"
             ready = payload.get("ready_lines", 0)
-            if ready > since_ready or status in ("ready", "failed", "error"):
+            # Exit on real progress (more chunks landed) OR on terminal
+            # state. status="ready" with 0 chunks is NOT terminal — it
+            # means a prior failed attempt left stale state. Don't
+            # short-circuit there or the client busy-loops on emptiness.
+            if ready > since_ready or status in ("failed", "error"):
+                return payload
+            if status == "ready" and ready > 0:
                 return payload
             if asyncio.get_event_loop().time() >= deadline:
                 return payload
