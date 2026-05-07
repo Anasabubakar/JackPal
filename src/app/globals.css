@@ -2367,6 +2367,11 @@ button.jp-button {
     z-index: 2;
   }
 
+  /* Push the now-playing card lower on mobile, well below the CTAs */
+  .jp-hero-demo {
+    margin-top: 56px;
+  }
+
   .jp-hero {
     padding-top: 60px;
     padding-bottom: 112px;
