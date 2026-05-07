@@ -354,7 +354,7 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: linear-gradient(180deg, #002e80 0%, #001046 100%);
+  background: linear-gradient(180deg, #002676 0%, #000a3c 100%);
   overflow: hidden;
 }
 
@@ -1458,7 +1458,7 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #002e80 0%, #001046 100%);
+  background: linear-gradient(180deg, #002676 0%, #000a3c 100%);
   overflow: hidden;
 }
 
@@ -2284,7 +2284,7 @@ button.jp-button {
   }
 
   .jp-hero-grid {
-    gap: 54px;
+    gap: 72px;
   }
 
   .jp-hero-copy {
@@ -2419,7 +2419,7 @@ button.jp-button {
   }
 
   .jp-hero {
-    padding-top: 96px;
+    padding-top: 60px;
     padding-bottom: 112px;
   }
 
