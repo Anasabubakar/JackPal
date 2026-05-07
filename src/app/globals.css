@@ -354,7 +354,7 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: linear-gradient(180deg, #002080 0%, #000d3e 100%);
+  background: linear-gradient(180deg, #00378c 0%, #00154d 100%);
   overflow: hidden;
 }
 
@@ -369,20 +369,23 @@ h1, h2, h3, h4 {
   pointer-events: none;
 }
 
+/* The hero/dark background art is a light line drawing of a workstation.
+   `multiply` would wipe it out on a dark blue field (white × dark = dark),
+   so we use `screen` to let the bright strokes glow through the gradient. */
 .jp-hero-bg {
-  opacity: 0.22;
-  mix-blend-mode: multiply;
-  transform: scale(1.14) translateY(-32%);
-  transform-origin: top left;
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  transform: scale(1.04);
+  transform-origin: center center;
+  object-position: center;
 }
 
 @media (max-width: 640px) {
   .jp-hero-bg {
-    /* Stronger opacity so the sketch reads through the dark gradient,
-       and reframe the image around its center so the workstation scene
-       sits behind the copy instead of being pushed off the top. */
-    opacity: 0.32;
-    transform: scale(1.25);
+    /* On mobile the copy stretches across the full width, so dial the
+       sketch back a touch (still using `screen` for visibility). */
+    opacity: 0.42;
+    transform: scale(1.15);
     transform-origin: center center;
     object-position: center center;
   }
@@ -1455,13 +1458,13 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #002080 0%, #000d3e 100%);
+  background: linear-gradient(180deg, #00378c 0%, #00154d 100%);
   overflow: hidden;
 }
 
 .jp-dark-bg {
-  opacity: 0.47;
-  mix-blend-mode: multiply;
+  opacity: 0.5;
+  mix-blend-mode: screen;
 }
 
 .jp-centered {
