@@ -333,16 +333,29 @@ h1, h2, h3, h4 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  min-height: 40px;
   padding: 0 24px;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   background: #0f8ce9;
   color: #f8f8fa;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
+  box-shadow: 0 4px 16px rgba(15, 140, 233, 0.38), 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease;
+}
+
+.jp-nav-actions a:last-child:hover,
+.jp-nav-actions button.jp-nav-cta:hover {
+  background: #1a9af5;
+  box-shadow: 0 6px 20px rgba(15, 140, 233, 0.45), 0 2px 8px rgba(0, 0, 0, 0.14);
+}
+
+.jp-nav-actions a:last-child:active,
+.jp-nav-actions button.jp-nav-cta:active {
+  transform: scale(0.98);
 }
 
 .jp-menu,
@@ -438,11 +451,7 @@ h1, h2, h3, h4 {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Glassmorphism buttons
-   - rgba background + heavy backdrop-blur(17px)
-   - 1px white outline + layered inset shadows for inner glow
-   - ::before = horizontal sheen across the top
-   - ::after  = vertical sheen down the left edge
+   Landing CTAs — solid primary + outline secondary (Figma-style)
    ────────────────────────────────────────────────────────────── */
 .jp-button {
   position: relative;
@@ -453,59 +462,14 @@ h1, h2, h3, h4 {
   min-height: 47px;
   padding: 0 30px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid transparent;
   font-size: 18px;
   font-weight: 500;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
-  overflow: hidden;
-  isolation: isolate;
-  backdrop-filter: blur(17px);
-  -webkit-backdrop-filter: blur(17px);
-  transition: background-color 0.2s ease, border-color 0.2s ease,
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
     box-shadow 0.2s ease, transform 0.18s ease;
-}
-
-/* Edge highlights (pseudo-elements live behind the label/triangle) */
-.jp-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.8),
-    transparent
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-.jp-button::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.8),
-    transparent,
-    rgba(255, 255, 255, 0.3)
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Keep label and triangle above the edge highlights */
-.jp-button > * {
-  position: relative;
-  z-index: 1;
 }
 
 button.jp-button {
@@ -520,49 +484,53 @@ button.jp-button {
 
 .jp-button:active {
   transform: translateY(0);
-  filter: brightness(0.96);
 }
 
-/* Primary — blue-tinted glass */
+/* Primary — solid brand blue + soft blue glow */
 .jp-button-primary {
   color: #fff;
-  background: rgba(20, 100, 230, 0.35);
+  background: #0f8ce9;
+  border-color: transparent;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 20px 10px rgba(255, 255, 255, 0.7);
+    0 4px 18px rgba(15, 140, 233, 0.42),
+    0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .jp-button-primary:hover {
-  background: rgba(20, 100, 230, 0.44);
+  background: #1a9af5;
+  box-shadow:
+    0 6px 22px rgba(15, 140, 233, 0.48),
+    0 2px 10px rgba(0, 0, 0, 0.14);
 }
 
-/* Ghost — clear glass over the dark hero */
+.jp-button-primary:active {
+  background: #0d7fd4;
+}
+
+/* Ghost — transparent + thin light rim */
 .jp-button-ghost {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 0 20px 10px rgba(255, 255, 255, 0.18);
+  color: #fff;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: none;
 }
 
 .jp-button-ghost:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.75);
 }
 
-/* Dark — used in the referral band */
+/* Dark — outline on light sections (referral band) */
 .jp-button-dark {
-  color: #fff;
-  background: rgba(15, 20, 35, 0.5);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
-    inset 0 0 20px 10px rgba(40, 60, 100, 0.35);
+  color: #191a15;
+  background: transparent;
+  border-color: rgba(25, 26, 21, 0.28);
+  box-shadow: none;
+}
+
+.jp-button-dark:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(25, 26, 21, 0.45);
 }
 
 /* Triangle indicator — rendered as a child element when triangle prop is set */
@@ -1109,18 +1077,6 @@ button.jp-button {
   width: 105px;
   height: auto;
   filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.35));
-}
-
-.jp-launch-note {
-  position: relative;
-  z-index: 1;
-  width: min(410px, calc(100% - max(48px, env(safe-area-inset-left) + env(safe-area-inset-right))));
-  margin: 44px max(24px, env(safe-area-inset-right)) 0 auto;
-  padding-right: env(safe-area-inset-right);
-  color: #1d397b;
-  font-size: 11px;
-  line-height: 30px;
-  text-align: right;
 }
 
 .jp-pill {
@@ -1828,8 +1784,7 @@ button.jp-button {
   width: 100%;
   height: 60px;
   margin-top: auto;
-  border: 0.8px solid #2876f4;
-  border-radius: 40px;
+  border-radius: 999px;
   color: #fff;
   font-size: 18px;
   font-weight: 600;
@@ -1837,12 +1792,33 @@ button.jp-button {
   font-family: inherit;
   cursor: pointer;
   background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.45);
   box-sizing: border-box;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.18s ease;
+}
+
+.jp-price-card a:hover,
+.jp-price-card button.jp-price-card-cta:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.65);
 }
 
 .jp-price-card.featured a,
 .jp-price-card.featured button.jp-price-card-cta {
-  background: var(--jp-blue-2);
+  background: #0f8ce9;
+  border-color: transparent;
+  box-shadow:
+    0 4px 18px rgba(15, 140, 233, 0.42),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.jp-price-card.featured a:hover,
+.jp-price-card.featured button.jp-price-card-cta:hover {
+  background: #1a9af5;
+  box-shadow:
+    0 6px 22px rgba(15, 140, 233, 0.48),
+    0 2px 10px rgba(0, 0, 0, 0.14);
 }
 
 .jp-ribbon {
@@ -2067,7 +2043,7 @@ button.jp-button {
   border-radius: 999px;
 }
 
-/* FinalCta inherits the global glassmorphism — no per-section override */
+/* FinalCta uses the same .jp-button primary / ghost treatment */
 
 .jp-final-cta-arrow {
   flex-shrink: 0;
@@ -2256,15 +2232,6 @@ button.jp-button {
     overflow: visible;
   }
 
-  .jp-launch-note {
-    width: min(32rem, calc(100% - max(32px, env(safe-area-inset-left) + env(safe-area-inset-right))));
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 32px;
-    text-align: center;
-    padding-right: 0;
-  }
-
   .jp-hero-grid {
     gap: 72px;
   }
@@ -2406,8 +2373,9 @@ button.jp-button {
   }
 
   .jp-hero h1 {
-    font-size: clamp(32px, 8.6vw, 38px);
-    line-height: 1.08;
+    font-size: 32px;
+    line-height: 1.22;
+    font-weight: 700;
     word-break: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
@@ -2426,16 +2394,20 @@ button.jp-button {
   }
 
   .jp-kicker {
-    font-size: 16px;
+    font-size: 12px;
+    line-height: 30px;
+    font-weight: 500;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
 
   .jp-hero-copy > p {
-    font-size: clamp(16px, 4.4vw, 19px);
-    line-height: 1.55;
-    margin-top: 22px;
+    font-size: 14px;
+    line-height: 1.71;
+    font-weight: 400;
+    color: #bfe4ff;
+    margin-top: 36px;
     overflow-wrap: break-word;
     max-width: 100%;
   }
@@ -2556,10 +2528,38 @@ button.jp-button {
     width: auto;
     min-width: 0;
     font-size: 14px;
+    font-weight: 400;
     min-height: 46px;
     padding: 0 14px;
     white-space: nowrap;
     line-height: 1;
+    border-radius: 40px;
+  }
+
+  /* Mobile hero CTAs — translucent blue + dark-bordered ghost (Figma) */
+  .jp-hero .jp-button-primary {
+    background: rgba(0, 149, 255, 0.2);
+    border: none;
+    box-shadow: none;
+    color: #fff;
+  }
+
+  .jp-hero .jp-button-primary:hover,
+  .jp-hero .jp-button-primary:active {
+    background: rgba(0, 149, 255, 0.3);
+    box-shadow: none;
+  }
+
+  .jp-hero .jp-button-ghost {
+    background: rgba(0, 0, 0, 0.004);
+    border: 1px solid #162141;
+    color: #d9d9d9;
+    box-shadow: none;
+  }
+
+  .jp-hero .jp-button-ghost:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: #1f2c4f;
   }
 
   .jp-footer-grid {
@@ -2802,18 +2802,23 @@ button.jp-button {
   min-height: 52px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(90deg, #2d6bff, #1b6ef3);
+  background: #0f8ce9;
   color: #fff;
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(45, 107, 255, 0.4);
-  transition: filter 0.15s ease, transform 0.15s ease;
+  box-shadow:
+    0 4px 18px rgba(15, 140, 233, 0.42),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .jp-wl-submit:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: #1a9af5;
+  box-shadow:
+    0 6px 22px rgba(15, 140, 233, 0.48),
+    0 2px 10px rgba(0, 0, 0, 0.14);
 }
 
 .jp-wl-submit:disabled {
@@ -2898,13 +2903,20 @@ button.jp-button {
   width: 100%;
   height: 44px;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   background: #0f8ce9;
   color: #f8f8fa;
   font-size: 16px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  box-shadow: 0 4px 16px rgba(15, 140, 233, 0.38), 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jp-mobile-waitlist:hover {
+  background: #1a9af5;
+  box-shadow: 0 6px 20px rgba(15, 140, 233, 0.45), 0 2px 8px rgba(0, 0, 0, 0.14);
 }
 
 @media (max-width: 520px) {
