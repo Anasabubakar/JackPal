@@ -1633,7 +1633,7 @@ export default function Dashboard() {
   return (
     <div className="studio flex h-screen max-h-[100dvh] min-h-0 overflow-hidden" style={{ background: "var(--ink)", color: "var(--text-1)" }}>
       <audio ref={audioRef} />
-      <LeftRail />
+      {LeftRail()}
       <main
         className="flex-1 flex flex-col min-w-0 overflow-hidden"
         style={{
@@ -1646,13 +1646,13 @@ export default function Dashboard() {
         }}
       >
         <AnimatePresence mode="wait">
-          {activeTab === "home" && !currentDocId && !podcastPlayingDocId && <LibraryView key="library" />}
-          {currentDocId && !podcastPlayingDocId && <SyncReader key="reader" />}
-          {(podcastPlayingDocId || podcastGenerating) && <PodcastTheater key="podcast" />}
+          {activeTab === "home" && !currentDocId && !podcastPlayingDocId && LibraryView()}
+          {currentDocId && !podcastPlayingDocId && SyncReader()}
+          {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
         </AnimatePresence>
       </main>
-      <RightPanel />
-      <PlayerBar />
+      {RightPanel()}
+      {PlayerBar()}
     </div>
   );
 }
