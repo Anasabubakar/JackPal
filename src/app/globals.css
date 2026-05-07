@@ -354,7 +354,7 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: linear-gradient(180deg, #001c66 0%, #00052a 100%);
+  background: linear-gradient(180deg, #000e34 0%, #00061e 100%);
   overflow: hidden;
 }
 
@@ -1458,7 +1458,7 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #001c66 0%, #00052a 100%);
+  background: linear-gradient(180deg, #000e34 0%, #00061e 100%);
   overflow: hidden;
 }
 
