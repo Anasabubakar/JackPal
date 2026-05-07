@@ -13,6 +13,17 @@ import json
 import os
 import httpx
 
+from services.cache import (
+    content_hash,
+    get_json,
+    set_json,
+    key_script_by_hash,
+    key_listen_by_hash,
+    key_summary_by_hash,
+    TTL_SCRIPT_HASH,
+    TTL_SUMMARY_HASH,
+)
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
@@ -178,6 +189,13 @@ async def _gemini_stream_podcast(content: str, mode: str = "standard"):
 # ── Summarize ─────────────────────────────────────────────────────────────────
 
 async def summarize_document(text: str) -> str:
+    c_hash = content_hash(text)
+    cache_k = key_summary_by_hash(c_hash)
+    cached = get_json(cache_k)
+    if cached and isinstance(cached, str):
+        print(f"[AI] Summary cache HIT ({c_hash})")
+        return cached
+
     prompt_body = (
         "You are an expert academic tutor for Nigerian university students.\n"
         "Write a study guide for the document below using EXACTLY this format:\n\n"
@@ -202,12 +220,21 @@ async def summarize_document(text: str) -> str:
     )
     if USE_GEMINI:
         capped = " ".join(text.split()[:GEMINI_MAX_WORDS])
-        return await _gemini_complete(prompt_body.format(content=capped), max_tokens=600, timeout=30)
+        result = await _gemini_complete(prompt_body.format(content=capped), max_tokens=600, timeout=30)
+        if result:
+            set_json(cache_k, result, TTL_SUMMARY_HASH)
+        return result
     truncated = " ".join(text.split()[:10_000])
     prompt = prompt_body.format(content=truncated)
     if USE_GROQ:
-        return await _groq_complete(prompt, max_tokens=600, timeout=30)
-    return await _ollama_generate(prompt, timeout=120)
+        result = await _groq_complete(prompt, max_tokens=600, timeout=30)
+        if result:
+            set_json(cache_k, result, TTL_SUMMARY_HASH)
+        return result
+    result = await _ollama_generate(prompt, timeout=120)
+    if result:
+        set_json(cache_k, result, TTL_SUMMARY_HASH)
+    return result
 
 
 # ── Nigerian podcast prompt ───────────────────────────────────────────────────
@@ -632,15 +659,40 @@ async def stream_podcast_lines(
     Async generator — yields {speaker, voice, text} dicts one at a time.
 
     Routing:
+      Cache hit (content hash): yield cached lines instantly — no LLM call
       Short (≤4000 words):  Groq → Gemini on 429
       Long + Gemini key:    Gemini full-context (no map-reduce)
       Long + topic + RAG:   RAG retrieval → Groq → Gemini on 429
       Long, no Gemini:      map-reduce → Groq
       No API keys:          Ollama template
     """
-    if not USE_GROQ and not USE_GEMINI:
-        async for line in _ollama_stream_podcast(text):
+    # ── Cross-user content-hash cache ─────────────────────────────────────────
+    # Same doc text + same mode => identical Groq output. Skip the LLM call
+    # entirely and yield the cached script. Saves 8-15s per call and frees
+    # Groq quota for new content.
+    cache_text = topic if topic else text
+    c_hash = content_hash(f"{cache_text}|{mode}")
+    cache_k = key_script_by_hash(c_hash, mode)
+    cached_script = get_json(cache_k)
+    if cached_script and isinstance(cached_script, list) and cached_script:
+        print(f"[AI] Script cache HIT ({c_hash}) — {len(cached_script)} lines, skipping Groq")
+        for line in cached_script:
             yield line
+        return
+
+    # ── Cache miss: stream from LLM and collect for cache write ───────────────
+    collected: list[dict] = []
+
+    async def _yield_and_collect(gen):
+        async for line in gen:
+            collected.append(line)
+            yield line
+
+    if not USE_GROQ and not USE_GEMINI:
+        async for line in _yield_and_collect(_ollama_stream_podcast(text)):
+            yield line
+        if collected:
+            set_json(cache_k, collected, TTL_SCRIPT_HASH)
         return
 
     words = text.split()
@@ -654,15 +706,20 @@ async def stream_podcast_lines(
         content = " ".join(words)
         if USE_GROQ:
             try:
-                async for line in _groq_stream_podcast(content, mode=mode):
+                async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
                     yield line
+                if collected:
+                    set_json(cache_k, collected, TTL_SCRIPT_HASH)
                 return
             except httpx.HTTPStatusError as e:
                 if e.response.status_code != 429 or not USE_GEMINI:
                     raise
                 print("[AI] Groq 429 — falling back to Gemini for short doc")
-        async for line in _gemini_stream_podcast(content, mode=mode):
+                collected.clear()
+        async for line in _yield_and_collect(_gemini_stream_podcast(content, mode=mode)):
             yield line
+        if collected:
+            set_json(cache_k, collected, TTL_SCRIPT_HASH)
         return
 
     # ── Long doc: map-reduce + Groq (Gemini bypassed — rate-limited on free tier) ─
@@ -673,8 +730,10 @@ async def stream_podcast_lines(
             if rag_chunks:
                 content = " ".join(rag_chunks)
                 print(f"[AI] RAG retrieval: {len(rag_chunks)} chunks ({len(content.split())} words) for topic: '{topic[:60]}'")
-                async for line in _groq_stream_podcast(content, mode=mode):
+                async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
                     yield line
+                if collected:
+                    set_json(cache_k, collected, TTL_SCRIPT_HASH)
                 return
         import threading
         threading.Thread(
@@ -683,8 +742,10 @@ async def stream_podcast_lines(
         ).start()
 
     content = await _map_reduce_condense(text)
-    async for line in _groq_stream_podcast(content, mode=mode):
+    async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
         yield line
+    if collected:
+        set_json(cache_k, collected, TTL_SCRIPT_HASH)
 
 
 async def answer_question(context: str, question: str) -> str:

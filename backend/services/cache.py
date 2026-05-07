@@ -1,5 +1,7 @@
+import hashlib
 import json
 import os
+import re
 import threading
 from typing import Any
 
@@ -112,3 +114,47 @@ def key_user_stats(user_id: str) -> str:
 
 def key_tts_caps() -> str:
     return "tts_caps"
+
+
+# ── Content-hash caching (cross-user) ─────────────────────────────────────────
+# Same document text + same prompt => identical Groq output. Cache it once,
+# serve to every user who uploads that lecture. Massive win for Nigerian
+# students sharing syllabi.
+
+_WS_RE = re.compile(r"\s+")
+
+
+def content_hash(text: str) -> str:
+    """Stable fingerprint for a chunk of text. Whitespace-normalized so that
+    minor copy-paste differences (extra newlines, trailing spaces) still hit
+    the same cache entry."""
+    normalized = _WS_RE.sub(" ", (text or "").strip()).lower()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
+
+
+def key_script_by_hash(c_hash: str, mode: str, chapter: int | None = None) -> str:
+    """Cross-user podcast script cache key."""
+    ch = "all" if chapter is None else str(chapter)
+    return cache_key("script_h", mode, ch, c_hash)
+
+
+def key_listen_by_hash(c_hash: str) -> str:
+    """Cross-user listen-narration script cache key."""
+    return cache_key("listen_h", c_hash)
+
+
+def key_summary_by_hash(c_hash: str) -> str:
+    """Cross-user summary cache key."""
+    return cache_key("summary_h", c_hash)
+
+
+# Long TTLs — content hashes are stable, no reason to re-pay Groq cost
+TTL_SCRIPT_HASH = 60 * 60 * 24 * 30   # 30 days
+TTL_SUMMARY_HASH = 60 * 60 * 24 * 30  # 30 days
+TTL_PER_USER_SCRIPT = 60 * 60 * 24 * 7  # 7 days
+
+
+def is_enabled() -> bool:
+    """True only if a real Redis connection is alive. Lets routes log a
+    warning when REDIS_URL is missing in production."""
+    return _get_client() is not None
