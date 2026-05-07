@@ -2373,8 +2373,9 @@ button.jp-button {
   }
 
   .jp-hero h1 {
-    font-size: clamp(32px, 8.6vw, 38px);
-    line-height: 1.08;
+    font-size: 32px;
+    line-height: 1.22;
+    font-weight: 700;
     word-break: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
@@ -2393,16 +2394,20 @@ button.jp-button {
   }
 
   .jp-kicker {
-    font-size: 16px;
+    font-size: 12px;
+    line-height: 30px;
+    font-weight: 500;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
 
   .jp-hero-copy > p {
-    font-size: clamp(16px, 4.4vw, 19px);
-    line-height: 1.55;
-    margin-top: 22px;
+    font-size: 14px;
+    line-height: 1.71;
+    font-weight: 400;
+    color: #bfe4ff;
+    margin-top: 36px;
     overflow-wrap: break-word;
     max-width: 100%;
   }
@@ -2523,10 +2528,38 @@ button.jp-button {
     width: auto;
     min-width: 0;
     font-size: 14px;
+    font-weight: 400;
     min-height: 46px;
     padding: 0 14px;
     white-space: nowrap;
     line-height: 1;
+    border-radius: 40px;
+  }
+
+  /* Mobile hero CTAs — translucent blue + dark-bordered ghost (Figma) */
+  .jp-hero .jp-button-primary {
+    background: rgba(0, 149, 255, 0.2);
+    border: none;
+    box-shadow: none;
+    color: #fff;
+  }
+
+  .jp-hero .jp-button-primary:hover,
+  .jp-hero .jp-button-primary:active {
+    background: rgba(0, 149, 255, 0.3);
+    box-shadow: none;
+  }
+
+  .jp-hero .jp-button-ghost {
+    background: rgba(0, 0, 0, 0.004);
+    border: 1px solid #162141;
+    color: #d9d9d9;
+    box-shadow: none;
+  }
+
+  .jp-hero .jp-button-ghost:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: #1f2c4f;
   }
 
   .jp-footer-grid {
