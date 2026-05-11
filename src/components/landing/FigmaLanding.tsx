@@ -974,15 +974,16 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
   return (
     <section className="jp-final" id="final-cta">
       <div className="jp-final-scene" aria-hidden="true">
-        <img
-          className="jp-final-bg"
-          src="/images/Group%202042.png"
-          alt=""
-          width={1758}
-          height={1011}
-          decoding="async"
-          draggable={false}
-        />
+        <picture>
+          <source media="(max-width: 640px)" srcSet="/images/sessionmb.png" />
+          <img
+            className="jp-final-bg"
+            src="/images/sessionpc.png"
+            alt=""
+            decoding="async"
+            draggable={false}
+          />
+        </picture>
       </div>
       <div className="jp-final-shade" />
       <div className="jp-container jp-final-grid">
