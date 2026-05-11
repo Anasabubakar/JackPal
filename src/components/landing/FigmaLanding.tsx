@@ -454,7 +454,7 @@ function Hero({ openWaitlist }: { openWaitlist: () => void }) {
     <section className="jp-hero">
       <picture aria-hidden="true">
         <source media="(max-width: 640px)" srcSet="/images/mobilelanding.jpg" />
-        <img className="jp-hero-bg" src="/images/landing.jpg" alt="" />
+        <img className="jp-hero-bg" src="/images/Group 2040.jpg" alt="" />
       </picture>
       <div className="jp-container jp-hero-grid">
         <div className="jp-hero-copy">
@@ -569,8 +569,9 @@ function SocialProof() {
       <div className="jp-testimonials">
         {testimonials.map((item, index) => (
           <article className="jp-testimonial" key={item.name}>
-            <span className="jp-quote-mark">“</span>
-            <p>“{item.quote}”</p>
+            <Image className="jp-quote-mark" src="/images/%E2%80%9C.png" alt="" width={39} height={28} aria-hidden="true" />
+            <div className="jp-stars">★★★★★</div>
+            <p>{item.quote}</p>
             <div className="jp-person">
               <span className={`avatar avatar-${index}`}>{item.initials}</span>
               <div>
@@ -611,8 +612,9 @@ function SocialProof() {
                   }}
                   aria-hidden={active !== index}
                 >
-                  <span className="jp-quote-mark">“</span>
-                  <p>“{item.quote}”</p>
+                  <Image className="jp-quote-mark" src="/images/%E2%80%9C.png" alt="" width={39} height={28} aria-hidden="true" />
+                  <div className="jp-stars">★★★★★</div>
+                  <p>{item.quote}</p>
                   <div className="jp-person">
                     <span className={`avatar avatar-${index}`}>{item.initials}</span>
                     <div>
@@ -698,7 +700,12 @@ function Reality() {
 function HowItWorks() {
   return (
     <section className="jp-dark-section" id="how-it-works">
-      <img className="jp-dark-bg" src="/images/Whisk_c70ae977c0feb5492014aa58127a071fdr 1.png" alt="" aria-hidden="true" />
+      <img
+        className="jp-dark-bg"
+        src="/images/Whisk_fa77d4db251aadf8bd74ed8e18ab7d80dr%20(1)%201.png"
+        alt=""
+        aria-hidden="true"
+      />
       <div className="jp-container">
         <div className="jp-centered">
           <Pill>SIMPLE BY DESIGN</Pill>
@@ -741,7 +748,6 @@ function HowItWorks() {
 function Features() {
   return (
     <section className="jp-features">
-      <img className="jp-feature-sketch" src="/images/Whisk_fa77d4db251aadf8bd74ed8e18ab7d80dr (1) 1.png" alt="" aria-hidden="true" />
       <Pill>REAL ACTION</Pill>
       <h2>Everything you need.<br />Nothing you don&apos;t.</h2>
       <div className="jp-container jp-feature-grid">
@@ -843,23 +849,96 @@ function Pricing({ openWaitlist }: { openWaitlist: () => void }) {
   );
 }
 
-function ReferralAndFaq({ openWaitlist }: { openWaitlist: () => void }) {
+function ReferralAndFaq() {
   const [open, setOpen] = useState<number | null>(null);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const shareStatusTimer = useRef<number | null>(null);
+
+  const clearShareStatus = () => {
+    if (shareStatusTimer.current !== null) {
+      window.clearTimeout(shareStatusTimer.current);
+      shareStatusTimer.current = null;
+    }
+  };
+
+  const showShareStatus = (message: string) => {
+    clearShareStatus();
+    setShareStatus(message);
+    shareStatusTimer.current = window.setTimeout(() => {
+      setShareStatus(null);
+      shareStatusTimer.current = null;
+    }, 2400);
+  };
+
+  const shareLink = async () => {
+    const shareData = {
+      title: "JackPals",
+      text: "JackPals turns your notes, PDFs, and links into study audio with Nigerian voices.",
+      url: SOCIAL_LINKS.site,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        showShareStatus("Share sheet opened");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(SOCIAL_LINKS.site);
+        showShareStatus("Link copied");
+        return;
+      }
+    } catch {
+      // Fall through to the manual copy path below.
+    }
+
+    showShareStatus("Copy the link from the address bar");
+  };
+
+  const copyLink = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(SOCIAL_LINKS.site);
+        showShareStatus("JackPals link copied");
+        return;
+      }
+    } catch {
+      // Fall through to the manual copy path below.
+    }
+
+    showShareStatus("Copy the link from the address bar");
+  };
+
+  useEffect(() => {
+    return () => {
+      if (shareStatusTimer.current !== null) {
+        window.clearTimeout(shareStatusTimer.current);
+      }
+    };
+  }, []);
 
   return (
     <section className="jp-faq-band" id="faq">
       <div className="jp-referral">
         <div className="jp-referral-actions">
-          <CtaButton openWaitlist={openWaitlist} variant="dark">
+          <button type="button" className="jp-share-button jp-share-button-dark" onClick={shareLink}>
             Spread the word
-          </CtaButton>
-          <CtaButton openWaitlist={openWaitlist}>Share Jackpals</CtaButton>
+          </button>
+          <button type="button" className="jp-share-button" onClick={copyLink}>
+            Share Jackpals
+          </button>
         </div>
         <h2>Know a student who needs this?</h2>
         <p>
           JackPals is better when your study group uses it. Share it with one person and help them reclaim hours
           of wasted commute time.
         </p>
+        {shareStatus ? (
+          <p className="jp-share-status" aria-live="polite">
+            {shareStatus}
+          </p>
+        ) : null}
       </div>
 
       <div className="jp-container jp-faq-grid">
@@ -877,7 +956,11 @@ function ReferralAndFaq({ openWaitlist }: { openWaitlist: () => void }) {
                   <span>{item.question}</span>
                   <ChevronDown size={17} />
                 </button>
-                {isOpen && <p>{item.answer}</p>}
+                <div className="jp-accordion-panel" aria-hidden={!isOpen}>
+                  <div className="jp-accordion-panel-inner">
+                    <p>{item.answer}</p>
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -910,10 +993,10 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
             <span className="jp-final-line jp-final-accent">all-night reading</span>
             <span className="jp-final-line jp-final-accent">sessions.</span>
           </h2>
-          <p className="jp-final-lead">Join the early access waitlist.</p>
+          <p className="jp-final-lead">Join thousands of Nigerian students already on the waitlist</p>
           <div className="jp-actions jp-final-actions">
-            <CtaButton openWaitlist={openWaitlist}>Join the Waitlist</CtaButton>
-            <CtaButton href="#how-it-works" variant="ghost">
+            <CtaButton openWaitlist={openWaitlist}>Join Now</CtaButton>
+            <CtaButton href="#how-it-works" variant="ghost" triangle>
               Learn More
             </CtaButton>
           </div>
@@ -928,6 +1011,7 @@ function FinalCta({ openWaitlist }: { openWaitlist: () => void }) {
 function Footer() {
   const groups = [
     ["PRODUCT", "How It Works", "Voices", "Features", "Pricing", "Waitlist"],
+    ["COMPANY", "About", "Blog", "Careers", "Contact Us"],
     ["LEGAL", "Privacy Policy", "Terms of Use", "Cookie Policy"],
   ];
 
@@ -997,7 +1081,7 @@ function FigmaLandingInner() {
         <Features />
         <Conditions />
         <Pricing openWaitlist={openWaitlist} />
-        <ReferralAndFaq openWaitlist={openWaitlist} />
+        <ReferralAndFaq />
         <FinalCta openWaitlist={openWaitlist} />
       </main>
       <Footer />

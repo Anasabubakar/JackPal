@@ -367,13 +367,12 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
   padding: clamp(64px, 10vw, 115px) 0 68px;
-  background: #01092d;
+  background: #000a28;
   overflow: hidden;
 }
 
 .jp-hero-bg,
-.jp-dark-bg,
-.jp-feature-sketch {
+.jp-dark-bg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -383,7 +382,7 @@ h1, h2, h3, h4 {
 }
 
 .jp-hero-bg {
-  object-position: center;
+  object-position: center center;
 }
 
 .jp-hero-grid {
@@ -1209,9 +1208,10 @@ button.jp-button {
   position: relative;
   min-height: 232px;
   padding: 36px 27px 24px;
-  border: 1px solid #ddd;
+  border: 1px solid #e3e7f0;
   border-radius: 20px;
-  background: #fafafa;
+  background: #fbfbfd;
+  box-shadow: 0 10px 24px rgba(10, 22, 40, 0.04);
   text-align: left;
 }
 
@@ -1224,11 +1224,12 @@ button.jp-button {
 .jp-quote-mark {
   position: absolute;
   top: 18px;
-  right: 26px;
-  color: #bdeaff;
-  font-size: 58px;
-  font-weight: 800;
-  line-height: 1;
+  right: 22px;
+  width: 39px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 1;
 }
 
 .jp-testimonial p {
@@ -1396,13 +1397,23 @@ button.jp-button {
 .jp-dark-section {
   position: relative;
   padding: 92px 0 111px;
-  background: linear-gradient(180deg, #011257 0%, #01092d 100%);
+  background:
+    linear-gradient(180deg, rgba(0, 10, 40, 0.22) 0%, rgba(0, 10, 40, 0.18) 28%, rgba(0, 10, 40, 0.38) 100%),
+    var(--jp-navy);
   overflow: hidden;
 }
 
 .jp-dark-bg {
-  opacity: 0.5;
-  mix-blend-mode: screen;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.16;
+  filter: contrast(1.08) brightness(0.96);
+  mix-blend-mode: normal;
+}
+
+.jp-dark-section > .jp-container {
+  position: relative;
+  z-index: 1;
 }
 
 .jp-centered {
@@ -1549,22 +1560,18 @@ button.jp-button {
 .jp-features {
   position: relative;
   padding: 77px 0 111px;
-  background: var(--jp-navy);
+  background: #fff url("/images/Whisk_fa77d4db251aadf8bd74ed8e18ab7d80dr (1) 1.png") center top / 100% auto no-repeat;
   overflow: hidden;
   text-align: center;
 }
 
-.jp-feature-sketch {
-  opacity: 0.12;
-}
-
-.jp-features > *:not(.jp-feature-sketch) {
+.jp-features > * {
   position: relative;
   z-index: 1;
 }
 
 .jp-features h2 {
-  color: #fff;
+  color: var(--jp-heading);
 }
 
 .jp-feature-grid {
@@ -1861,6 +1868,51 @@ button.jp-button {
   margin-bottom: 40px;
 }
 
+.jp-share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 0 24px;
+  border: 1px solid rgba(45, 107, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0a1628;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(18, 40, 89, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease,
+    border-color 0.2s ease, color 0.2s ease;
+}
+
+.jp-share-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(45, 107, 255, 0.28);
+  box-shadow: 0 14px 28px rgba(18, 40, 89, 0.12);
+}
+
+.jp-share-button-dark {
+  background: #0a1628;
+  color: #fff;
+  border-color: rgba(10, 22, 40, 0.06);
+}
+
+.jp-share-button-dark:hover {
+  background: #122548;
+  border-color: rgba(10, 22, 40, 0.12);
+}
+
+.jp-share-status {
+  margin-top: 16px;
+  color: #2d6bff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .jp-referral h2 {
   margin: 0 0 12px;
   color: #2f2f2f;
@@ -1900,11 +1952,23 @@ button.jp-button {
 }
 
 .jp-accordion > div {
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
   border: 0.5px solid #e4e4e4;
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 4px 9px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+}
+
+.jp-accordion > div:hover {
+  transform: translateY(-2px);
+  border-color: #d7d7d7;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.jp-accordion > div.open {
+  border-color: rgba(45, 107, 255, 0.22);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.1);
 }
 
 .jp-accordion button {
@@ -1925,20 +1989,50 @@ button.jp-button {
   text-align: left;
 }
 
+.jp-accordion button span {
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
 .jp-accordion button svg {
-  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, color 0.25s ease;
 }
 
 .jp-accordion .open button svg {
   transform: rotate(180deg);
+  color: #2d6bff;
 }
 
-.jp-accordion p {
+.jp-accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.32s ease, opacity 0.25s ease;
+}
+
+.jp-accordion-panel-inner {
+  overflow: hidden;
+}
+
+.jp-accordion-panel p {
   margin: 0;
   padding: 0 30px 24px;
   color: #565656;
   font-size: 15px;
   line-height: 25px;
+  transform: translateY(-6px);
+  transition: transform 0.28s ease, opacity 0.28s ease;
+  opacity: 0;
+}
+
+.jp-accordion > div.open .jp-accordion-panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.jp-accordion > div.open .jp-accordion-panel p {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .jp-final {
@@ -2072,7 +2166,7 @@ button.jp-button {
 
 .jp-footer-grid {
   display: grid;
-  grid-template-columns: 1.5fr repeat(2, 0.65fr);
+  grid-template-columns: 1.5fr repeat(3, 0.65fr);
   gap: 64px;
 }
 
@@ -2158,12 +2252,12 @@ button.jp-button {
 /* ── Mid-range breakpoints (860px) ── */
 @media (max-width: 860px) {
   .jp-footer-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 36px;
   }
 
   .jp-footer-grid > div:first-child {
-    grid-column: span 2;
+    grid-column: span 3;
   }
 
   .jp-faq-grid {
@@ -2314,9 +2408,10 @@ button.jp-button {
   }
 
   .jp-quote-mark {
-    font-size: 48px;
     top: 14px;
-    right: 20px;
+    right: 18px;
+    width: 31px;
+    height: 22px;
   }
 
   /* Section padding reduction */
