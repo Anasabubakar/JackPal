@@ -26,6 +26,7 @@ from services.ingest import (
     from_youtube as ingest_from_youtube,
 )
 from services.research import run_research
+from services import artifacts as artifact_engine
 from services.local_storage import (
     create_artifact,
     create_note,
@@ -896,91 +897,43 @@ async def _generate_artifact_content(
     artifact_type: str,
     prompt: str | None,
 ) -> tuple[str, str, str]:
+    """Dispatch to the LLM-driven artifact engine in services.artifacts.
+
+    Each generator returns ``(title, content, fmt)`` directly. The router
+    persists that as-is — the engine owns prompt design, JSON shape, and
+    fallbacks for malformed LLM output.
+    """
     corpus = _collect_corpus(notebook_id, user_id)
     if not corpus.strip():
         raise HTTPException(status_code=422, detail="Notebook has no source text to build from.")
+    sources = list_sources(notebook_id, user_id)
 
-    title = prompt or artifact_type.replace("-", " ").title()
-    if artifact_type in {"report", "study-guide", "summary"}:
-        summary = await summarize_document(corpus[:14000])
-        content = f"# {title}\n\n{summary}"
-        return title, content, "markdown"
-
-    if artifact_type == "audio":
-        script = await generate_podcast_script(corpus[:14000])
-        content = json.dumps(script, indent=2)
-        return title, content, "json"
-
-    if artifact_type in {"quiz", "flashcard"}:
-        sentences = _sentence_list(corpus, limit=6)
-        rows = []
-        for idx, sentence in enumerate(sentences, 1):
-            stem = sentence.rstrip(".")
-            rows.append({
-                "item": idx,
-                "prompt": f"What is a key idea from sentence {idx}?",
-                "answer": stem,
-            })
-        content = json.dumps(rows, indent=2)
-        return title, content, "json"
-
+    # Resolve known aliases — the dashboard hits both /quiz and /flashcards,
+    # plus a legacy /summary endpoint that should still produce a report.
+    if artifact_type in {"report", "summary"}:
+        return await artifact_engine.make_report(corpus, prompt)
+    if artifact_type == "study-guide":
+        return await artifact_engine.make_study_guide(corpus, prompt)
+    if artifact_type == "quiz":
+        return await artifact_engine.make_quiz(corpus, prompt)
+    if artifact_type in {"flashcard", "flashcards"}:
+        return await artifact_engine.make_flashcards(corpus, prompt)
     if artifact_type == "mind-map":
-        data = {
-            "title": title,
-            "children": [
-                {
-                    "title": source["title"],
-                    "children": [
-                        {"title": item[:80]}
-                        for item in _sentence_list(source.get("fulltext", ""), limit=4)
-                    ],
-                }
-                for source in list_sources(notebook_id, user_id)
-            ],
-        }
-        return title, json.dumps(data, indent=2), "json"
-
-    if artifact_type == "data-table":
-        rows = [
-            {
-                "title": source["title"],
-                "type": source["type"],
-                "status": source.get("status", "ready"),
-                "created_at": source.get("created_at", ""),
-            }
-            for source in list_sources(notebook_id, user_id)
-        ]
-        buf = io.StringIO()
-        writer = csv.DictWriter(buf, fieldnames=["title", "type", "status", "created_at"])
-        writer.writeheader()
-        writer.writerows(rows)
-        return title, buf.getvalue(), "csv"
-
+        return await artifact_engine.make_mind_map(corpus, prompt)
     if artifact_type == "slide-deck":
-        slides = ["# " + title]
-        for source in list_sources(notebook_id, user_id)[:8]:
-            slides.append(f"## {source['title']}\n{source.get('fulltext', '')[:700]}")
-        return title, "\n\n---\n\n".join(slides), "markdown"
-
+        return await artifact_engine.make_slide_deck(corpus, prompt)
     if artifact_type == "infographic":
-        content = f"# {title}\n\n" + "\n".join(
-            f"## {source['title']}\n- {source.get('fulltext', '')[:220]}"
-            for source in list_sources(notebook_id, user_id)[:10]
-        )
-        return title, content, "markdown"
-
+        return await artifact_engine.make_infographic(corpus, prompt)
+    if artifact_type == "data-table":
+        return await artifact_engine.make_data_table(corpus, sources, prompt)
     if artifact_type == "video":
-        outline = {
-            "title": title,
-            "scenes": [
-                {"scene": idx + 1, "title": source["title"], "notes": source.get("fulltext", "")[:500]}
-                for idx, source in enumerate(list_sources(notebook_id, user_id)[:8])
-            ],
-        }
-        return title, json.dumps(outline, indent=2), "json"
+        return await artifact_engine.make_video_script(corpus, sources, prompt)
+    if artifact_type == "audio":
+        return await artifact_engine.make_audio_script(corpus, prompt)
 
-    content = f"# {title}\n\n{await summarize_document(corpus[:14000])}"
-    return title, content, "markdown"
+    # Unknown type → default to a report so the user still gets something
+    # rather than a 400. The artifact's metadata records the original type.
+    return await artifact_engine.make_report(corpus, prompt)
 
 
 @router.post("/{notebook_id}/artifacts/generate/{artifact_type}")
