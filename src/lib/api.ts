@@ -604,3 +604,75 @@ export async function deleteWorkspaceChat(workspaceId: string, chatId: string) {
 export async function cleanupWorkspaceDuplicates(workspaceId: string) {
   return request<{ removed: Source[] }>(`/workspaces/${workspaceId}/duplicates/cleanup`, { method: "POST" });
 }
+
+// ── Voice cloning (VoxCPM) ───────────────────────────────────────────────────
+
+export type VoiceCapabilities = {
+  cloning_available: boolean;
+  registry_available: boolean;
+  list_available: boolean;
+  engine: string;
+};
+
+export type VoiceClone = {
+  voice_key: string;
+  size: number;
+  has_transcript?: boolean;
+};
+
+export async function getVoiceCapabilities() {
+  return request<VoiceCapabilities>("/voice/capabilities");
+}
+
+export async function listVoiceClones() {
+  const data = await request<{ voices: VoiceClone[] }>("/voice/clones");
+  return data.voices;
+}
+
+export async function registerVoiceClone(
+  voiceKey: string,
+  audio: Blob,
+  transcript?: string,
+) {
+  const token = getToken();
+  const form = new FormData();
+  form.append("voice_key", voiceKey);
+  if (transcript) form.append("transcript", transcript);
+  form.append("audio", audio, `${voiceKey}.wav`);
+
+  const res = await fetch(`${BASE_URL}/voice/clones/register`, {
+    method: "POST",
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(err.detail || "Registration failed");
+  }
+  return res.json() as Promise<{ status: string; voice_key: string; size: number }>;
+}
+
+export async function synthesizeVoiceClone(params: {
+  text: string;
+  voice_key?: string;
+  reference_wav_b64?: string;
+  prompt_text?: string;
+  cfg_value?: number;
+  inference_timesteps?: number;
+  denoise?: boolean;
+}) {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/voice/clones/synthesize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Synthesis failed" }));
+    throw new Error(err.detail || "Synthesis failed");
+  }
+  return res.blob();
+}

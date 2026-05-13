@@ -6,7 +6,7 @@ import os
 
 load_dotenv()
 
-from routers import auth, documents, audio, ai, user, workspace
+from routers import auth, documents, audio, ai, user, workspace, voice
 
 
 def _build_allowed_origins() -> list[str]:
@@ -106,6 +106,7 @@ app.include_router(audio.router)
 app.include_router(ai.router)
 app.include_router(user.router)
 app.include_router(workspace.router)
+app.include_router(voice.router)
 
 
 @app.get("/")

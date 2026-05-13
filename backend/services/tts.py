@@ -23,11 +23,14 @@ import edge_tts
 
 # ── API keys ──────────────────────────────────────────────────────────────────
 
-YARNGPT_API_KEY   = os.environ.get("YARNGPT_API_KEY", "")
-MODAL_YARNGPT_URL = os.environ.get("MODAL_YARNGPT_URL", "")
-MODAL_TTS_URL     = os.environ.get("MODAL_TTS_URL", "")
-VOXCPM_API_URL    = os.environ.get("VOXCPM_API_URL", "")
-YARNGPT_API_URL   = "https://yarngpt.ai/api/v1/tts"
+YARNGPT_API_KEY    = os.environ.get("YARNGPT_API_KEY", "")
+MODAL_YARNGPT_URL  = os.environ.get("MODAL_YARNGPT_URL", "")
+MODAL_TTS_URL      = os.environ.get("MODAL_TTS_URL", "")
+VOXCPM_API_URL     = os.environ.get("VOXCPM_API_URL", "")
+VOXCPM_CLONE_URL   = os.environ.get("VOXCPM_CLONE_URL", "")
+VOXCPM_REGISTER_URL = os.environ.get("VOXCPM_REGISTER_URL", "")
+VOXCPM_VOICES_URL  = os.environ.get("VOXCPM_VOICES_URL", "")
+YARNGPT_API_URL    = "https://yarngpt.ai/api/v1/tts"
 
 # ── Local model singletons (MMS only) ─────────────────────────────────────────
 
@@ -49,22 +52,25 @@ def _mms_available() -> bool:
 
 # ── Voice map ─────────────────────────────────────────────────────────────────
 
+_F_CTRL = "Warm Nigerian English female narrator, clear and confident, natural pacing."
+_M_CTRL = "Confident Nigerian English male narrator, calm and articulate, natural pacing."
+
 VOICE_MAP = {
-    "chinenye":  {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "jude":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "idera":     {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "emma":      {"api": "emma",     "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "umar":      {"api": "umar",     "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "joke":      {"api": "joke",     "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "zainab":    {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "osagie":    {"api": "osagie",   "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "remi":      {"api": "remi",     "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "tayo":      {"api": "tayo",     "edge": "en-NG-AbeoNeural",   "gender": "male"},
+    "chinenye":  {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "jude":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "idera":     {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "emma":      {"api": "emma",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "umar":      {"api": "umar",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "joke":      {"api": "joke",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "zainab":    {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "osagie":    {"api": "osagie",   "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "remi":      {"api": "remi",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "tayo":      {"api": "tayo",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
     # Named aliases
-    "doyinsola": {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female"},
-    "dayo":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "yomi":      {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male"},
-    "awaye":     {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female"},
+    "doyinsola": {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "dayo":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "yomi":      {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "awaye":     {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
 }
 
 PREMIUM_VOICES = set(VOICE_MAP.keys())
@@ -115,17 +121,19 @@ def get_tts_capabilities() -> dict:
         engine = "edge-tts"
 
     return {
-        "fast_available":        True,
-        "premium_available":     premium,
-        "premium_enabled":       premium,
-        "premium_voxcpm":        voxcpm,
-        "premium_modal_yarngpt": modal_yarn,
-        "premium_modal_tts":     modal_tts,
-        "premium_yarngpt":       yarn_api,
-        "premium_mms_pidgin":    mms,
-        "fast_voices":           sorted(FAST_VOICES),
-        "premium_voices":        sorted(PREMIUM_VOICES),
-        "engine":                engine,
+        "fast_available":           True,
+        "premium_available":        premium,
+        "premium_enabled":          premium,
+        "premium_voxcpm":           voxcpm,
+        "premium_voxcpm_cloning":   bool(VOXCPM_CLONE_URL),
+        "premium_voxcpm_registry":  bool(VOXCPM_REGISTER_URL),
+        "premium_modal_yarngpt":    modal_yarn,
+        "premium_modal_tts":        modal_tts,
+        "premium_yarngpt":          yarn_api,
+        "premium_mms_pidgin":       mms,
+        "fast_voices":              sorted(FAST_VOICES),
+        "premium_voices":           sorted(PREMIUM_VOICES),
+        "engine":                   engine,
     }
 
 
@@ -249,12 +257,23 @@ async def _yarn_api_synthesize(text: str, voice: str) -> bytes:
 
 
 async def _voxcpm_synthesize(text: str, voice: str, api_url: str) -> bytes:
+    """
+    Call the JackPal VoxCPM2 endpoint (see backend/modal_voxcpm.py).
+
+    Sends ``text`` plus an optional natural-language voice prompt derived
+    from the voice map (e.g. "Warm Nigerian English female narrator").
+    """
     import aiohttp
-    api_voice = VOICE_MAP.get(voice, {}).get("api", voice)
+    cfg = VOICE_MAP.get(voice, {})
     payload = {
         "text": text,
-        "voice": api_voice,
-        "control": f"{voice} Nigerian voice",
+        "prompt_text": cfg.get("voxcpm")
+            or ("Female Nigerian English narrator" if cfg.get("gender") == "female"
+                else "Male Nigerian English narrator"),
+        "cfg_value": 2.0,
+        "inference_timesteps": 10,
+        "denoise": False,
+        "normalize": True,
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -265,6 +284,113 @@ async def _voxcpm_synthesize(text: str, voice: str, api_url: str) -> bytes:
                 body = await resp.text()
                 raise RuntimeError(f"VoxCPM API {resp.status}: {body[:200]}")
             return await resp.read()
+
+
+# ── VoxCPM voice cloning ──────────────────────────────────────────────────────
+
+async def synthesize_with_voice_clone(
+    text: str,
+    *,
+    voice_key: str | None = None,
+    reference_wav_b64: str | None = None,
+    prompt_text: str | None = None,
+    cfg_value: float = 2.0,
+    inference_timesteps: int = 10,
+    denoise: bool = True,
+    normalize: bool = True,
+) -> bytes:
+    """
+    Synthesize ``text`` using a cloned voice via VoxCPM2.
+
+    Either ``voice_key`` (a profile registered on Modal) or
+    ``reference_wav_b64`` (a base64 WAV payload) is required.
+
+    If ``prompt_text`` is supplied the call uses VoxCPM2 'ultimate cloning'
+    (reference audio + matching transcript). Otherwise it falls back to
+    zero-shot cloning from the reference audio alone.
+    """
+    if not VOXCPM_CLONE_URL:
+        raise RuntimeError(
+            "Voice cloning is unavailable — set VOXCPM_CLONE_URL after running "
+            "`modal deploy backend/modal_voxcpm.py`."
+        )
+    if not voice_key and not reference_wav_b64:
+        raise ValueError("voice_key or reference_wav_b64 is required")
+
+    import aiohttp
+    payload: dict = {
+        "text": text,
+        "cfg_value": cfg_value,
+        "inference_timesteps": inference_timesteps,
+        "denoise": denoise,
+        "normalize": normalize,
+    }
+    if voice_key:
+        payload["voice_key"] = voice_key
+    if reference_wav_b64:
+        payload["reference_wav_b64"] = reference_wav_b64
+    if prompt_text:
+        payload["prompt_text"] = prompt_text
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            VOXCPM_CLONE_URL, json=payload,
+            timeout=aiohttp.ClientTimeout(total=240),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"VoxCPM clone {resp.status}: {body[:200]}")
+            return await resp.read()
+
+
+async def register_voice_clone(
+    voice_key: str,
+    wav_bytes: bytes,
+    transcript: str | None = None,
+) -> dict:
+    """Upload a reference WAV (and optional transcript) to the VoxCPM voice store."""
+    if not VOXCPM_REGISTER_URL:
+        raise RuntimeError(
+            "Voice registration is unavailable — set VOXCPM_REGISTER_URL after "
+            "`modal deploy backend/modal_voxcpm.py`."
+        )
+    if not voice_key or not wav_bytes:
+        raise ValueError("voice_key and wav_bytes are required")
+
+    import base64
+    import aiohttp
+    payload = {
+        "voice_key": voice_key,
+        "wav_base64": base64.b64encode(wav_bytes).decode("ascii"),
+    }
+    if transcript:
+        payload["transcript"] = transcript
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            VOXCPM_REGISTER_URL, json=payload,
+            timeout=aiohttp.ClientTimeout(total=120),
+        ) as resp:
+            data = await resp.json()
+            if resp.status != 200:
+                raise RuntimeError(f"VoxCPM register {resp.status}: {data}")
+            return data
+
+
+async def list_voice_clones() -> list[dict]:
+    """List voices registered on the VoxCPM Modal deployment."""
+    if not VOXCPM_VOICES_URL:
+        return []
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            VOXCPM_VOICES_URL,
+            timeout=aiohttp.ClientTimeout(total=30),
+        ) as resp:
+            if resp.status != 200:
+                return []
+            data = await resp.json()
+            return list(data.get("voices") or [])
 
 
 # ── edge-tts synthesizer ──────────────────────────────────────────────────────
