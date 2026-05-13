@@ -46,6 +46,9 @@ backend/test_yarngpt.wav
 backend/.env
 backend/*.wav
 backend/data/
+backend/*.pid
+backend/.modal/
+backend/artifacts_cache/
 
 # logs
 *.log
