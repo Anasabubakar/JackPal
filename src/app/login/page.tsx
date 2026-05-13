@@ -20,6 +20,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const needsConfirm = searchParams.get("confirm") === "1";
+  const nextPath = searchParams.get("next");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -44,7 +45,8 @@ function LoginForm() {
     setError("");
     try {
       await signInWithEmail(email, password);
-      router.push("/dashboard");
+      const dest = nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
+      router.push(dest);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
       setLoading(false);

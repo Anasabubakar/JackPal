@@ -16,6 +16,18 @@
   --teal: #2A9A78;
   --teal-dim: rgba(42, 154, 120, 0.12);
 
+  /* ── Liquid glass (web / studio) — one blur layer per surface; no blur on nested inset fills ── */
+  --glass-blur: 14px;
+  --glass-saturate: 1.28;
+  --glass-bg: rgba(22, 20, 17, 0.56);
+  --glass-bg-strong: rgba(20, 18, 15, 0.78);
+  --glass-bg-inset: rgba(28, 25, 21, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.085);
+  --glass-border-bright: rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 16px 44px rgba(0, 0, 0, 0.34);
+  --glass-shadow-card: 0 22px 56px rgba(0, 0, 0, 0.38);
+  --glass-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+
   /* ── Landing page palette ── */
   --lp-dark:      #060C22;
   --lp-bg:        #060C22;
@@ -127,6 +139,70 @@ h1, h2, h3, h4 {
 .studio-scroll::-webkit-scrollbar-track       { background: transparent; }
 .studio-scroll::-webkit-scrollbar-thumb       { background: var(--surface-3); border-radius: 2px; }
 .studio-scroll::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ── Studio glass utilities (.studio context / dark notebook chrome) ── */
+.studio-glass {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inset-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+.studio-glass-card {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-card), var(--glass-inset-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* Top bars, player chrome, side rails — slightly denser tint for legibility */
+.studio-glass-chrome {
+  position: relative;
+  z-index: 1;
+  background: var(--glass-bg-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-inset-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(1.22);
+  backdrop-filter: blur(12px) saturate(1.22);
+}
+
+/* Nested panels inside an already-frosted card: no extra backdrop blur */
+.studio-glass-inset {
+  background: var(--glass-bg-inset);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+@media (hover: hover) {
+  .studio-glass-interactive {
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease;
+  }
+  .studio-glass-interactive:hover {
+    border-color: var(--glass-border-bright);
+    box-shadow: var(--glass-shadow), var(--glass-inset-highlight), 0 0 0 1px rgba(44, 123, 229, 0.12);
+  }
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .studio-glass,
+  .studio-glass-card,
+  .studio-glass-chrome {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
 
 .custom-scrollbar::-webkit-scrollbar             { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track       { background: transparent; }

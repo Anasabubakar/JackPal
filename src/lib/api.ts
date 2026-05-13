@@ -1,6 +1,6 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function getToken(): string | null {
+export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("jackpal_token");
 }
@@ -162,10 +162,16 @@ export type ResearchJob = {
   query: string;
   mode: "fast" | "deep";
   status: string;
-  results: Array<Record<string, unknown>>;
+  /** Backend stores a dict (imports, summary, …), not only an array. */
+  results?: unknown;
   created_at?: string;
   updated_at?: string;
 };
+
+/** GET /workspaces/{id}/research/{job_id} — same shape as persisted job. */
+export async function getWorkspaceResearchJob(workspaceId: string, jobId: string) {
+  return request<ResearchJob>(`/workspaces/${workspaceId}/research/${encodeURIComponent(jobId)}`);
+}
 
 export type WorkspaceCitation = {
   index: number;
@@ -686,7 +692,7 @@ export async function acceptWorkspaceInvitation(token: string) {
     invitation: WorkspaceInvitation;
   }>("/workspaces/invitations/accept", {
     method: "POST",
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token: token.trim() }),
   });
 }
 
@@ -703,7 +709,7 @@ export async function createWorkspaceInvitation(
     body: JSON.stringify({
       role: opts.role ?? "viewer",
       expires_in: opts.expires_in ?? 7 * 24 * 3600,
-      invitee_email: opts.invitee_email,
+      invitee_email: opts.invitee_email?.trim() ? opts.invitee_email.trim() : null,
     }),
   });
 }
@@ -730,14 +736,16 @@ export async function updateWorkspaceCollaboratorRole(
   collaboratorUserId: string,
   role: "viewer" | "editor",
 ) {
-  return request<{ collaborator: WorkspaceCollaborator }>(`/workspaces/${workspaceId}/collaborators/${collaboratorUserId}`, {
+  const uid = encodeURIComponent(collaboratorUserId);
+  return request<{ collaborator: WorkspaceCollaborator }>(`/workspaces/${workspaceId}/collaborators/${uid}`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
   });
 }
 
 export async function removeWorkspaceCollaborator(workspaceId: string, collaboratorUserId: string) {
-  return request<{ message: string }>(`/workspaces/${workspaceId}/collaborators/${collaboratorUserId}`, {
+  const uid = encodeURIComponent(collaboratorUserId);
+  return request<{ message: string }>(`/workspaces/${workspaceId}/collaborators/${uid}`, {
     method: "DELETE",
   });
 }
@@ -814,6 +822,23 @@ export async function setChatTurnPinned(
 
 export async function cleanupWorkspaceDuplicates(workspaceId: string) {
   return request<{ removed: Source[] }>(`/workspaces/${workspaceId}/duplicates/cleanup`, { method: "POST" });
+}
+
+/** Batch zip: notebook.json, sources/, notes/, artifacts/ (Phase 9). */
+export async function downloadWorkspaceBundle(workspaceId: string) {
+  const token = getToken();
+  if (!token) throw new Error("Missing session token.");
+  const res = await fetch(`${BASE_URL}/workspaces/${workspaceId}/export?token=${encodeURIComponent(token)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Export failed" }));
+    throw new Error(
+      typeof err.detail === "string" ? err.detail : Array.isArray(err.detail) ? err.detail[0]?.msg || "Export failed" : "Export failed",
+    );
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get("content-disposition") || "";
+  const match = cd.match(/filename="?([^"]+)"?/i);
+  return { blob, filename: match?.[1] || "jackpal-notebook-export.zip" };
 }
 
 // ── Voice cloning (VoxCPM) ───────────────────────────────────────────────────

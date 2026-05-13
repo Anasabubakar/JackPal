@@ -36,15 +36,20 @@ import {
   Trash2,
   RotateCcw,
   FastForward,
+  Bookmark,
+  RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ease, dur } from "@/lib/motion";
 import { FadeUp, SlideIn, SpringScale } from "@/components/ui/MotionPrimitives";
+import { NotebookCollaborationPanel } from "@/components/workspace/NotebookCollaborationPanel";
+import { WorkspaceNotebookSearch } from "@/components/workspace/WorkspaceNotebookSearch";
+import { VoiceClonePanel } from "@/components/workspace/VoiceClonePanel";
 import {
   getUser,
   logout,
@@ -93,6 +98,9 @@ import {
   renameWorkspaceChat,
   deleteWorkspaceChat,
   cleanupWorkspaceDuplicates,
+  downloadWorkspaceBundle,
+  saveChatTurnAsNote,
+  setChatTurnPinned,
   type Document,
   type Chapter,
   type PodcastLine,
@@ -102,6 +110,7 @@ import {
   type Artifact,
   type SavedChat,
   type ChatTurn,
+  type WorkspaceCitation,
 } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -114,9 +123,10 @@ const PODCAST_HOSTS = [
   { voice: "jude",     name: "Abeo",   role: "Breaks it down" },
 ];
 
-export default function Dashboard() {
+function DashboardPage() {
   const SPEED_OPTIONS = [0.9, 1, 1.25, 1.5, 1.75];
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -262,10 +272,25 @@ export default function Dashboard() {
   const [sourceContent, setSourceContent] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [researchQuery, setResearchQuery] = useState("");
+  const [researchMode, setResearchMode] = useState<"fast" | "deep">("fast");
+  const [researchImportUrls, setResearchImportUrls] = useState("");
+  const [lastResearchRun, setLastResearchRun] = useState<{
+    jobId: string;
+    summary: string;
+    provider: string;
+    imported: number;
+    failedImports: number;
+    deepQueries?: string[];
+  } | null>(null);
+  const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [chatQuestion, setChatQuestionWorkspace] = useState("");
   const [workspaceAnswer, setWorkspaceAnswer] = useState("");
+  /** Citations from the latest ask (and cleared when question changes). */
+  const [lastWorkspaceCitations, setLastWorkspaceCitations] = useState<WorkspaceCitation[]>([]);
+  const [saveChatAsNote, setSaveChatAsNote] = useState(false);
+  const [workspaceExporting, setWorkspaceExporting] = useState(false);
   const [workspaceFileName, setWorkspaceFileName] = useState("");
   const workspaceFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -319,6 +344,18 @@ export default function Dashboard() {
     setActiveWorkspaceSourceGuide("");
     loadWorkspaceDetails(selectedWorkspaceId);
   }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    setLastResearchRun(null);
+  }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const tab = searchParams.get("tab");
+    const nb = searchParams.get("notebook");
+    if (tab === "workspace") setActiveTab("workspace");
+    if (nb && workspaces.some((w) => w.id === nb)) setSelectedWorkspaceId(nb);
+  }, [mounted, searchParams, workspaces]);
 
   function saveSubject(docId: string, subject: string) {
     const updated = { ...subjects, [docId]: subject };
@@ -631,7 +668,26 @@ export default function Dashboard() {
         await addWorkspaceUrlSource(selectedWorkspaceId, sourceTitle.trim() || null, sourceUrl.trim());
       } else if (sourceMode === "research") {
         if (!researchQuery.trim()) throw new Error("Enter a research query.");
-        await addWorkspaceResearch(selectedWorkspaceId, researchQuery.trim(), { mode: "fast" });
+        const extraLines = researchImportUrls
+          .split("\n")
+          .map((s) => s.replace(/\r$/, "").trim())
+          .filter(Boolean);
+        const result = await addWorkspaceResearch(selectedWorkspaceId, researchQuery.trim(), {
+          mode: researchMode,
+          importUrls: extraLines.length ? extraLines : undefined,
+        });
+        const rawImports = (result.sources ?? []) as Array<Record<string, unknown> & { error?: string }>;
+        const failedImports = rawImports.filter((x) => "error" in x && x.error).length;
+        const imported = rawImports.filter((x) => !("error" in x && x.error)).length;
+        const sum = result.summary ?? "";
+        setLastResearchRun({
+          jobId: result.job?.id ?? "",
+          summary: sum.length > 700 ? `${sum.slice(0, 700)}…` : sum,
+          provider: result.provider ?? "none",
+          imported,
+          failedImports,
+          deepQueries: result.expanded_queries,
+        });
       } else {
         if (!sourceContent.trim()) throw new Error("Enter source text.");
         await addWorkspaceTextSource(selectedWorkspaceId, sourceTitle.trim() || "Pasted Notes", sourceContent.trim());
@@ -640,6 +696,7 @@ export default function Dashboard() {
       setSourceTitle("");
       setSourceUrl("");
       setResearchQuery("");
+      setResearchImportUrls("");
       await loadWorkspaceDetails(selectedWorkspaceId);
       await fetchWorkspaces();
     } catch (err: unknown) {
@@ -671,10 +728,11 @@ export default function Dashboard() {
     setWorkspaceBusy("Thinking...");
     try {
       const result = await askWorkspace(selectedWorkspaceId, chatQuestion.trim(), {
-        saveAsNote: true,
+        saveAsNote: saveChatAsNote,
         chatId: activeChatId,
       });
       setWorkspaceAnswer(result.answer);
+      setLastWorkspaceCitations(result.citations ?? []);
       setChatQuestionWorkspace("");
       await loadWorkspaceDetails(selectedWorkspaceId);
       await fetchWorkspaces();
@@ -700,6 +758,27 @@ export default function Dashboard() {
       setWorkspaceError(err instanceof Error ? err.message : `Could not generate ${artifactType}.`);
     } finally {
       setWorkspaceBusy("");
+    }
+  }
+
+  async function handleDownloadWorkspaceBundle() {
+    if (!selectedWorkspaceId || workspaceExporting) return;
+    setWorkspaceExporting(true);
+    setWorkspaceError("");
+    try {
+      const { blob, filename } = await downloadWorkspaceBundle(selectedWorkspaceId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not export notebook.");
+    } finally {
+      setWorkspaceExporting(false);
     }
   }
 
@@ -791,6 +870,61 @@ export default function Dashboard() {
       await loadWorkspaceDetails(selectedWorkspaceId);
     } catch (err: unknown) {
       setWorkspaceError(err instanceof Error ? err.message : "Could not clean duplicates.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleRefreshWorkspaceSource(sourceId: string) {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    setRefreshingSourceId(sourceId);
+    setWorkspaceError("");
+    try {
+      await refreshWorkspaceSource(selectedWorkspaceId, sourceId);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      const sources = await listWorkspaceSources(selectedWorkspaceId);
+      const src = sources.find((s) => s.id === sourceId);
+      if (src && activeWorkspaceSourceId === sourceId) {
+        await inspectWorkspaceSource(src);
+      }
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not refresh source.");
+    } finally {
+      setRefreshingSourceId(null);
+    }
+  }
+
+  async function handlePinChatTurn(turnId: string, pinned: boolean) {
+    if (!selectedWorkspaceId || !activeChatId) return;
+    const nb = workspaces.find((w) => w.id === selectedWorkspaceId);
+    const role = nb?.role ?? "owner";
+    if (role !== "owner" && role !== "editor") return;
+    setWorkspaceBusy(pinned ? "Pinning answer…" : "Unpinning…");
+    setWorkspaceError("");
+    try {
+      await setChatTurnPinned(selectedWorkspaceId, activeChatId, turnId, pinned);
+      const refreshed = await getWorkspaceChat(selectedWorkspaceId, activeChatId);
+      setActiveChatTurns(refreshed.turns || []);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not update pin.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleSaveChatTurnAsNote(turnId: string) {
+    if (!selectedWorkspaceId || !activeChatId) return;
+    const nb = workspaces.find((w) => w.id === selectedWorkspaceId);
+    const role = nb?.role ?? "owner";
+    if (role !== "owner" && role !== "editor") return;
+    setWorkspaceBusy("Saving answer as note…");
+    setWorkspaceError("");
+    try {
+      await saveChatTurnAsNote(selectedWorkspaceId, activeChatId, turnId);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      await fetchWorkspaces();
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not save note.");
     } finally {
       setWorkspaceBusy("");
     }
@@ -1439,7 +1573,20 @@ export default function Dashboard() {
     { id: 3, title: "Introduction to Law", chapter: "Lesson 12", progress: 10, duration: "32:00", color: "#02013D" },
   ];
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div
+        className="studio flex min-h-[100dvh] flex-col items-center justify-center gap-3 px-6"
+        style={{ background: "var(--ink)", color: "var(--text-2)" }}
+      >
+        <Loader2 size={28} className="animate-spin text-[var(--blue)]" aria-hidden />
+        <p className="text-[12px] font-medium" style={{ fontFamily: "var(--font-syne)" }}>
+          Loading your studio…
+        </p>
+        <span className="sr-only">Loading dashboard</span>
+      </div>
+    );
+  }
 
   const firstName = user?.full_name?.split(" ")[0] || "Winner";
   const activeDocId = podcastPlayingDocId || currentDocId;
@@ -1456,8 +1603,8 @@ export default function Dashboard() {
 
   const LeftRail = () => (
     <nav
-      className="w-24 flex-shrink-0 flex flex-col items-center py-5 gap-1 z-40"
-      style={{ background: "var(--surface)", borderRight: "1px solid var(--border)" }}
+      className="studio studio-glass-chrome w-24 flex-shrink-0 flex flex-col items-center py-5 gap-1 z-40 border-r"
+      style={{ borderColor: "var(--glass-border)" }}
     >
       <div className="mb-5 px-1 w-full flex justify-center">
         <JackpalsLogo variant="wordmark" priority className="h-8 w-auto max-w-[5.5rem]" />
@@ -1521,8 +1668,8 @@ export default function Dashboard() {
       >
         {/* Top bar */}
         <div
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0"
-          style={{ borderBottom: "1px solid var(--border)" }}
+          className="studio studio-glass-chrome flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0 border-b"
+          style={{ borderColor: "var(--glass-border)" }}
         >
           <div className="min-w-0 flex-1">
             <div
@@ -1809,6 +1956,9 @@ export default function Dashboard() {
     const selectedWorkspace = selectedWorkspaceId
       ? workspaces.find((item) => item.id === selectedWorkspaceId) ?? null
       : null;
+    const wsRole = selectedWorkspace ? (selectedWorkspace.role ?? "owner") : "owner";
+    const wsOwner = selectedWorkspace ? (selectedWorkspace.is_owner ?? (wsRole === "owner")) : false;
+    const canEditNotebook = wsRole === "owner" || wsRole === "editor";
     return (
       <motion.div
         key="workspace"
@@ -1818,14 +1968,42 @@ export default function Dashboard() {
         transition={{ duration: dur.smooth, ease: ease.out }}
         className="flex-1 flex flex-col overflow-hidden"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
-          <div>
+        <div className="studio studio-glass-chrome flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0 border-b" style={{ borderColor: "var(--glass-border)" }}>
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <div>
             <div className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}>
               Notebook workspace
             </div>
-            <div className="leading-none mt-0.5 truncate" style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}>
+            <div className="leading-none mt-0.5 truncate flex flex-wrap items-center gap-2" style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}>
               Study layers
+              {selectedWorkspace && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md shrink-0"
+                  style={{
+                    background: wsOwner ? "var(--blue-dim)" : "var(--surface-2)",
+                    color: wsOwner ? "var(--blue)" : "var(--teal)",
+                    border: "1px solid var(--border)",
+                    fontStyle: "normal",
+                    fontFamily: "var(--font-syne)",
+                  }}
+                >
+                  {wsRole}
+                </span>
+              )}
             </div>
+            </div>
+            {selectedWorkspaceId && (
+              <button
+                type="button"
+                onClick={() => void handleDownloadWorkspaceBundle()}
+                disabled={workspaceExporting}
+                className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+              >
+                {workspaceExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                Export .zip
+              </button>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
             <input
@@ -1854,7 +2032,12 @@ export default function Dashboard() {
         </div>
 
         {(workspaceError || workspaceBusy) && (
-          <div className="mx-5 mt-3 px-4 py-2.5 rounded-xl text-[11px] flex items-center justify-between gap-3" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border)" }}>
+          <div
+            className="mx-5 mt-3 px-4 py-2.5 rounded-xl text-[11px] flex items-center justify-between gap-3"
+            style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border)" }}
+            role={workspaceError ? "alert" : "status"}
+            aria-live={workspaceError ? "assertive" : "polite"}
+          >
             <span>{workspaceError || workspaceBusy}</span>
             {workspaceError && (
               <button onClick={() => setWorkspaceError("")} style={{ color: "var(--text-3)" }}>
@@ -1865,7 +2048,7 @@ export default function Dashboard() {
         )}
 
         <div className="flex-1 overflow-hidden grid lg:grid-cols-[260px_1fr]">
-          <aside className="border-r" style={{ borderColor: "var(--border)" }}>
+          <aside className="studio studio-glass-chrome border-r" style={{ borderColor: "var(--glass-border)" }}>
             <div className="h-full overflow-y-auto studio-scroll px-3 py-3 space-y-2">
               {workspaceLoading ? (
                 <div className="space-y-2">
@@ -1878,7 +2061,9 @@ export default function Dashboard() {
                   Create a notebook to group sources, notes, and artifacts.
                 </div>
               ) : (
-                workspaces.map((workspace) => (
+                workspaces.map((workspace) => {
+                  const rowOwner = workspace.is_owner ?? workspace.role === "owner";
+                  return (
                   <button
                     key={workspace.id}
                     onClick={() => setSelectedWorkspaceId(workspace.id)}
@@ -1893,8 +2078,12 @@ export default function Dashboard() {
                         <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>{workspace.title}</div>
                         <div className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>
                           {workspace.source_count ?? 0} sources · {workspace.note_count ?? 0} notes · {workspace.artifact_count ?? 0} artifacts
+                          {workspace.role && workspace.role !== "owner" ? (
+                            <span className="ml-1 opacity-80">· {workspace.role}</span>
+                          ) : null}
                         </div>
                       </div>
+                      {rowOwner ? (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleRenameWorkspace(workspace.id); }}
@@ -1911,9 +2100,11 @@ export default function Dashboard() {
                           <Trash2 size={11} />
                         </button>
                       </div>
+                      ) : null}
                     </div>
                   </button>
-                ))
+                  );
+                })
               )}
             </div>
           </aside>
@@ -1930,31 +2121,73 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto studio-scroll px-4 sm:px-5 py-4 space-y-5">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="text-[18px] font-semibold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>{selectedWorkspace.title}</div>
-                    <div className="text-[11px]" style={{ color: "var(--text-3)" }}>{selectedWorkspace.description || "Workspace is ready for sources and notes."}</div>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex flex-wrap items-start gap-2 min-w-0">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-[18px] font-semibold truncate" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>{selectedWorkspace.title}</div>
+                        <span
+                          className="inline-flex items-center gap-1 shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                          style={{
+                            border: "1px solid var(--border)",
+                            background: wsRole === "owner" ? "rgba(42, 154, 120, 0.12)" : wsRole === "editor" ? "var(--blue-dim)" : "var(--surface-2)",
+                            color: wsRole === "owner" ? "var(--teal)" : wsRole === "editor" ? "var(--blue)" : "var(--text-3)",
+                          }}
+                          title="Your access level on this notebook"
+                        >
+                          <ShieldCheck size={12} strokeWidth={2} aria-hidden />
+                          {wsRole}
+                        </span>
+                      </div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>{selectedWorkspace.description || "Workspace is ready for sources and notes."}</div>
+                    </div>
                   </div>
+                  {wsOwner ? (
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => handleSetSharing(!(workspaceSharing?.public ?? false), workspaceSharing?.role ?? "viewer")}
-                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                      disabled={!!workspaceBusy}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] disabled:opacity-50"
                       style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                     >
                       {workspaceSharing?.public ? "Public" : "Private"}
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleSetSharing(workspaceSharing?.public ?? false, (workspaceSharing?.role === "viewer" ? "editor" : "viewer"))}
-                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                      disabled={!!workspaceBusy}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] disabled:opacity-50"
                       style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                     >
-                      Role: {workspaceSharing?.role ?? "viewer"}
+                      Link role: {workspaceSharing?.role ?? "viewer"}
                     </button>
                   </div>
+                  ) : null}
                 </div>
 
+                {!canEditNotebook ? (
+                  <div className="rounded-xl px-3 py-2 text-[11px]" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-3)" }}>
+                    You have read-only access. Sources and answers are visible; importing, notes, chat, and artifacts require editor permission.
+                  </div>
+                ) : null}
+
+                {wsOwner && selectedWorkspaceId ? (
+                  <NotebookCollaborationPanel
+                    notebookId={selectedWorkspaceId}
+                    onRefresh={async () => {
+                      await fetchWorkspaces();
+                      if (selectedWorkspaceId) await loadWorkspaceDetails(selectedWorkspaceId);
+                    }}
+                  />
+                ) : null}
+
                 <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-4">
-                  <section className="rounded-2xl p-4 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <div className="space-y-4">
+                    {selectedWorkspaceId ? (
+                      <WorkspaceNotebookSearch workspaceId={selectedWorkspaceId} />
+                    ) : null}
+                  <section className="studio studio-glass-card studio-glass-interactive rounded-2xl p-4 space-y-4">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Import sources</div>
                       <div className="flex items-center gap-2">
@@ -1975,7 +2208,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="grid gap-3">
-                      {(sourceMode === "text" || sourceMode === "url" || sourceMode === "research") && (
+                      {(sourceMode === "text" || sourceMode === "url") && (
                         <input
                           value={sourceTitle}
                           onChange={(e) => setSourceTitle(e.target.value)}
@@ -2013,6 +2246,41 @@ export default function Dashboard() {
                           style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
                         />
                       )}
+                      {sourceMode === "research" && (
+                        <div className="studio-glass-inset rounded-xl p-3 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>
+                              Depth
+                            </span>
+                            {(["fast", "deep"] as const).map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setResearchMode(m)}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[36px]"
+                                style={{
+                                  background: researchMode === m ? "var(--surface-2)" : "transparent",
+                                  border: "1px solid var(--border)",
+                                  color: "var(--text-2)",
+                                }}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                          <label className="grid gap-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>
+                            Must-include URLs (one per line, optional)
+                            <textarea
+                              value={researchImportUrls}
+                              onChange={(e) => setResearchImportUrls(e.target.value)}
+                              placeholder={"https://example.com/article"}
+                              rows={3}
+                              className="rounded-lg px-3 py-2 text-[12px] outline-none resize-none"
+                              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                            />
+                          </label>
+                        </div>
+                      )}
                       {sourceMode === "file" && (
                         <div className="flex flex-col gap-2">
                           <input
@@ -2029,7 +2297,7 @@ export default function Dashboard() {
                     </div>
                     <button
                       onClick={handleAddWorkspaceSource}
-                      disabled={!!workspaceBusy}
+                      disabled={!!workspaceBusy || !canEditNotebook}
                       className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
                       style={{ background: "var(--blue)" }}
                     >
@@ -2037,12 +2305,48 @@ export default function Dashboard() {
                     </button>
                     <button
                       onClick={handleCleanupDuplicates}
-                      disabled={!!workspaceBusy}
+                      disabled={!!workspaceBusy || !canEditNotebook}
                       className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
                       style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                     >
                       Clean duplicates
                     </button>
+                    {lastResearchRun && (
+                      <div className="studio-glass-inset rounded-xl p-3 space-y-2" aria-live="polite">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>
+                            Last research run
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLastResearchRun(null)}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[32px]"
+                            style={{ border: "1px solid var(--border)", color: "var(--text-3)" }}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <div className="text-[10px] flex flex-wrap gap-2" style={{ color: "var(--text-3)" }}>
+                          {lastResearchRun.jobId ? <span>Job {lastResearchRun.jobId.slice(0, 8)}…</span> : null}
+                          <span>Provider: {lastResearchRun.provider}</span>
+                          <span>Imported: {lastResearchRun.imported}</span>
+                          {lastResearchRun.failedImports ? <span style={{ color: "#fecaca" }}>Failed: {lastResearchRun.failedImports}</span> : null}
+                        </div>
+                        <p className="text-[11px] whitespace-pre-wrap leading-snug" style={{ color: "var(--text-2)" }}>
+                          {lastResearchRun.summary || "—"}
+                        </p>
+                        {lastResearchRun.deepQueries && lastResearchRun.deepQueries.length > 0 && (
+                          <div className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                            <div className="font-bold uppercase tracking-wide">Sub-queries</div>
+                            <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                              {lastResearchRun.deepQueries.map((q) => (
+                                <li key={q}>{q}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Sources</div>
                       {workspaceSources.length === 0 ? (
@@ -2051,7 +2355,10 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         workspaceSources.map((source) => (
-                          <div key={source.id} className="rounded-xl p-3" style={{ background: activeWorkspaceSourceId === source.id ? "var(--surface-2)" : "var(--surface-2)", border: "1px solid var(--border)" }}>
+                          <div
+                            key={source.id}
+                            className={`studio studio-glass-inset rounded-xl p-3 ${activeWorkspaceSourceId === source.id ? "ring-1 ring-[rgba(44,123,229,0.38)]" : ""}`}
+                          >
                             <div className="flex items-start justify-between gap-2">
                               <button
                                 onClick={() => {
@@ -2066,19 +2373,36 @@ export default function Dashboard() {
                                 </div>
                               </button>
                               <div className="flex items-center gap-1">
-                                <button onClick={async () => {
+                                {["url", "youtube", "drive"].includes(source.type) && (
+                                  <button
+                                    type="button"
+                                    title="Refresh from URL"
+                                    aria-label="Refresh source from URL"
+                                    disabled={!canEditNotebook || refreshingSourceId === source.id}
+                                    onClick={() => void handleRefreshWorkspaceSource(source.id)}
+                                    className="p-1 rounded disabled:opacity-40"
+                                    style={{ color: "var(--text-3)" }}
+                                  >
+                                    {refreshingSourceId === source.id ? (
+                                      <Loader2 size={11} className="animate-spin" aria-hidden />
+                                    ) : (
+                                      <RefreshCw size={11} aria-hidden />
+                                    )}
+                                  </button>
+                                )}
+                                <button disabled={!canEditNotebook} onClick={async () => {
                                   const next = prompt("Rename source", source.title);
                                   if (!next?.trim() || !selectedWorkspaceId) return;
                                   await renameWorkspaceSource(selectedWorkspaceId, source.id, next.trim());
                                   await loadWorkspaceDetails(selectedWorkspaceId);
-                                }} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                }} className="p-1 rounded disabled:opacity-40" style={{ color: "var(--text-3)" }}>
                                   <RotateCcw size={11} />
                                 </button>
-                                <button onClick={async () => {
+                                <button disabled={!canEditNotebook} onClick={async () => {
                                   if (!selectedWorkspaceId || !confirm("Delete source?")) return;
                                   await deleteWorkspaceSource(selectedWorkspaceId, source.id);
                                   await loadWorkspaceDetails(selectedWorkspaceId);
-                                }} className="p-1 rounded" style={{ color: "#f87171" }}>
+                                }} className="p-1 rounded disabled:opacity-40" style={{ color: "#f87171" }}>
                                   <Trash2 size={11} />
                                 </button>
                               </div>
@@ -2095,13 +2419,14 @@ export default function Dashboard() {
                       </div>
                     )}
                   </section>
+                  </div>
 
-                  <section className="rounded-2xl p-4 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <section className="studio studio-glass-card studio-glass-interactive rounded-2xl p-4 space-y-4">
                     <div className="grid gap-4">
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Saved chats</div>
-                          <button onClick={handleCreateSavedChat} className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest" style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}>
+                          <button onClick={handleCreateSavedChat} disabled={!canEditNotebook} className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-40" style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}>
                             New
                           </button>
                         </div>
@@ -2132,10 +2457,10 @@ export default function Dashboard() {
                                   <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{chat.source_ids?.length ?? 0} linked sources</div>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); handleRenameSavedChat(chat.id); }} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                  <button disabled={!canEditNotebook} onClick={(e) => { e.stopPropagation(); handleRenameSavedChat(chat.id); }} className="p-1 rounded disabled:opacity-40" style={{ color: "var(--text-3)" }}>
                                     <RotateCcw size={11} />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSavedChat(chat.id); }} className="p-1 rounded" style={{ color: "#f87171" }}>
+                                  <button disabled={!canEditNotebook} onClick={(e) => { e.stopPropagation(); handleDeleteSavedChat(chat.id); }} className="p-1 rounded disabled:opacity-40" style={{ color: "#f87171" }}>
                                     <Trash2 size={11} />
                                   </button>
                                 </div>
@@ -2143,6 +2468,23 @@ export default function Dashboard() {
                             </button>
                           ))}
                         </div>
+                        {activeChatTurns.some((t) => t.role === "assistant" && t.pinned) && (
+                          <div className="mt-3 rounded-xl p-3 studio-glass-inset space-y-2" aria-label="Pinned answers in this chat">
+                            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>
+                              Pinned answers
+                            </div>
+                            {activeChatTurns
+                              .filter((t) => t.role === "assistant" && t.pinned)
+                              .map((turn) => (
+                                <div key={turn.id} className="text-[11px] rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-2)" }}>
+                                  <div className="flex items-start gap-2">
+                                    <Bookmark size={14} className="shrink-0 mt-0.5" style={{ color: "var(--teal)" }} aria-hidden />
+                                    <p className="whitespace-pre-wrap line-clamp-4">{turn.content}</p>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
                         {activeChatTurns.length > 0 && (
                           <div className="mt-3 space-y-2">
                             <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Chat history</div>
@@ -2152,6 +2494,52 @@ export default function Dashboard() {
                                   {turn.role}
                                 </div>
                                 <div className="text-[11px] whitespace-pre-wrap" style={{ color: "var(--text-2)" }}>{turn.content}</div>
+                                {turn.role === "assistant" && turn.citations && turn.citations.length > 0 && (
+                                  <ul className="mt-2 space-y-1.5 list-none border-t border-[var(--border)] pt-2" aria-label="Sources cited">
+                                    {turn.citations.map((c) => (
+                                      <li key={`${turn.id}-${c.index}-${c.source_id}`} className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                                        <span className="font-mono text-[9px]" style={{ color: "var(--blue)" }}>[{c.index}]</span>{" "}
+                                        {c.title}
+                                        {c.url ? (
+                                          <a href={c.url} target="_blank" rel="noopener noreferrer" className="ml-1 underline" style={{ color: "var(--teal)" }}>
+                                            Open
+                                          </a>
+                                        ) : null}
+                                        {c.excerpt ? (
+                                          <span className="block mt-0.5 italic opacity-90" style={{ color: "var(--text-3)" }}>
+                                            “{c.excerpt.slice(0, 180)}{c.excerpt.length > 180 ? "…" : ""}”
+                                          </span>
+                                        ) : null}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                {turn.role === "assistant" && canEditNotebook && activeChatId ? (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      title={turn.pinned ? "Unpin this answer" : "Pin this answer"}
+                                      onClick={() => void handlePinChatTurn(turn.id, !turn.pinned)}
+                                      disabled={!!workspaceBusy}
+                                      className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                                      style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                                    >
+                                      <Bookmark size={12} aria-hidden />
+                                      {turn.pinned ? "Unpin" : "Pin"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Save this answer as a note"
+                                      onClick={() => void handleSaveChatTurnAsNote(turn.id)}
+                                      disabled={!!workspaceBusy}
+                                      className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                                      style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                                    >
+                                      <FileText size={12} aria-hidden />
+                                      Save as note
+                                    </button>
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -2160,9 +2548,9 @@ export default function Dashboard() {
                       <div>
                         <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Notes</div>
                         <div className="grid gap-2">
-                          <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Note title" className="rounded-xl px-3 py-2 text-[12px] outline-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
-                          <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} placeholder="Write a revision note..." rows={4} className="rounded-xl px-3 py-2 text-[12px] outline-none resize-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
-                          <button onClick={handleWorkspaceNoteSave} disabled={!!workspaceBusy} className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--teal)" }}>
+                          <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} readOnly={!canEditNotebook} placeholder="Note title" className="rounded-xl px-3 py-2 text-[12px] outline-none disabled:opacity-60" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                          <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} readOnly={!canEditNotebook} placeholder="Write a revision note..." rows={4} className="rounded-xl px-3 py-2 text-[12px] outline-none resize-none disabled:opacity-60" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                          <button onClick={handleWorkspaceNoteSave} disabled={!!workspaceBusy || !canEditNotebook} className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--teal)" }}>
                             Save note
                           </button>
                         </div>
@@ -2174,11 +2562,11 @@ export default function Dashboard() {
                                   <div className="text-[13px] font-medium" style={{ color: "var(--text-1)" }}>{note.title}</div>
                                   <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{note.kind}</div>
                                 </div>
-                                <button onClick={async () => {
+                                <button disabled={!canEditNotebook} onClick={async () => {
                                   if (!selectedWorkspaceId || !confirm("Delete this note?")) return;
                                   await deleteWorkspaceNote(selectedWorkspaceId, note.id);
                                   await loadWorkspaceDetails(selectedWorkspaceId);
-                                }} style={{ color: "#f87171" }}>
+                                }} className="disabled:opacity-40" style={{ color: "#f87171" }}>
                                   <Trash2 size={11} />
                                 </button>
                               </div>
@@ -2190,13 +2578,52 @@ export default function Dashboard() {
 
                       <div>
                         <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Chat</div>
+                        <div className="studio studio-glass-inset rounded-xl p-3 space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer select-none" style={{ color: "var(--text-3)" }}>
+                          <input
+                            type="checkbox"
+                            checked={saveChatAsNote}
+                            onChange={(e) => setSaveChatAsNote(e.target.checked)}
+                            disabled={!canEditNotebook}
+                            className="h-4 w-4 rounded border-[var(--border)] accent-[var(--blue)]"
+                          />
+                          <span className="text-[11px]">Save answer as a note</span>
+                        </label>
                         <div className="flex gap-2">
-                          <input value={chatQuestion} onChange={(e) => setChatQuestionWorkspace(e.target.value)} placeholder="Ask the notebook..." className="flex-1 rounded-xl px-3 py-2 text-[12px] outline-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
-                          <button onClick={handleWorkspaceAsk} disabled={!!workspaceBusy || !chatQuestion.trim()} className="px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--blue)" }}>
+                          <input
+                            value={chatQuestion}
+                            onChange={(e) => {
+                              setChatQuestionWorkspace(e.target.value);
+                              if (lastWorkspaceCitations.length) setLastWorkspaceCitations([]);
+                            }}
+                            readOnly={!canEditNotebook}
+                            placeholder="Ask the notebook..."
+                            className="flex-1 rounded-xl px-3 py-2 text-[12px] outline-none disabled:opacity-60"
+                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                          />
+                          <button onClick={handleWorkspaceAsk} disabled={!!workspaceBusy || !chatQuestion.trim() || !canEditNotebook} className="px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--blue)" }}>
                             Ask
                           </button>
                         </div>
                         {workspaceAnswer && <pre className="mt-2 text-[11px] whitespace-pre-wrap rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{workspaceAnswer}</pre>}
+                        {lastWorkspaceCitations.length > 0 && (
+                          <div className="mt-3 rounded-xl p-3 space-y-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                            <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Citations</div>
+                            <ul className="space-y-2 list-none">
+                              {lastWorkspaceCitations.map((c) => (
+                                <li key={`${c.index}-${c.source_id}`} className="text-[11px]" style={{ color: "var(--text-2)" }}>
+                                  <span className="font-mono text-[10px]" style={{ color: "var(--blue)" }}>[{c.index}]</span> {c.title}
+                                  {c.url ? (
+                                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="ml-1 text-[10px] underline" style={{ color: "var(--teal)" }}>
+                                      Source
+                                    </a>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        </div>
                       </div>
 
                       <div>
@@ -2205,8 +2632,10 @@ export default function Dashboard() {
                           {["audio", "report", "study-guide", "quiz", "flashcard", "mind-map", "slide-deck", "infographic", "data-table", "video"].map((type) => (
                             <button
                               key={type}
+                              type="button"
                               onClick={() => handleWorkspaceGenerate(type)}
-                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                              disabled={!canEditNotebook || !!workspaceBusy}
+                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-40"
                               style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                             >
                               {type}
@@ -2225,11 +2654,11 @@ export default function Dashboard() {
                                   <button onClick={() => handleDownloadWorkspaceArtifact(artifact.id)} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
                                     <Download size={12} />
                                   </button>
-                                  <button onClick={async () => {
+                                  <button disabled={!canEditNotebook} onClick={async () => {
                                     if (!selectedWorkspaceId || !confirm("Delete this artifact?")) return;
                                     await deleteWorkspaceArtifact(selectedWorkspaceId, artifact.id);
                                     await loadWorkspaceDetails(selectedWorkspaceId);
-                                  }} style={{ color: "#f87171" }}>
+                                  }} className="disabled:opacity-40" style={{ color: "#f87171" }}>
                                     <Trash2 size={11} />
                                   </button>
                                 </div>
@@ -2242,6 +2671,7 @@ export default function Dashboard() {
                     </div>
                   </section>
                 </div>
+                <VoiceClonePanel />
               </div>
             )}
           </div>
@@ -2252,7 +2682,7 @@ export default function Dashboard() {
 
   const SyncReader = () => (
     <motion.div key="reader" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+      <div className="studio studio-glass-chrome flex items-center gap-3 px-5 py-3 flex-shrink-0 border-b" style={{ borderColor: "var(--glass-border)" }}>
         <button onClick={() => { setCurrentDocId(null); setPlayingDocId(null); setPodcastPlayingDocId(null); }} className="p-1 rounded-lg transition-colors" style={{ color: "var(--text-3)" }}>
           <ChevronRight size={16} strokeWidth={1.75} className="rotate-180" />
         </button>
@@ -2270,7 +2700,7 @@ export default function Dashboard() {
 
   const PodcastTheater = () => (
     <motion.div key="theater" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: dur.smooth, ease: ease.out }} className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0 w-full" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+      <div className="studio studio-glass-chrome flex items-center gap-3 px-5 py-3 flex-shrink-0 w-full border-b" style={{ borderColor: "var(--glass-border)" }}>
         <button
           onClick={() => { stopPodcast(); stopAudio(); }}
           className="p-1 rounded-lg transition-colors"
@@ -2297,7 +2727,7 @@ export default function Dashboard() {
       {podcastGenerating && !podcastPlayingDocId && (
         <div className="w-full max-w-lg mx-auto mt-10 px-4">
           <FadeUp>
-            <div className="rounded-2xl p-8 flex flex-col items-center gap-6" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
+            <div className="studio studio-glass studio-glass-interactive rounded-2xl p-8 flex flex-col items-center gap-6">
               <div className="w-full max-w-xs">
                 <div className="relative h-3 rounded-full overflow-hidden" style={{ background: "var(--surface-3)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
                   <div
@@ -2384,10 +2814,10 @@ export default function Dashboard() {
             transition={ease.spring}
             className={
               isMobileLayout
-                ? "fixed top-0 right-0 bottom-0 z-[60] flex w-full max-w-[304px] flex-shrink-0 flex-col overflow-hidden shadow-2xl md:hidden"
-                : "relative hidden h-full flex-shrink-0 overflow-hidden md:flex"
+                ? "studio studio-glass-chrome fixed top-0 right-0 bottom-0 z-[60] flex w-full max-w-[304px] flex-shrink-0 flex-col overflow-hidden shadow-2xl md:hidden border-l"
+                : "studio studio-glass-chrome relative hidden h-full flex-shrink-0 overflow-hidden md:flex border-l"
             }
-            style={{ borderLeft: "1px solid var(--border)", background: "var(--surface)" }}
+            style={{ borderColor: "var(--glass-border)" }}
           >
             <div className="h-full min-h-0 overflow-y-auto studio-scroll p-5 space-y-6">
             <div className="flex items-center justify-between">
@@ -2470,13 +2900,12 @@ export default function Dashboard() {
     };
     return (
       <div
-        className="fixed bottom-0 z-50 flex flex-col"
+        className="studio studio-glass-chrome fixed bottom-0 z-50 flex flex-col border-t"
         style={{
           left: isMobileLayout ? 0 : 96,
           right: 0,
           paddingBottom: "max(0px, env(safe-area-inset-bottom))",
-          background: "linear-gradient(180deg, var(--surface) 0%, var(--ink) 100%)",
-          borderTop: "1px solid var(--border)",
+          borderColor: "var(--glass-border)",
         }}
       >
         {/* Progress bar — full-width, top edge */}
@@ -2627,5 +3056,22 @@ export default function Dashboard() {
       {RightPanel()}
       {PlayerBar()}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="studio flex h-screen max-h-[100dvh] min-h-0 items-center justify-center"
+          style={{ background: "var(--ink)", color: "var(--text-3)" }}
+        >
+          <Loader2 className="animate-spin" size={28} aria-hidden />
+        </div>
+      }
+    >
+      <DashboardPage />
+    </Suspense>
   );
 }
