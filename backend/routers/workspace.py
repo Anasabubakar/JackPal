@@ -3,9 +3,10 @@ import io
 import json
 import re
 import zipfile
+from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, File, HTTPException, Header, UploadFile
+from fastapi import APIRouter, File, HTTPException, Header, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -54,9 +55,9 @@ from services.local_storage import (
     list_collaborators,
     list_invitations,
     set_turn_pinned,
+    list_accessible_notebooks,
     list_artifacts,
     list_notes,
-    list_notebooks,
     list_sources,
     remove_collaborator,
     rename_notebook,
@@ -234,20 +235,22 @@ def _source_or_404(source_id: str, user_id: str) -> dict:
     return source
 
 
-def _note_or_404(note_id: str, user_id: str) -> dict:
+def _note_or_404(notebook_id: str, note_id: str, user_id: str) -> dict:
     from services.local_storage import _notes
 
+    _notebook_or_404(notebook_id, user_id)
     note = _notes.get(note_id)
-    if not note or (note["user_id"] != user_id):
+    if not note or note["notebook_id"] != notebook_id:
         raise HTTPException(status_code=404, detail="Note not found.")
     return note
 
 
-def _artifact_or_404(artifact_id: str, user_id: str) -> dict:
+def _artifact_or_404(notebook_id: str, artifact_id: str, user_id: str) -> dict:
     from services.local_storage import _artifacts
 
+    _notebook_or_404(notebook_id, user_id)
     artifact = _artifacts.get(artifact_id)
-    if not artifact or (artifact["user_id"] != user_id):
+    if not artifact or artifact["notebook_id"] != notebook_id:
         raise HTTPException(status_code=404, detail="Artifact not found.")
     return artifact
 
@@ -379,12 +382,26 @@ async def _import_text_source(
     return source
 
 
+async def _fetch_url(url: str) -> tuple[str, str]:
+    """Re-fetch remote content for source refresh (URL / YouTube / Drive)."""
+    kind = classify_url(url)
+    if kind == "youtube":
+        payload = await ingest_from_youtube(url)
+    elif kind == "drive":
+        payload = await ingest_from_drive(url)
+    else:
+        payload = await ingest_from_url(url)
+    title = str(payload.get("title") or url)
+    text = str(payload.get("text") or "")
+    return title, text
+
+
 @router.get("")
 @router.get("/")
 async def list_workspaces(authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    notebooks = list_notebooks(user_id)
+    notebooks = list_accessible_notebooks(user_id)
     return {"notebooks": [_notebook_payload(nb, user_id) for nb in notebooks]}
 
 
@@ -779,7 +796,7 @@ async def edit_note(notebook_id: str, note_id: str, body: NoteUpdate, authorizat
     user_id = get_user_id(authorization)
     _require_local()
     _writer_or_404(notebook_id, user_id)
-    note = _note_or_404(note_id, user_id)
+    note = _note_or_404(notebook_id, note_id, user_id)
     updates = {}
     if body.title is not None:
         updates["title"] = body.title
@@ -1145,7 +1162,7 @@ async def get_artifact_detail(notebook_id: str, artifact_id: str, authorization:
     user_id = get_user_id(authorization)
     _require_local()
     _notebook_or_404(notebook_id, user_id)
-    return {"artifact": _artifact_or_404(artifact_id, user_id)}
+    return {"artifact": _artifact_or_404(notebook_id, artifact_id, user_id)}
 
 
 @router.patch("/{notebook_id}/artifacts/{artifact_id}")
@@ -1187,7 +1204,7 @@ async def download_artifact(notebook_id: str, artifact_id: str, authorization: s
     user_id = get_user_id(authorization)
     _require_local()
     _notebook_or_404(notebook_id, user_id)
-    artifact = _artifact_or_404(artifact_id, user_id)
+    artifact = _artifact_or_404(notebook_id, artifact_id, user_id)
     content = artifact.get("content", "")
     fmt = artifact.get("format", "text")
 
@@ -1218,6 +1235,93 @@ async def download_artifact(notebook_id: str, artifact_id: str, authorization: s
         content=content,
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{artifact["title"]}.{ext}"'},
+    )
+
+
+def _export_zip_stem(title: str, fallback: str) -> str:
+    stem = _slug_title(title) if title else fallback
+    return (stem or fallback)[:60]
+
+
+@router.get("/{notebook_id}/export")
+async def export_notebook_bundle(
+    notebook_id: str,
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+):
+    """Zip export of notebook manifest, source fulltext, notes, and artifacts."""
+    auth_header = authorization
+    if not auth_header and token:
+        auth_header = f"Bearer {token.strip()}"
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing or invalid token.")
+    user_id = get_user_id(auth_header)
+    _require_local()
+    nb = _notebook_or_404(notebook_id, user_id)
+    sources = list_sources(notebook_id, user_id)
+    notes = list_notes(notebook_id, user_id)
+    artifacts = list_artifacts(notebook_id, user_id)
+    zip_prefix = _export_zip_stem(nb.get("title") or "", "jackpal-notebook")
+    buf = io.BytesIO()
+    used: dict[str, int] = {}
+
+    def unique_path(folder: str, base: str, ext: str) -> str:
+        key = f"{folder}/{base}.{ext}"
+        n = used.get(key, 0)
+        used[key] = n + 1
+        if n == 0:
+            return f"{folder}/{base}.{ext}"
+        return f"{folder}/{base}-{n}.{ext}"
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "notebook.json",
+            json.dumps(
+                {
+                    "id": nb["id"],
+                    "title": nb.get("title"),
+                    "description": nb.get("description", ""),
+                    "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "counts": {"sources": len(sources), "notes": len(notes), "artifacts": len(artifacts)},
+                },
+                indent=2,
+            ),
+        )
+        for i, src in enumerate(sources):
+            stem = _export_zip_stem(src.get("title") or f"source-{i}", f"source-{i}")
+            text = src.get("fulltext") or src.get("content") or ""
+            meta = f"---\n{json.dumps({'id': src['id'], 'type': src.get('type'), 'url': src.get('url')}, indent=2)}\n---\n\n"
+            zf.writestr(unique_path("sources", stem, "txt"), meta + text)
+        for i, note in enumerate(notes):
+            stem = _export_zip_stem(note.get("title") or f"note-{i}", f"note-{i}")
+            body = f"# {note.get('title') or 'Note'}\n\n{note.get('content') or ''}"
+            zf.writestr(unique_path("notes", stem, "md"), body)
+        for i, art in enumerate(artifacts):
+            stem = _export_zip_stem(art.get("title") or f"artifact-{i}", f"artifact-{i}")
+            fmt = (art.get("format") or "text").strip().lower()
+            if fmt in {"csv", "json"}:
+                ext = fmt
+            elif art.get("type") == "audio":
+                ext = "json"
+                body = art.get("content") or "[]"
+            else:
+                ext = "md"
+                body = art.get("content") or ""
+            zf.writestr(unique_path("artifacts", stem, ext), body)
+        zf.writestr(
+            "README.txt",
+            "JackPal notebook export\n"
+            "------------------------\n"
+            "- notebook.json — metadata\n"
+            "- sources/*.txt — ingested source text (YAML-style front matter is JSON)\n"
+            "- notes/*.md\n"
+            "- artifacts/* — generated outputs\n",
+        )
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_prefix}-jackpal-export.zip"'},
     )
 
 

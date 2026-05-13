@@ -479,15 +479,32 @@ def list_notebooks(user_id: str) -> list[dict]:
     return sorted(notebooks, key=lambda n: n["updated_at"], reverse=True)
 
 
+def list_accessible_notebooks(user_id: str) -> list[dict]:
+    """Notebooks the user owns plus notebooks they joined as a collaborator."""
+    by_id: dict[str, dict] = {}
+    for n in _notebooks.values():
+        if n["user_id"] == user_id:
+            by_id[n["id"]] = n
+    for nb_id, collabs in _collaborators.items():
+        if user_id in collabs and nb_id in _notebooks:
+            by_id[nb_id] = _notebooks[nb_id]
+    return sorted(by_id.values(), key=lambda n: n["updated_at"], reverse=True)
+
+
 def get_notebook(notebook_id: str, user_id: str) -> dict | None:
     nb = _notebooks.get(notebook_id)
     if not nb:
         return None
-    if _LOCAL_DEV or nb["user_id"] == user_id:
+    if nb["user_id"] == user_id:
         return nb
-    # Accepted collaborator (any role) can read the notebook.
     collaborators = _collaborators.get(notebook_id, {})
     if user_id and user_id in collaborators:
+        return nb
+    sharing = _sharing.get(notebook_id, {})
+    if sharing.get("public") and user_id:
+        return nb
+    # Legacy local dev: user/session id may not match persisted owner_id after restarts.
+    if _LOCAL_DEV and user_id:
         return nb
     return None
 
@@ -522,6 +539,8 @@ def delete_notebook(notebook_id: str, user_id: str) -> bool:
     nb = get_notebook(notebook_id, user_id)
     if not nb:
         return False
+    if nb.get("user_id") != user_id:
+        return False
     for source in list(_sources.values()):
         if source["notebook_id"] == notebook_id:
             delete_source(source["id"], user_id)
@@ -546,7 +565,10 @@ def _source_defaults() -> dict:
 
 
 def list_sources(notebook_id: str, user_id: str) -> list[dict]:
-    sources = [s for s in _sources.values() if s["notebook_id"] == notebook_id and (_LOCAL_DEV or s["user_id"] == user_id)]
+    """All sources in the notebook for anyone who can open the notebook (owner, collaborator, or public viewer)."""
+    if get_notebook(notebook_id, user_id) is None:
+        return []
+    sources = [s for s in _sources.values() if s["notebook_id"] == notebook_id]
     return sorted(sources, key=lambda s: s["updated_at"], reverse=True)
 
 
@@ -554,9 +576,9 @@ def get_source(source_id: str, user_id: str) -> dict | None:
     src = _sources.get(source_id)
     if not src:
         return None
-    if _LOCAL_DEV or src["user_id"] == user_id:
-        return src
-    return None
+    if get_notebook(src["notebook_id"], user_id) is None:
+        return None
+    return src
 
 
 def upsert_source(
@@ -628,7 +650,9 @@ def delete_source(source_id: str, user_id: str) -> bool:
 
 
 def list_notes(notebook_id: str, user_id: str) -> list[dict]:
-    notes = [n for n in _notes.values() if n["notebook_id"] == notebook_id and (_LOCAL_DEV or n["user_id"] == user_id)]
+    if get_notebook(notebook_id, user_id) is None:
+        return []
+    notes = [n for n in _notes.values() if n["notebook_id"] == notebook_id]
     return sorted(notes, key=lambda n: n["updated_at"], reverse=True)
 
 
@@ -663,8 +687,10 @@ def update_note(note_id: str, user_id: str, updates: dict) -> dict | None:
     note = _notes.get(note_id)
     if not note:
         return None
-    if not _LOCAL_DEV and note["user_id"] != user_id:
-        return None
+    nb_id = note["notebook_id"]
+    if not _LOCAL_DEV:
+        if note["user_id"] != user_id and not can_access_notebook(nb_id, user_id, required="editor"):
+            return None
     note.update(updates)
     note["updated_at"] = _timestamp()
     _save_db()
@@ -675,15 +701,19 @@ def delete_note(note_id: str, user_id: str) -> bool:
     note = _notes.get(note_id)
     if not note:
         return False
-    if not _LOCAL_DEV and note["user_id"] != user_id:
-        return False
+    nb_id = note["notebook_id"]
+    if not _LOCAL_DEV:
+        if note["user_id"] != user_id and not can_access_notebook(nb_id, user_id, required="editor"):
+            return False
     _notes.pop(note_id, None)
     _save_db()
     return True
 
 
 def list_artifacts(notebook_id: str, user_id: str) -> list[dict]:
-    artifacts = [a for a in _artifacts.values() if a["notebook_id"] == notebook_id and (_LOCAL_DEV or a["user_id"] == user_id)]
+    if get_notebook(notebook_id, user_id) is None:
+        return []
+    artifacts = [a for a in _artifacts.values() if a["notebook_id"] == notebook_id]
     return sorted(artifacts, key=lambda a: a["updated_at"], reverse=True)
 
 
@@ -722,8 +752,10 @@ def update_artifact(artifact_id: str, user_id: str, updates: dict) -> dict | Non
     artifact = _artifacts.get(artifact_id)
     if not artifact:
         return None
-    if not _LOCAL_DEV and artifact["user_id"] != user_id:
-        return None
+    nb_id = artifact["notebook_id"]
+    if not _LOCAL_DEV:
+        if artifact["user_id"] != user_id and not can_access_notebook(nb_id, user_id, required="editor"):
+            return None
     artifact.update(updates)
     artifact["updated_at"] = _timestamp()
     _save_db()
@@ -734,8 +766,10 @@ def delete_artifact(artifact_id: str, user_id: str) -> bool:
     artifact = _artifacts.get(artifact_id)
     if not artifact:
         return False
-    if not _LOCAL_DEV and artifact["user_id"] != user_id:
-        return False
+    nb_id = artifact["notebook_id"]
+    if not _LOCAL_DEV:
+        if artifact["user_id"] != user_id and not can_access_notebook(nb_id, user_id, required="editor"):
+            return False
     _artifacts.pop(artifact_id, None)
     _save_db()
     return True
@@ -801,7 +835,9 @@ def get_research_job(job_id: str, user_id: str) -> dict | None:
 
 
 def list_chats(notebook_id: str, user_id: str) -> list[dict]:
-    chats = [c for c in _chats.values() if c["notebook_id"] == notebook_id and (_LOCAL_DEV or c["user_id"] == user_id)]
+    if get_notebook(notebook_id, user_id) is None:
+        return []
+    chats = [c for c in _chats.values() if c["notebook_id"] == notebook_id]
     return sorted(chats, key=lambda c: c["updated_at"], reverse=True)
 
 
@@ -827,9 +863,9 @@ def get_chat(chat_id: str, user_id: str) -> dict | None:
     chat = _chats.get(chat_id)
     if not chat:
         return None
-    if _LOCAL_DEV or chat["user_id"] == user_id:
-        return chat
-    return None
+    if get_notebook(chat["notebook_id"], user_id) is None:
+        return None
+    return chat
 
 
 def rename_chat(chat_id: str, user_id: str, title: str) -> dict | None:
@@ -936,14 +972,13 @@ def get_notebook_role(notebook_id: str, user_id: str | None) -> str | None:
     """Return the effective role for ``user_id`` on a notebook.
 
     Returns ``"owner"`` / ``"editor"`` / ``"viewer"`` for explicit access.  In
-    local-dev mode the caller is treated as the owner so legacy single-user
-    flows keep working.  Returns ``None`` when the user has no access.
+    local-dev mode, unknown users gain ``"editor"`` (not owner) so solo-dev
+    flows can mutate content while collaborator viewer/editor still apply when
+    joined.  Returns ``None`` when the user has no access.
     """
     nb = _notebooks.get(notebook_id)
     if not nb:
         return None
-    if _LOCAL_DEV:
-        return "owner"
     if user_id and nb.get("user_id") == user_id:
         return "owner"
     if user_id:
@@ -954,6 +989,8 @@ def get_notebook_role(notebook_id: str, user_id: str | None) -> str | None:
     if sharing and sharing.get("public"):
         # Public sharing currently exposes read-only access.
         return _normalize_role(sharing.get("role"), default="viewer")
+    if _LOCAL_DEV and user_id:
+        return "editor"
     return None
 
 
