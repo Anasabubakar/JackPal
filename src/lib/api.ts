@@ -77,6 +77,87 @@ export type PodcastChunk = {
   url: string;
 };
 
+export type Notebook = {
+  id: string;
+  title: string;
+  description?: string | null;
+  source_count?: number;
+  note_count?: number;
+  artifact_count?: number;
+  sharing?: {
+    notebook_id: string;
+    public: boolean;
+    role: "viewer" | "editor";
+  };
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Source = {
+  id: string;
+  notebook_id: string;
+  type: "url" | "youtube" | "file" | "text" | "drive";
+  title: string;
+  url?: string | null;
+  document_id?: string | null;
+  status?: string;
+  refresh_state?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Note = {
+  id: string;
+  notebook_id: string;
+  source_id?: string | null;
+  kind: string;
+  title: string;
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Artifact = {
+  id: string;
+  notebook_id: string;
+  type: string;
+  title: string;
+  content: string;
+  format?: string;
+  status?: string;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ResearchJob = {
+  id: string;
+  notebook_id: string;
+  query: string;
+  mode: "fast" | "deep";
+  status: string;
+  results: Array<Record<string, unknown>>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ChatTurn = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: Array<Record<string, unknown>>;
+  created_at?: string;
+};
+
+export type SavedChat = {
+  id: string;
+  notebook_id: string;
+  title: string;
+  source_ids: string[];
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type PodcastStatus = {
   status: "none" | "generating" | "ready";
   ready_lines: number;
@@ -91,6 +172,11 @@ export type TtsCapabilities = {
   premium_model_ready: boolean;
   premium_loaded: boolean;
   premium_available: boolean;
+  premium_voxcpm?: boolean;
+  premium_modal_yarngpt?: boolean;
+  premium_modal_tts?: boolean;
+  premium_yarngpt?: boolean;
+  premium_mms_pidgin?: boolean;
   fast_voices: string[];
   premium_voices: string[];
 };
@@ -258,4 +344,263 @@ export async function askDocument(docId: string, question: string) {
     method: "POST",
     body: JSON.stringify({ question }),
   });
+}
+
+// ── Workspace / Notebook ─────────────────────────────────────────────────────
+
+export async function listWorkspaces() {
+  const data = await request<{ notebooks: Notebook[] }>("/workspaces");
+  return data.notebooks;
+}
+
+export async function createWorkspace(title: string, description?: string) {
+  return request<Notebook>("/workspaces", {
+    method: "POST",
+    body: JSON.stringify({ title, description: description ?? null }),
+  });
+}
+
+export async function getWorkspace(workspaceId: string) {
+  return request<Notebook>(`/workspaces/${workspaceId}`);
+}
+
+export async function renameWorkspace(workspaceId: string, title: string) {
+  return request<Notebook>(`/workspaces/${workspaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+  return request(`/workspaces/${workspaceId}`, { method: "DELETE" });
+}
+
+export async function listWorkspaceSources(workspaceId: string) {
+  const data = await request<{ sources: Source[] }>(`/workspaces/${workspaceId}/sources`);
+  return data.sources;
+}
+
+export async function addWorkspaceTextSource(workspaceId: string, title: string, content: string) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/text`, {
+    method: "POST",
+    body: JSON.stringify({ title, content }),
+  });
+}
+
+export async function addWorkspaceUrlSource(workspaceId: string, title: string | null, url: string) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/url`, {
+    method: "POST",
+    body: JSON.stringify({ title, url }),
+  });
+}
+
+export async function addWorkspaceFileSource(workspaceId: string, file: File) {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE_URL}/workspaces/${workspaceId}/sources/file`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Import failed" }));
+    throw new Error(err.detail || "Import failed");
+  }
+  return res.json() as Promise<{ source: Source }>;
+}
+
+export async function addWorkspaceResearch(
+  workspaceId: string,
+  query: string,
+  opts?: { mode?: "fast" | "deep"; importUrls?: string[] },
+) {
+  return request<{ job: ResearchJob; note?: Note; sources: Array<Record<string, unknown>> }>(
+    `/workspaces/${workspaceId}/sources/research`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        query,
+        mode: opts?.mode ?? "fast",
+        import_urls: opts?.importUrls ?? [],
+      }),
+    }
+  );
+}
+
+export async function getWorkspaceSource(workspaceId: string, sourceId: string) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/${sourceId}`);
+}
+
+export async function renameWorkspaceSource(workspaceId: string, sourceId: string, title: string) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/${sourceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteWorkspaceSource(workspaceId: string, sourceId: string) {
+  return request(`/workspaces/${workspaceId}/sources/${sourceId}`, { method: "DELETE" });
+}
+
+export async function getWorkspaceSourceText(workspaceId: string, sourceId: string) {
+  const data = await request<{ text: string }>(`/workspaces/${workspaceId}/sources/${sourceId}/fulltext`);
+  return data.text;
+}
+
+export async function getWorkspaceSourceGuide(workspaceId: string, sourceId: string) {
+  const data = await request<{ guide: string }>(`/workspaces/${workspaceId}/sources/${sourceId}/guide`);
+  return data.guide;
+}
+
+export async function refreshWorkspaceSource(workspaceId: string, sourceId: string) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/${sourceId}/refresh`, {
+    method: "POST",
+  });
+}
+
+export async function getWorkspaceSourceFreshness(workspaceId: string, sourceId: string) {
+  return request<{ status: string }>(`/workspaces/${workspaceId}/sources/${sourceId}/freshness`);
+}
+
+export async function listWorkspaceNotes(workspaceId: string) {
+  const data = await request<{ notes: Note[] }>(`/workspaces/${workspaceId}/notes`);
+  return data.notes;
+}
+
+export async function addWorkspaceNote(
+  workspaceId: string,
+  title: string,
+  content: string,
+  sourceId?: string,
+  kind = "note",
+) {
+  return request<{ note: Note }>(`/workspaces/${workspaceId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ title, content, source_id: sourceId ?? null, kind }),
+  });
+}
+
+export async function updateWorkspaceNote(
+  workspaceId: string,
+  noteId: string,
+  updates: { title?: string; content?: string; kind?: string },
+) {
+  return request<{ note: Note }>(`/workspaces/${workspaceId}/notes/${noteId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteWorkspaceNote(workspaceId: string, noteId: string) {
+  return request(`/workspaces/${workspaceId}/notes/${noteId}`, { method: "DELETE" });
+}
+
+export async function askWorkspace(
+  workspaceId: string,
+  question: string,
+  opts?: { saveAsNote?: boolean; sourceIds?: string[]; chatId?: string | null },
+) {
+  return request<{ question: string; answer: string; note?: Note | null }>(`/workspaces/${workspaceId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({
+      question,
+      save_as_note: opts?.saveAsNote ?? false,
+      source_ids: opts?.sourceIds ?? [],
+      chat_id: opts?.chatId ?? null,
+    }),
+  });
+}
+
+export async function listWorkspaceArtifacts(workspaceId: string) {
+  const data = await request<{ artifacts: Artifact[] }>(`/workspaces/${workspaceId}/artifacts`);
+  return data.artifacts;
+}
+
+export async function generateWorkspaceArtifact(
+  workspaceId: string,
+  artifactType: string,
+  payload?: { title?: string; prompt?: string; format?: string },
+) {
+  return request<{ artifact: Artifact }>(`/workspaces/${workspaceId}/artifacts/generate/${artifactType}`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export async function getWorkspaceArtifact(workspaceId: string, artifactId: string) {
+  return request<{ artifact: Artifact }>(`/workspaces/${workspaceId}/artifacts/${artifactId}`);
+}
+
+export async function updateWorkspaceArtifact(
+  workspaceId: string,
+  artifactId: string,
+  payload: { title?: string; prompt?: string; format?: string },
+) {
+  return request<{ artifact: Artifact }>(`/workspaces/${workspaceId}/artifacts/${artifactId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteWorkspaceArtifact(workspaceId: string, artifactId: string) {
+  return request(`/workspaces/${workspaceId}/artifacts/${artifactId}`, { method: "DELETE" });
+}
+
+export async function downloadWorkspaceArtifact(workspaceId: string, artifactId: string) {
+  const token = getToken();
+  if (!token) throw new Error("Missing session token.");
+  const res = await fetch(`${BASE_URL}/workspaces/${workspaceId}/artifacts/${artifactId}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Download failed" }));
+    throw new Error(err.detail || "Download failed");
+  }
+  const blob = await res.blob();
+  const contentDisposition = res.headers.get("content-disposition") || "";
+  const match = contentDisposition.match(/filename="?([^"]+)"?/i);
+  return { blob, filename: match?.[1] || "jackpal-artifact" };
+}
+
+export async function getWorkspaceSharing(workspaceId: string) {
+  return request<{ notebook_id: string; public: boolean; role: "viewer" | "editor" }>(`/workspaces/${workspaceId}/sharing`);
+}
+
+export async function setWorkspaceSharing(workspaceId: string, publicValue: boolean, role: "viewer" | "editor" = "viewer") {
+  return request<{ notebook_id: string; public: boolean; role: "viewer" | "editor" }>(`/workspaces/${workspaceId}/sharing`, {
+    method: "POST",
+    body: JSON.stringify({ public: publicValue, role }),
+  });
+}
+
+export async function listWorkspaceChats(workspaceId: string) {
+  const data = await request<{ chats: SavedChat[] }>(`/workspaces/${workspaceId}/chats`);
+  return data.chats;
+}
+
+export async function createWorkspaceChat(workspaceId: string, title: string, sourceIds: string[] = []) {
+  return request<{ chat: SavedChat }>(`/workspaces/${workspaceId}/chats`, {
+    method: "POST",
+    body: JSON.stringify({ title, source_ids: sourceIds }),
+  });
+}
+
+export async function getWorkspaceChat(workspaceId: string, chatId: string) {
+  return request<{ chat: SavedChat; turns: ChatTurn[] }>(`/workspaces/${workspaceId}/chats/${chatId}`);
+}
+
+export async function renameWorkspaceChat(workspaceId: string, chatId: string, title: string) {
+  return request<{ chat: SavedChat }>(`/workspaces/${workspaceId}/chats/${chatId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteWorkspaceChat(workspaceId: string, chatId: string) {
+  return request(`/workspaces/${workspaceId}/chats/${chatId}`, { method: "DELETE" });
+}
+
+export async function cleanupWorkspaceDuplicates(workspaceId: string) {
+  return request<{ removed: Source[] }>(`/workspaces/${workspaceId}/duplicates/cleanup`, { method: "POST" });
 }

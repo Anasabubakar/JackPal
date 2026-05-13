@@ -41,6 +41,14 @@ def _load_db() -> dict:
         "podcast_chunks": {},
         "podcast_scripts": {},
         "activity": [],
+        "notebooks": {},
+        "sources": {},
+        "notes": {},
+        "artifacts": {},
+        "sharing": {},
+        "research_jobs": {},
+        "chats": {},
+        "chat_turns": {},
     }
 
 
@@ -55,6 +63,14 @@ def _save_db():
         "podcast_chunks": _podcast_chunks,
         "podcast_scripts": _podcast_scripts,
         "activity": _activity,
+        "notebooks": _notebooks,
+        "sources": _sources,
+        "notes": _notes,
+        "artifacts": _artifacts,
+        "sharing": _sharing,
+        "research_jobs": _research_jobs,
+        "chats": _chats,
+        "chat_turns": _chat_turns,
     }
     DB_FILE.write_text(json.dumps(data))
 
@@ -66,6 +82,22 @@ _audio_chunks: dict[str, dict] = _db["audio_chunks"]
 _podcast_chunks: dict[str, dict] = _db.get("podcast_chunks", {})
 _podcast_scripts: dict[str, list] = _db.get("podcast_scripts", {})
 _activity: list[dict] = _db.get("activity", [])
+_notebooks: dict[str, dict] = _db.get("notebooks", {})
+_sources: dict[str, dict] = _db.get("sources", {})
+_notes: dict[str, dict] = _db.get("notes", {})
+_artifacts: dict[str, dict] = _db.get("artifacts", {})
+_sharing: dict[str, dict] = _db.get("sharing", {})
+_research_jobs: dict[str, dict] = _db.get("research_jobs", {})
+_chats: dict[str, dict] = _db.get("chats", {})
+_chat_turns: dict[str, list[dict]] = _db.get("chat_turns", {})
+
+
+def _timestamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _new_id() -> str:
+    return str(uuid.uuid4())
 
 def log_activity(user_id: str, doc_id: str, activity_type: str, duration_seconds: int = 0):
     """Record a study event (e.g., 'listen_chunk', 'listen_podcast')."""
@@ -113,11 +145,29 @@ def save_document(user_id: str, filename: str, file_bytes: bytes, text: str) -> 
         "status": "ready",
         "audio_voice": None,
         "audio_engine": None,
-        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "created_at": _timestamp(),
     }
     _documents[doc_id] = record
     _save_db()
     delete_keys(key_doc_list(user_id), key_user_stats(user_id))
+    return record
+
+
+def save_document_from_text(
+    user_id: str,
+    filename: str,
+    text: str,
+    *,
+    source_type: str = "text",
+    source_id: str | None = None,
+) -> dict:
+    file_bytes = text.encode("utf-8")
+    record = save_document(user_id, filename, file_bytes, text)
+    record["source_type"] = source_type
+    if source_id:
+        record["source_id"] = source_id
+    _documents[record["id"]].update({k: v for k, v in record.items() if k != "extracted_text"})
+    _save_db()
     return record
 
 
@@ -412,3 +462,420 @@ def clear_podcast_chunks(doc_id: str, user_id: str):
 
     _save_db()
     delete_keys(key_podcast_chunks(user_id, doc_id))
+
+
+# ── Notebook workspace storage ───────────────────────────────────────────────
+
+def list_notebooks(user_id: str) -> list[dict]:
+    notebooks = [n for n in _notebooks.values() if n["user_id"] == user_id]
+    return sorted(notebooks, key=lambda n: n["updated_at"], reverse=True)
+
+
+def get_notebook(notebook_id: str, user_id: str) -> dict | None:
+    nb = _notebooks.get(notebook_id)
+    if not nb:
+        return None
+    if _LOCAL_DEV or nb["user_id"] == user_id:
+        return nb
+    return None
+
+
+def create_notebook(user_id: str, title: str, description: str = "") -> dict:
+    notebook_id = _new_id()
+    record = {
+        "id": notebook_id,
+        "user_id": user_id,
+        "title": title.strip() or "Untitled Notebook",
+        "description": description.strip(),
+        "created_at": _timestamp(),
+        "updated_at": _timestamp(),
+    }
+    _notebooks[notebook_id] = record
+    _sharing.setdefault(notebook_id, {"notebook_id": notebook_id, "user_id": user_id, "public": False, "role": "viewer"})
+    _save_db()
+    return record
+
+
+def rename_notebook(notebook_id: str, user_id: str, title: str) -> dict | None:
+    nb = get_notebook(notebook_id, user_id)
+    if not nb:
+        return None
+    nb["title"] = title.strip() or nb["title"]
+    nb["updated_at"] = _timestamp()
+    _save_db()
+    return nb
+
+
+def delete_notebook(notebook_id: str, user_id: str) -> bool:
+    nb = get_notebook(notebook_id, user_id)
+    if not nb:
+        return False
+    for source in list(_sources.values()):
+        if source["notebook_id"] == notebook_id:
+            delete_source(source["id"], user_id)
+    for note in list(_notes.values()):
+        if note["notebook_id"] == notebook_id:
+            _notes.pop(note["id"], None)
+    for artifact in list(_artifacts.values()):
+        if artifact["notebook_id"] == notebook_id:
+            _artifacts.pop(artifact["id"], None)
+    _sharing.pop(notebook_id, None)
+    _notebooks.pop(notebook_id, None)
+    _save_db()
+    return True
+
+
+def _source_defaults() -> dict:
+    return {"status": "ready", "guide": None, "fulltext": "", "refresh_state": "fresh"}
+
+
+def list_sources(notebook_id: str, user_id: str) -> list[dict]:
+    sources = [s for s in _sources.values() if s["notebook_id"] == notebook_id and (_LOCAL_DEV or s["user_id"] == user_id)]
+    return sorted(sources, key=lambda s: s["updated_at"], reverse=True)
+
+
+def get_source(source_id: str, user_id: str) -> dict | None:
+    src = _sources.get(source_id)
+    if not src:
+        return None
+    if _LOCAL_DEV or src["user_id"] == user_id:
+        return src
+    return None
+
+
+def upsert_source(
+    notebook_id: str,
+    user_id: str,
+    *,
+    source_type: str,
+    title: str,
+    content: str,
+    url: str | None = None,
+    document_id: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    source_id = _new_id()
+    now = _timestamp()
+    record = {
+        "id": source_id,
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "type": source_type,
+        "title": title.strip() or "Untitled Source",
+        "url": url,
+        "document_id": document_id,
+        "content": content,
+        "fulltext": content,
+        "metadata": metadata or {},
+        "status": "ready",
+        "refresh_state": "fresh",
+        "created_at": now,
+        "updated_at": now,
+    }
+    _sources[source_id] = record
+    if notebook_id in _notebooks:
+        _notebooks[notebook_id]["updated_at"] = now
+    _save_db()
+    return record
+
+
+def rename_source(source_id: str, user_id: str, title: str) -> dict | None:
+    src = get_source(source_id, user_id)
+    if not src:
+        return None
+    src["title"] = title.strip() or src["title"]
+    src["updated_at"] = _timestamp()
+    _save_db()
+    return src
+
+
+def update_source(source_id: str, user_id: str, updates: dict) -> dict | None:
+    src = get_source(source_id, user_id)
+    if not src:
+        return None
+    src.update(updates)
+    src["updated_at"] = _timestamp()
+    _save_db()
+    return src
+
+
+def delete_source(source_id: str, user_id: str) -> bool:
+    src = get_source(source_id, user_id)
+    if not src:
+        return False
+    doc_id = src.get("document_id")
+    if doc_id:
+        delete_document(doc_id, user_id)
+    _sources.pop(source_id, None)
+    _save_db()
+    return True
+
+
+def list_notes(notebook_id: str, user_id: str) -> list[dict]:
+    notes = [n for n in _notes.values() if n["notebook_id"] == notebook_id and (_LOCAL_DEV or n["user_id"] == user_id)]
+    return sorted(notes, key=lambda n: n["updated_at"], reverse=True)
+
+
+def create_note(
+    notebook_id: str,
+    user_id: str,
+    *,
+    title: str,
+    content: str,
+    source_id: str | None = None,
+    kind: str = "note",
+) -> dict:
+    note_id = _new_id()
+    now = _timestamp()
+    record = {
+        "id": note_id,
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "source_id": source_id,
+        "kind": kind,
+        "title": title.strip() or "Untitled Note",
+        "content": content.strip(),
+        "created_at": now,
+        "updated_at": now,
+    }
+    _notes[note_id] = record
+    _save_db()
+    return record
+
+
+def update_note(note_id: str, user_id: str, updates: dict) -> dict | None:
+    note = _notes.get(note_id)
+    if not note:
+        return None
+    if not _LOCAL_DEV and note["user_id"] != user_id:
+        return None
+    note.update(updates)
+    note["updated_at"] = _timestamp()
+    _save_db()
+    return note
+
+
+def delete_note(note_id: str, user_id: str) -> bool:
+    note = _notes.get(note_id)
+    if not note:
+        return False
+    if not _LOCAL_DEV and note["user_id"] != user_id:
+        return False
+    _notes.pop(note_id, None)
+    _save_db()
+    return True
+
+
+def list_artifacts(notebook_id: str, user_id: str) -> list[dict]:
+    artifacts = [a for a in _artifacts.values() if a["notebook_id"] == notebook_id and (_LOCAL_DEV or a["user_id"] == user_id)]
+    return sorted(artifacts, key=lambda a: a["updated_at"], reverse=True)
+
+
+def create_artifact(
+    notebook_id: str,
+    user_id: str,
+    *,
+    artifact_type: str,
+    title: str,
+    content: str,
+    fmt: str = "text",
+    status: str = "ready",
+    metadata: dict | None = None,
+) -> dict:
+    artifact_id = _new_id()
+    now = _timestamp()
+    record = {
+        "id": artifact_id,
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "type": artifact_type,
+        "title": title.strip() or artifact_type.title(),
+        "content": content,
+        "format": fmt,
+        "status": status,
+        "metadata": metadata or {},
+        "created_at": now,
+        "updated_at": now,
+    }
+    _artifacts[artifact_id] = record
+    _save_db()
+    return record
+
+
+def update_artifact(artifact_id: str, user_id: str, updates: dict) -> dict | None:
+    artifact = _artifacts.get(artifact_id)
+    if not artifact:
+        return None
+    if not _LOCAL_DEV and artifact["user_id"] != user_id:
+        return None
+    artifact.update(updates)
+    artifact["updated_at"] = _timestamp()
+    _save_db()
+    return artifact
+
+
+def delete_artifact(artifact_id: str, user_id: str) -> bool:
+    artifact = _artifacts.get(artifact_id)
+    if not artifact:
+        return False
+    if not _LOCAL_DEV and artifact["user_id"] != user_id:
+        return False
+    _artifacts.pop(artifact_id, None)
+    _save_db()
+    return True
+
+
+def set_sharing(notebook_id: str, user_id: str, public: bool, role: str = "viewer") -> dict | None:
+    nb = get_notebook(notebook_id, user_id)
+    if not nb:
+        return None
+    record = {
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "public": bool(public),
+        "role": role if role in {"viewer", "editor"} else "viewer",
+        "updated_at": _timestamp(),
+    }
+    _sharing[notebook_id] = record
+    _save_db()
+    return record
+
+
+def get_sharing(notebook_id: str, user_id: str) -> dict | None:
+    sharing = _sharing.get(notebook_id)
+    if not sharing:
+        return {"notebook_id": notebook_id, "user_id": user_id, "public": False, "role": "viewer"}
+    return sharing
+
+
+def create_research_job(
+    notebook_id: str,
+    user_id: str,
+    *,
+    query: str,
+    mode: str = "fast",
+    status: str = "ready",
+    results: list[dict] | None = None,
+) -> dict:
+    job_id = _new_id()
+    now = _timestamp()
+    record = {
+        "id": job_id,
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "query": query.strip(),
+        "mode": mode,
+        "status": status,
+        "results": results or [],
+        "created_at": now,
+        "updated_at": now,
+    }
+    _research_jobs[job_id] = record
+    _save_db()
+    return record
+
+
+def get_research_job(job_id: str, user_id: str) -> dict | None:
+    job = _research_jobs.get(job_id)
+    if not job:
+        return None
+    if _LOCAL_DEV or job["user_id"] == user_id:
+        return job
+    return None
+
+
+def list_chats(notebook_id: str, user_id: str) -> list[dict]:
+    chats = [c for c in _chats.values() if c["notebook_id"] == notebook_id and (_LOCAL_DEV or c["user_id"] == user_id)]
+    return sorted(chats, key=lambda c: c["updated_at"], reverse=True)
+
+
+def create_chat(notebook_id: str, user_id: str, title: str, source_ids: list[str] | None = None) -> dict:
+    chat_id = _new_id()
+    now = _timestamp()
+    record = {
+        "id": chat_id,
+        "notebook_id": notebook_id,
+        "user_id": user_id,
+        "title": title.strip() or "Saved Chat",
+        "source_ids": source_ids or [],
+        "created_at": now,
+        "updated_at": now,
+    }
+    _chats[chat_id] = record
+    _chat_turns[chat_id] = []
+    _save_db()
+    return record
+
+
+def get_chat(chat_id: str, user_id: str) -> dict | None:
+    chat = _chats.get(chat_id)
+    if not chat:
+        return None
+    if _LOCAL_DEV or chat["user_id"] == user_id:
+        return chat
+    return None
+
+
+def rename_chat(chat_id: str, user_id: str, title: str) -> dict | None:
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        return None
+    chat["title"] = title.strip() or chat["title"]
+    chat["updated_at"] = _timestamp()
+    _save_db()
+    return chat
+
+
+def delete_chat(chat_id: str, user_id: str) -> bool:
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        return False
+    _chats.pop(chat_id, None)
+    _chat_turns.pop(chat_id, None)
+    _save_db()
+    return True
+
+
+def list_chat_turns(chat_id: str, user_id: str) -> list[dict]:
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        return []
+    return _chat_turns.get(chat_id, [])
+
+
+def add_chat_turn(
+    chat_id: str,
+    user_id: str,
+    *,
+    role: str,
+    content: str,
+    citations: list[dict] | None = None,
+) -> dict | None:
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        return None
+    turn = {
+        "id": _new_id(),
+        "role": role,
+        "content": content,
+        "citations": citations or [],
+        "created_at": _timestamp(),
+    }
+    _chat_turns.setdefault(chat_id, []).append(turn)
+    chat["updated_at"] = _timestamp()
+    _save_db()
+    return turn
+
+
+def cleanup_duplicate_sources(notebook_id: str, user_id: str) -> list[dict]:
+    sources = list_sources(notebook_id, user_id)
+    seen = {}
+    removed = []
+    for source in sources:
+        key = (source.get("url") or "").strip().lower() or source["title"].strip().lower()
+        if key in seen:
+            removed.append(source)
+            delete_source(source["id"], user_id)
+            continue
+        seen[key] = source["id"]
+    return removed

@@ -26,6 +26,7 @@ import edge_tts
 YARNGPT_API_KEY   = os.environ.get("YARNGPT_API_KEY", "")
 MODAL_YARNGPT_URL = os.environ.get("MODAL_YARNGPT_URL", "")
 MODAL_TTS_URL     = os.environ.get("MODAL_TTS_URL", "")
+VOXCPM_API_URL    = os.environ.get("VOXCPM_API_URL", "")
 YARNGPT_API_URL   = "https://yarngpt.ai/api/v1/tts"
 
 # ── Local model singletons (MMS only) ─────────────────────────────────────────
@@ -95,13 +96,16 @@ def resolve_voice_for_engine(voice: str | None, engine: str | None) -> str:
 # ── Capabilities ───────────────────────────────────────────────────────────────
 
 def get_tts_capabilities() -> dict:
+    voxcpm     = bool(VOXCPM_API_URL)
     modal_yarn = bool(MODAL_YARNGPT_URL)
     modal_tts  = bool(MODAL_TTS_URL)
     yarn_api   = bool(YARNGPT_API_KEY)
     mms        = _mms_available()
-    premium    = modal_yarn or modal_tts or yarn_api
+    premium    = voxcpm or modal_yarn or modal_tts or yarn_api
 
-    if modal_yarn:
+    if voxcpm:
+        engine = "voxcpm_api"
+    elif modal_yarn:
         engine = "modal_yarngpt"
     elif yarn_api:
         engine = "yarngpt_api"
@@ -114,6 +118,7 @@ def get_tts_capabilities() -> dict:
         "fast_available":        True,
         "premium_available":     premium,
         "premium_enabled":       premium,
+        "premium_voxcpm":        voxcpm,
         "premium_modal_yarngpt": modal_yarn,
         "premium_modal_tts":     modal_tts,
         "premium_yarngpt":       yarn_api,
@@ -126,6 +131,8 @@ def get_tts_capabilities() -> dict:
 
 def start_background_download():
     """Log active TTS engines on startup."""
+    if VOXCPM_API_URL:
+        print("[TTS] VoxCPM API active — strongest premium synthesis path.")
     if MODAL_YARNGPT_URL:
         print("[TTS] Modal YarnGPT2b active — authentic Nigerian voices.")
     if YARNGPT_API_KEY:
@@ -186,6 +193,12 @@ async def synthesize_chunk(
 
     # ── Premium path ─────────────────────────────────────────────────────────
     if engine == "premium":
+        if VOXCPM_API_URL:
+            try:
+                return await _voxcpm_synthesize(text, voice, VOXCPM_API_URL)
+            except Exception as e:
+                print(f"[TTS] VoxCPM API failed ({e}), trying next engine")
+
         if MODAL_YARNGPT_URL:
             try:
                 return await _modal_yarngpt_synthesize(text, voice, MODAL_YARNGPT_URL)
@@ -232,6 +245,25 @@ async def _yarn_api_synthesize(text: str, voice: str) -> bytes:
             if resp.status != 200:
                 body = await resp.text()
                 raise RuntimeError(f"YarnGPT API {resp.status}: {body[:200]}")
+            return await resp.read()
+
+
+async def _voxcpm_synthesize(text: str, voice: str, api_url: str) -> bytes:
+    import aiohttp
+    api_voice = VOICE_MAP.get(voice, {}).get("api", voice)
+    payload = {
+        "text": text,
+        "voice": api_voice,
+        "control": f"{voice} Nigerian voice",
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            api_url, json=payload,
+            timeout=aiohttp.ClientTimeout(total=180),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"VoxCPM API {resp.status}: {body[:200]}")
             return await resp.read()
 
 

@@ -61,9 +61,47 @@ import {
   getPodcastChunks,
   getDocumentText,
   askDocument,
+  listWorkspaces,
+  createWorkspace,
+  renameWorkspace,
+  deleteWorkspace,
+  listWorkspaceSources,
+  addWorkspaceTextSource,
+  addWorkspaceUrlSource,
+  addWorkspaceFileSource,
+  addWorkspaceResearch,
+  renameWorkspaceSource,
+  deleteWorkspaceSource,
+  getWorkspaceSourceText,
+  getWorkspaceSourceGuide,
+  refreshWorkspaceSource,
+  getWorkspaceSourceFreshness,
+  listWorkspaceNotes,
+  addWorkspaceNote,
+  updateWorkspaceNote,
+  deleteWorkspaceNote,
+  askWorkspace,
+  listWorkspaceArtifacts,
+  generateWorkspaceArtifact,
+  deleteWorkspaceArtifact,
+  downloadWorkspaceArtifact,
+  getWorkspaceSharing,
+  setWorkspaceSharing,
+  listWorkspaceChats,
+  createWorkspaceChat,
+  getWorkspaceChat,
+  renameWorkspaceChat,
+  deleteWorkspaceChat,
+  cleanupWorkspaceDuplicates,
   type Document,
   type Chapter,
   type PodcastLine,
+  type Notebook,
+  type Source,
+  type Note,
+  type Artifact,
+  type SavedChat,
+  type ChatTurn,
 } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -201,6 +239,36 @@ export default function Dashboard() {
   // Real Stats
   const [userStats, setUserStats] = useState<any>(null);
 
+  // Workspace / notebooks
+  const [workspaces, setWorkspaces] = useState<Notebook[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [workspaceSources, setWorkspaceSources] = useState<Source[]>([]);
+  const [workspaceNotes, setWorkspaceNotes] = useState<Note[]>([]);
+  const [workspaceArtifacts, setWorkspaceArtifacts] = useState<Artifact[]>([]);
+  const [workspaceChats, setWorkspaceChats] = useState<SavedChat[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatTurns, setActiveChatTurns] = useState<ChatTurn[]>([]);
+  const [workspaceSharing, setWorkspaceSharingState] = useState<{ public: boolean; role: "viewer" | "editor" } | null>(null);
+  const [activeWorkspaceSourceId, setActiveWorkspaceSourceId] = useState<string | null>(null);
+  const [activeWorkspaceSourceText, setActiveWorkspaceSourceText] = useState("");
+  const [activeWorkspaceSourceGuide, setActiveWorkspaceSourceGuide] = useState("");
+  const [workspaceError, setWorkspaceError] = useState("");
+  const [workspaceBusy, setWorkspaceBusy] = useState("");
+  const [workspaceTitle, setWorkspaceTitle] = useState("");
+  const [workspaceDescription, setWorkspaceDescription] = useState("");
+  const [sourceMode, setSourceMode] = useState<"text" | "url" | "file" | "research">("text");
+  const [sourceTitle, setSourceTitle] = useState("");
+  const [sourceContent, setSourceContent] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [researchQuery, setResearchQuery] = useState("");
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [chatQuestion, setChatQuestionWorkspace] = useState("");
+  const [workspaceAnswer, setWorkspaceAnswer] = useState("");
+  const [workspaceFileName, setWorkspaceFileName] = useState("");
+  const workspaceFileInputRef = useRef<HTMLInputElement>(null);
+
   // Search
   const [searchQuery, setSearchQuery] = useState("");
   const lastTimeUpdateRef = useRef(0);
@@ -237,11 +305,20 @@ export default function Dashboard() {
       return () => mq.removeEventListener("change", syncLayout);
     }
     fetchDocuments();
+    fetchWorkspaces();
     // Warm up Render backend so user's first Listen/Podcast click hits an
     // awake container instead of paying 30-50s cold-start.
     fetch(`${API_URL}/audio/capabilities`).catch(() => {});
     return () => mq.removeEventListener("change", syncLayout);
   }, [router]);
+
+  useEffect(() => {
+    if (!selectedWorkspaceId) return;
+    setActiveWorkspaceSourceId(null);
+    setActiveWorkspaceSourceText("");
+    setActiveWorkspaceSourceGuide("");
+    loadWorkspaceDetails(selectedWorkspaceId);
+  }, [selectedWorkspaceId]);
 
   function saveSubject(docId: string, subject: string) {
     const updated = { ...subjects, [docId]: subject };
@@ -342,6 +419,68 @@ export default function Dashboard() {
     }
   }
 
+  async function fetchWorkspaces() {
+    setWorkspaceLoading(true);
+    try {
+      const notebooks = await listWorkspaces();
+      setWorkspaces(notebooks);
+      setSelectedWorkspaceId((prev) => {
+        if (prev && notebooks.some((nb) => nb.id === prev)) return prev;
+        return notebooks[0]?.id ?? null;
+      });
+    } catch {
+      setWorkspaceError("Could not load workspaces.");
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  }
+
+  async function loadWorkspaceDetails(workspaceId: string) {
+    try {
+      const [sources, notes, artifacts, sharing, chats] = await Promise.all([
+        listWorkspaceSources(workspaceId),
+        listWorkspaceNotes(workspaceId),
+        listWorkspaceArtifacts(workspaceId),
+        getWorkspaceSharing(workspaceId),
+        listWorkspaceChats(workspaceId),
+      ]);
+      setWorkspaceSources(sources);
+      setWorkspaceNotes(notes);
+      setWorkspaceArtifacts(artifacts);
+      setWorkspaceSharingState(sharing);
+      setWorkspaceChats(chats);
+      setActiveChatId((prev) => (prev && chats.some((chat) => chat.id === prev) ? prev : chats[0]?.id ?? null));
+    } catch {
+      setWorkspaceError("Could not load notebook details.");
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedWorkspaceId || !activeChatId) {
+      setActiveChatTurns([]);
+      return;
+    }
+    getWorkspaceChat(selectedWorkspaceId, activeChatId)
+      .then((data) => setActiveChatTurns(data.turns || []))
+      .catch(() => setActiveChatTurns([]));
+  }, [selectedWorkspaceId, activeChatId]);
+
+  async function inspectWorkspaceSource(source: Source) {
+    if (!selectedWorkspaceId) return;
+    setActiveWorkspaceSourceId(source.id);
+    try {
+      const [text, guide] = await Promise.all([
+        getWorkspaceSourceText(selectedWorkspaceId, source.id),
+        getWorkspaceSourceGuide(selectedWorkspaceId, source.id).catch(() => ""),
+      ]);
+      setActiveWorkspaceSourceText(text);
+      setActiveWorkspaceSourceGuide(guide);
+    } catch {
+      setActiveWorkspaceSourceText("");
+      setActiveWorkspaceSourceGuide("");
+    }
+  }
+
   function formatTime(value: number) {
     if (!Number.isFinite(value) || value < 0) return "00:00";
     const totalSeconds = Math.floor(value);
@@ -423,6 +562,237 @@ export default function Dashboard() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleCreateWorkspace() {
+    const title = workspaceTitle.trim();
+    if (!title || workspaceBusy) return;
+    setWorkspaceBusy("Creating notebook...");
+    setWorkspaceError("");
+    try {
+      const created = await createWorkspace(title, workspaceDescription.trim() || undefined);
+      setWorkspaceTitle("");
+      setWorkspaceDescription("");
+      await fetchWorkspaces();
+      setSelectedWorkspaceId(created.id);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not create notebook.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleRenameWorkspace(workspaceId: string) {
+    const current = workspaces.find((item) => item.id === workspaceId);
+    const next = prompt("Rename notebook", current?.title || "");
+    if (!next?.trim()) return;
+    setWorkspaceBusy("Renaming notebook...");
+    try {
+      await renameWorkspace(workspaceId, next.trim());
+      await fetchWorkspaces();
+      if (selectedWorkspaceId === workspaceId) {
+        setSelectedWorkspaceId(workspaceId);
+      }
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not rename notebook.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleDeleteWorkspace(workspaceId: string) {
+    if (!confirm("Delete this notebook and all of its notes, sources, and artifacts?")) return;
+    setWorkspaceBusy("Deleting notebook...");
+    try {
+      await deleteWorkspace(workspaceId);
+      await fetchWorkspaces();
+      setSelectedWorkspaceId((prev) => (prev === workspaceId ? null : prev));
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not delete notebook.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleAddWorkspaceSource() {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    setWorkspaceBusy("Importing source...");
+    setWorkspaceError("");
+    try {
+      if (sourceMode === "file") {
+        const file = workspaceFileInputRef.current?.files?.[0];
+        if (!file) throw new Error("Choose a file first.");
+        await addWorkspaceFileSource(selectedWorkspaceId, file);
+        if (workspaceFileInputRef.current) workspaceFileInputRef.current.value = "";
+        setWorkspaceFileName("");
+      } else if (sourceMode === "url") {
+        if (!sourceUrl.trim()) throw new Error("Enter a URL.");
+        await addWorkspaceUrlSource(selectedWorkspaceId, sourceTitle.trim() || null, sourceUrl.trim());
+      } else if (sourceMode === "research") {
+        if (!researchQuery.trim()) throw new Error("Enter a research query.");
+        await addWorkspaceResearch(selectedWorkspaceId, researchQuery.trim(), { mode: "fast" });
+      } else {
+        if (!sourceContent.trim()) throw new Error("Enter source text.");
+        await addWorkspaceTextSource(selectedWorkspaceId, sourceTitle.trim() || "Pasted Notes", sourceContent.trim());
+      }
+      setSourceContent("");
+      setSourceTitle("");
+      setSourceUrl("");
+      setResearchQuery("");
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      await fetchWorkspaces();
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not import source.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleWorkspaceNoteSave() {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    if (!noteTitle.trim() || !noteContent.trim()) return;
+    setWorkspaceBusy("Saving note...");
+    try {
+      await addWorkspaceNote(selectedWorkspaceId, noteTitle.trim(), noteContent.trim());
+      setNoteTitle("");
+      setNoteContent("");
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      await fetchWorkspaces();
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not save note.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleWorkspaceAsk() {
+    if (!selectedWorkspaceId || workspaceBusy || !chatQuestion.trim()) return;
+    setWorkspaceBusy("Thinking...");
+    try {
+      const result = await askWorkspace(selectedWorkspaceId, chatQuestion.trim(), {
+        saveAsNote: true,
+        chatId: activeChatId,
+      });
+      setWorkspaceAnswer(result.answer);
+      setChatQuestionWorkspace("");
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      await fetchWorkspaces();
+      if (activeChatId && selectedWorkspaceId) {
+        const refreshed = await getWorkspaceChat(selectedWorkspaceId, activeChatId).catch(() => null);
+        setActiveChatTurns(refreshed?.turns || []);
+      }
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not answer question.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleWorkspaceGenerate(artifactType: string, title?: string) {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    setWorkspaceBusy(`Generating ${artifactType}...`);
+    try {
+      await generateWorkspaceArtifact(selectedWorkspaceId, artifactType, { title });
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      await fetchWorkspaces();
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : `Could not generate ${artifactType}.`);
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleDownloadWorkspaceArtifact(artifactId: string) {
+    if (!selectedWorkspaceId) return;
+    try {
+      const { blob, filename } = await downloadWorkspaceArtifact(selectedWorkspaceId, artifactId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not download artifact.");
+    }
+  }
+
+  async function handleSetSharing(publicValue: boolean, role: "viewer" | "editor") {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    setWorkspaceBusy("Updating sharing...");
+    try {
+      await setWorkspaceSharing(selectedWorkspaceId, publicValue, role);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not update sharing.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleCreateSavedChat() {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    const title = prompt("Chat title", "Study chat");
+    if (!title?.trim()) return;
+    setWorkspaceBusy("Creating chat...");
+    try {
+      const created = await createWorkspaceChat(selectedWorkspaceId, title.trim(), []);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      setActiveChatId(created.chat.id);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not create chat.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleRenameSavedChat(chatId: string) {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    const current = workspaceChats.find((chat) => chat.id === chatId);
+    const title = prompt("Rename chat", current?.title || "");
+    if (!title?.trim()) return;
+    setWorkspaceBusy("Renaming chat...");
+    try {
+      await renameWorkspaceChat(selectedWorkspaceId, chatId, title.trim());
+      await loadWorkspaceDetails(selectedWorkspaceId);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not rename chat.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleDeleteSavedChat(chatId: string) {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    if (!confirm("Delete this chat history?")) return;
+    setWorkspaceBusy("Deleting chat...");
+    try {
+      await deleteWorkspaceChat(selectedWorkspaceId, chatId);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+      if (activeChatId === chatId) {
+        setActiveChatId(null);
+        setActiveChatTurns([]);
+      }
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not delete chat.");
+    } finally {
+      setWorkspaceBusy("");
+    }
+  }
+
+  async function handleCleanupDuplicates() {
+    if (!selectedWorkspaceId || workspaceBusy) return;
+    setWorkspaceBusy("Cleaning duplicates...");
+    try {
+      await cleanupWorkspaceDuplicates(selectedWorkspaceId);
+      await loadWorkspaceDetails(selectedWorkspaceId);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not clean duplicates.");
+    } finally {
+      setWorkspaceBusy("");
     }
   }
 
@@ -1094,6 +1464,7 @@ export default function Dashboard() {
       </div>
       {[
         { id: "home", Icon: Library, label: "Library" },
+        { id: "workspace", Icon: LayoutGrid, label: "Workspace" },
         { id: "upload", Icon: Plus, label: "Upload" },
       ].map(({ id, Icon, label }) => (
         <button
@@ -1429,6 +1800,451 @@ export default function Dashboard() {
               ))}
             </div>
           )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const WorkspaceView = () => {
+    const selectedWorkspace = selectedWorkspaceId
+      ? workspaces.find((item) => item.id === selectedWorkspaceId) ?? null
+      : null;
+    return (
+      <motion.div
+        key="workspace"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: dur.smooth, ease: ease.out }}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}>
+              Notebook workspace
+            </div>
+            <div className="leading-none mt-0.5 truncate" style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}>
+              Study layers
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              value={workspaceTitle}
+              onChange={(e) => setWorkspaceTitle(e.target.value)}
+              placeholder="New notebook"
+              className="rounded-lg px-3 py-2 text-[11px] outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+            />
+            <input
+              value={workspaceDescription}
+              onChange={(e) => setWorkspaceDescription(e.target.value)}
+              placeholder="Description"
+              className="rounded-lg px-3 py-2 text-[11px] outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+            />
+            <button
+              onClick={handleCreateWorkspace}
+              disabled={!!workspaceBusy || !workspaceTitle.trim()}
+              className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+              style={{ background: "var(--blue)" }}
+            >
+              {workspaceBusy === "Creating notebook..." ? "Creating" : "Create"}
+            </button>
+          </div>
+        </div>
+
+        {(workspaceError || workspaceBusy) && (
+          <div className="mx-5 mt-3 px-4 py-2.5 rounded-xl text-[11px] flex items-center justify-between gap-3" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border)" }}>
+            <span>{workspaceError || workspaceBusy}</span>
+            {workspaceError && (
+              <button onClick={() => setWorkspaceError("")} style={{ color: "var(--text-3)" }}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-hidden grid lg:grid-cols-[260px_1fr]">
+          <aside className="border-r" style={{ borderColor: "var(--border)" }}>
+            <div className="h-full overflow-y-auto studio-scroll px-3 py-3 space-y-2">
+              {workspaceLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: "var(--surface-2)" }} />
+                  ))}
+                </div>
+              ) : workspaces.length === 0 ? (
+                <div className="rounded-xl p-4 text-[12px]" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
+                  Create a notebook to group sources, notes, and artifacts.
+                </div>
+              ) : (
+                workspaces.map((workspace) => (
+                  <button
+                    key={workspace.id}
+                    onClick={() => setSelectedWorkspaceId(workspace.id)}
+                    className="w-full text-left rounded-xl p-3 transition-colors"
+                    style={{
+                      background: selectedWorkspaceId === workspace.id ? "var(--surface-2)" : "transparent",
+                      border: selectedWorkspaceId === workspace.id ? "1px solid var(--border)" : "1px solid transparent",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>{workspace.title}</div>
+                        <div className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>
+                          {workspace.source_count ?? 0} sources · {workspace.note_count ?? 0} notes · {workspace.artifact_count ?? 0} artifacts
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRenameWorkspace(workspace.id); }}
+                          className="p-1 rounded"
+                          style={{ color: "var(--text-3)" }}
+                        >
+                          <RotateCcw size={11} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(workspace.id); }}
+                          className="p-1 rounded"
+                          style={{ color: "#f87171" }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+
+          <div className="h-full overflow-hidden flex flex-col">
+            {!selectedWorkspace ? (
+              <div className="flex-1 flex items-center justify-center px-6">
+                <div className="max-w-md text-center space-y-3">
+                  <div className="text-[20px] font-semibold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>Select a notebook</div>
+                  <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
+                    Import links, files, and pasted text, then save notes and generate study artifacts from the same corpus.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto studio-scroll px-4 sm:px-5 py-4 space-y-5">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="text-[18px] font-semibold" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>{selectedWorkspace.title}</div>
+                    <div className="text-[11px]" style={{ color: "var(--text-3)" }}>{selectedWorkspace.description || "Workspace is ready for sources and notes."}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSetSharing(!(workspaceSharing?.public ?? false), workspaceSharing?.role ?? "viewer")}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                      style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                    >
+                      {workspaceSharing?.public ? "Public" : "Private"}
+                    </button>
+                    <button
+                      onClick={() => handleSetSharing(workspaceSharing?.public ?? false, (workspaceSharing?.role === "viewer" ? "editor" : "viewer"))}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                      style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                    >
+                      Role: {workspaceSharing?.role ?? "viewer"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-4">
+                  <section className="rounded-2xl p-4 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Import sources</div>
+                      <div className="flex items-center gap-2">
+                        {(["text", "url", "file", "research"] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setSourceMode(mode)}
+                            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                            style={{
+                              background: sourceMode === mode ? "var(--surface-2)" : "transparent",
+                              border: "1px solid var(--border)",
+                              color: "var(--text-2)",
+                            }}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      {(sourceMode === "text" || sourceMode === "url" || sourceMode === "research") && (
+                        <input
+                          value={sourceTitle}
+                          onChange={(e) => setSourceTitle(e.target.value)}
+                          placeholder="Source title"
+                          className="rounded-xl px-3 py-2 text-[12px] outline-none"
+                          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                        />
+                      )}
+                      {sourceMode === "text" && (
+                        <textarea
+                          value={sourceContent}
+                          onChange={(e) => setSourceContent(e.target.value)}
+                          placeholder="Paste study text here..."
+                          rows={5}
+                          className="rounded-xl px-3 py-2 text-[12px] outline-none resize-none"
+                          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                        />
+                      )}
+                      {sourceMode === "url" && (
+                        <input
+                          value={sourceUrl}
+                          onChange={(e) => setSourceUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="rounded-xl px-3 py-2 text-[12px] outline-none"
+                          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                        />
+                      )}
+                      {sourceMode === "research" && (
+                        <textarea
+                          value={researchQuery}
+                          onChange={(e) => setResearchQuery(e.target.value)}
+                          placeholder="Research question or topic..."
+                          rows={4}
+                          className="rounded-xl px-3 py-2 text-[12px] outline-none resize-none"
+                          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+                        />
+                      )}
+                      {sourceMode === "file" && (
+                        <div className="flex flex-col gap-2">
+                          <input
+                            ref={workspaceFileInputRef}
+                            type="file"
+                            accept=".pdf,.doc,.docx,.txt"
+                            onChange={(e) => setWorkspaceFileName(e.target.files?.[0]?.name || "")}
+                            className="block w-full text-[12px]"
+                            style={{ color: "var(--text-2)" }}
+                          />
+                          <div className="text-[11px]" style={{ color: "var(--text-3)" }}>{workspaceFileName || "Choose a PDF, DOCX, or TXT file."}</div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleAddWorkspaceSource}
+                      disabled={!!workspaceBusy}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+                      style={{ background: "var(--blue)" }}
+                    >
+                      Import source
+                    </button>
+                    <button
+                      onClick={handleCleanupDuplicates}
+                      disabled={!!workspaceBusy}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                      style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                    >
+                      Clean duplicates
+                    </button>
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Sources</div>
+                      {workspaceSources.length === 0 ? (
+                        <div className="text-[12px] rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-3)" }}>
+                          No sources yet.
+                        </div>
+                      ) : (
+                        workspaceSources.map((source) => (
+                          <div key={source.id} className="rounded-xl p-3" style={{ background: activeWorkspaceSourceId === source.id ? "var(--surface-2)" : "var(--surface-2)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-start justify-between gap-2">
+                              <button
+                                onClick={() => {
+                                  inspectWorkspaceSource(source);
+                                  if (source.document_id) setSelectedDocId(source.document_id);
+                                }}
+                                className="text-left min-w-0"
+                              >
+                                <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>{source.title}</div>
+                                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>
+                                  {source.type} · {source.refresh_state ?? "fresh"}
+                                </div>
+                              </button>
+                              <div className="flex items-center gap-1">
+                                <button onClick={async () => {
+                                  const next = prompt("Rename source", source.title);
+                                  if (!next?.trim() || !selectedWorkspaceId) return;
+                                  await renameWorkspaceSource(selectedWorkspaceId, source.id, next.trim());
+                                  await loadWorkspaceDetails(selectedWorkspaceId);
+                                }} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                  <RotateCcw size={11} />
+                                </button>
+                                <button onClick={async () => {
+                                  if (!selectedWorkspaceId || !confirm("Delete source?")) return;
+                                  await deleteWorkspaceSource(selectedWorkspaceId, source.id);
+                                  await loadWorkspaceDetails(selectedWorkspaceId);
+                                }} className="p-1 rounded" style={{ color: "#f87171" }}>
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {(activeWorkspaceSourceText || activeWorkspaceSourceGuide) && (
+                      <div className="space-y-3">
+                        <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Source details</div>
+                        {activeWorkspaceSourceGuide && <pre className="text-[11px] whitespace-pre-wrap rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{activeWorkspaceSourceGuide}</pre>}
+                        {activeWorkspaceSourceText && <pre className="text-[11px] whitespace-pre-wrap rounded-xl p-3 max-h-48 overflow-y-auto studio-scroll" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{activeWorkspaceSourceText}</pre>}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="rounded-2xl p-4 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <div className="grid gap-4">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Saved chats</div>
+                          <button onClick={handleCreateSavedChat} className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest" style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}>
+                            New
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {workspaceChats.length === 0 ? (
+                            <div className="rounded-xl p-3 text-[12px]" style={{ background: "var(--surface-2)", color: "var(--text-3)" }}>
+                              No saved chats yet.
+                            </div>
+                          ) : workspaceChats.map((chat) => (
+                            <button
+                              key={chat.id}
+                              onClick={async () => {
+                                setActiveChatId(chat.id);
+                                if (selectedWorkspaceId) {
+                                  const thread = await getWorkspaceChat(selectedWorkspaceId, chat.id).catch(() => null);
+                                  setActiveChatTurns(thread?.turns || []);
+                                }
+                              }}
+                              className="w-full rounded-xl p-3 text-left"
+                              style={{
+                                background: activeChatId === chat.id ? "var(--surface-2)" : "transparent",
+                                border: "1px solid var(--border)",
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>{chat.title}</div>
+                                  <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{chat.source_ids?.length ?? 0} linked sources</div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); handleRenameSavedChat(chat.id); }} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                    <RotateCcw size={11} />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSavedChat(chat.id); }} className="p-1 rounded" style={{ color: "#f87171" }}>
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        {activeChatTurns.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Chat history</div>
+                            {activeChatTurns.map((turn) => (
+                              <div key={turn.id} className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: turn.role === "assistant" ? "var(--teal)" : "var(--blue)" }}>
+                                  {turn.role}
+                                </div>
+                                <div className="text-[11px] whitespace-pre-wrap" style={{ color: "var(--text-2)" }}>{turn.content}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Notes</div>
+                        <div className="grid gap-2">
+                          <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Note title" className="rounded-xl px-3 py-2 text-[12px] outline-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                          <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} placeholder="Write a revision note..." rows={4} className="rounded-xl px-3 py-2 text-[12px] outline-none resize-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                          <button onClick={handleWorkspaceNoteSave} disabled={!!workspaceBusy} className="px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--teal)" }}>
+                            Save note
+                          </button>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {workspaceNotes.map((note) => (
+                            <div key={note.id} className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                              <div className="flex items-center justify-between gap-2">
+                                <div>
+                                  <div className="text-[13px] font-medium" style={{ color: "var(--text-1)" }}>{note.title}</div>
+                                  <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{note.kind}</div>
+                                </div>
+                                <button onClick={async () => {
+                                  if (!selectedWorkspaceId || !confirm("Delete this note?")) return;
+                                  await deleteWorkspaceNote(selectedWorkspaceId, note.id);
+                                  await loadWorkspaceDetails(selectedWorkspaceId);
+                                }} style={{ color: "#f87171" }}>
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                              <div className="text-[11px] mt-2 whitespace-pre-wrap" style={{ color: "var(--text-2)" }}>{note.content}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Chat</div>
+                        <div className="flex gap-2">
+                          <input value={chatQuestion} onChange={(e) => setChatQuestionWorkspace(e.target.value)} placeholder="Ask the notebook..." className="flex-1 rounded-xl px-3 py-2 text-[12px] outline-none" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }} />
+                          <button onClick={handleWorkspaceAsk} disabled={!!workspaceBusy || !chatQuestion.trim()} className="px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50" style={{ background: "var(--blue)" }}>
+                            Ask
+                          </button>
+                        </div>
+                        {workspaceAnswer && <pre className="mt-2 text-[11px] whitespace-pre-wrap rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{workspaceAnswer}</pre>}
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Artifacts</div>
+                        <div className="flex flex-wrap gap-2">
+                          {["audio", "report", "study-guide", "quiz", "flashcard", "mind-map", "slide-deck", "infographic", "data-table", "video"].map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => handleWorkspaceGenerate(type)}
+                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                              style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {workspaceArtifacts.map((artifact) => (
+                            <div key={artifact.id} className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="text-[13px] font-medium" style={{ color: "var(--text-1)" }}>{artifact.title}</div>
+                                  <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{artifact.type} · {artifact.format ?? "markdown"}</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => handleDownloadWorkspaceArtifact(artifact.id)} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                    <Download size={12} />
+                                  </button>
+                                  <button onClick={async () => {
+                                    if (!selectedWorkspaceId || !confirm("Delete this artifact?")) return;
+                                    await deleteWorkspaceArtifact(selectedWorkspaceId, artifact.id);
+                                    await loadWorkspaceDetails(selectedWorkspaceId);
+                                  }} style={{ color: "#f87171" }}>
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                              <pre className="mt-2 text-[11px] whitespace-pre-wrap max-h-36 overflow-y-auto studio-scroll" style={{ color: "var(--text-2)" }}>{artifact.content}</pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
     );
@@ -1804,6 +2620,7 @@ export default function Dashboard() {
         }}
       >
         {activeTab === "home" && !currentDocId && !podcastPlayingDocId && !podcastGenerating && LibraryView()}
+        {activeTab === "workspace" && !currentDocId && !podcastPlayingDocId && !podcastGenerating && WorkspaceView()}
         {currentDocId && !podcastPlayingDocId && !podcastGenerating && SyncReader()}
         {(podcastPlayingDocId || podcastGenerating) && PodcastTheater()}
       </main>
