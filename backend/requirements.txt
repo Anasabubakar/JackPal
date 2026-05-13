@@ -8,7 +8,16 @@ pymupdf==1.24.10
 python-docx==1.1.2
 httpx==0.27.2
 groq==0.11.0
-edge-tts==7.2.7
 aiohttp>=3.9.0
 numpy>=1.26.0
 redis>=5.0.0
+# Workspace / NotebookLM-style ingestion
+yt-dlp>=2024.10.7
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+trafilatura>=1.12.0
+# Artifact rendering
+markdown>=3.6
+Pillow>=10.0.0
+# Optional: Modal client for VoxCPM/Chatterbox deploy (installed at deploy time only)
+# modal>=0.65.0

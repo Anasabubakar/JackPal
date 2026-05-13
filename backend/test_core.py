@@ -21,11 +21,16 @@ def test_extraction():
 
 # ── 2. TTS ──────────────────────────────────────────────────────────────────
 async def test_tts():
-    from services.tts import MISTRAL_API_KEY, synthesize_chunk
+    from services.tts import ELEVENLABS_API_KEY, get_tts_capabilities, synthesize_chunk
 
     text = "Welcome to JackPal. Your academic documents, now in audio."
-    engine = "premium" if MISTRAL_API_KEY else "fast"
-    engine_label = f"Voxtral ({MISTRAL_API_KEY[:8]}...)" if MISTRAL_API_KEY else "edge-tts (no MISTRAL_API_KEY)"
+    caps = get_tts_capabilities()
+    engine = "premium" if caps.get("premium_available") else "fast"
+    engine_label = (
+        f"ElevenLabs ({ELEVENLABS_API_KEY[:8]}...)"
+        if caps.get("premium_elevenlabs")
+        else str(caps.get("engine") or "unconfigured")
+    )
     print(f"[....] TTS: generating audio — engine={engine_label}")
     audio = await synthesize_chunk(text, voice="doyinsola", engine=engine)
 

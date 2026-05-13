@@ -1,12 +1,15 @@
 """
-AI service — Groq (Llama 3.3 70B) for podcast scripts, Ollama local for summaries.
-Gemini 2.0 Flash handles long documents (1M context window, no chunking needed).
+AI service — NVIDIA NIM (Llama 3.3 70B) primary, Groq + Gemini + Ollama fallbacks.
 
-Priority:
-  Short docs (≤4000 words): Groq (fast, free)
-  Long docs (>4000 words):  Gemini (full context) → map-reduce+Groq if no Gemini key
-  Groq 429 rate-limit:      Gemini fallback
-  No API keys:              Ollama local
+Provider priority (configurable via env):
+  1. NVIDIA NIM   (NVIDIA_API_KEY set)        — primary, Llama 3.3 70B Instruct
+  2. Groq         (GROQ_API_KEY set)          — fast fallback, same Llama family
+  3. Gemini 2.0   (GOOGLE_AI_API_KEY set)     — long-context fallback (~1M tokens)
+  4. Ollama local (always last)               — offline fallback
+
+The provider router selects the first-available chain for each task. NVIDIA is
+preferred because it gives stable rate limits and the same OpenAI-compatible
+chat-completion shape as Groq, so streaming code paths are reused.
 """
 import asyncio
 import json
@@ -26,6 +29,12 @@ from services.cache import (
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
+NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "") or os.environ.get("NVIDIA_NIM_API_KEY", "")
+NVIDIA_URL     = os.environ.get(
+    "NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions"
+)
+NVIDIA_MODEL   = os.environ.get("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL    = "llama-3.3-70b-versatile"
@@ -38,8 +47,25 @@ GEMINI_MAX_WORDS = 80_000  # ~104k tokens, well within 1M context
 OLLAMA_URL    = "http://localhost:11434/api/generate"
 OLLAMA_MODEL  = "gemma3:1b"
 
+USE_NVIDIA = bool(NVIDIA_API_KEY)
 USE_GROQ   = bool(GROQ_API_KEY)
 USE_GEMINI = bool(GOOGLE_AI_API_KEY)
+
+
+def get_ai_capabilities() -> dict:
+    """Report which providers are configured so the frontend can show status."""
+    return {
+        "nvidia": USE_NVIDIA,
+        "nvidia_model": NVIDIA_MODEL if USE_NVIDIA else None,
+        "groq": USE_GROQ,
+        "groq_model": GROQ_MODEL if USE_GROQ else None,
+        "gemini": USE_GEMINI,
+        "gemini_model": GEMINI_MODEL if USE_GEMINI else None,
+        "ollama_local": True,
+        "primary": "nvidia" if USE_NVIDIA else (
+            "groq" if USE_GROQ else ("gemini" if USE_GEMINI else "ollama")
+        ),
+    }
 
 
 # ── Ollama helpers ────────────────────────────────────────────────────────────
@@ -63,6 +89,148 @@ async def _ollama_generate(prompt: str, timeout: int = 180) -> str:
                 except json.JSONDecodeError:
                     continue
     return "".join(parts).strip()
+
+
+# ── NVIDIA NIM helper (primary provider) ──────────────────────────────────────
+
+async def _nvidia_complete(
+    prompt: str,
+    max_tokens: int = 800,
+    timeout: int = 60,
+    temperature: float = 0.7,
+) -> str:
+    """OpenAI-compatible chat completion against NVIDIA NIM (build.nvidia.com)."""
+    headers = {
+        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    payload = {
+        "model": NVIDIA_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "top_p": 0.95,
+        "stream": False,
+    }
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        r = await client.post(NVIDIA_URL, headers=headers, json=payload)
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
+
+
+async def _nvidia_stream_podcast(content: str, mode: str = "standard"):
+    """Stream podcast lines from NVIDIA NIM. Same yield shape as Groq."""
+    template = _PIDGIN_PODCAST_PROMPT if mode == "pidgin" else _STANDARD_PODCAST_PROMPT
+    prompt = template.format(content=content)
+    headers = {
+        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+    payload = {
+        "model": NVIDIA_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "temperature": 0.7,
+        "max_tokens": 2400,
+        "top_p": 0.95,
+    }
+
+    current_speaker = "Ezinne"
+    current_parts: list[str] = []
+    line_buf = ""
+
+    def _flush(speaker: str, parts: list[str]):
+        text = " ".join(parts).strip()
+        lo = text.lower()
+        if lo.startswith("ezinne:"):
+            text = text[7:].strip()
+        elif lo.startswith("abeo:"):
+            text = text[5:].strip()
+        if not text:
+            return None
+        voice = "chinenye" if speaker == "Ezinne" else "jude"
+        return {"speaker": speaker, "voice": voice, "text": text}
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        async with client.stream("POST", NVIDIA_URL, headers=headers, json=payload) as response:
+            response.raise_for_status()
+            async for raw_line in response.aiter_lines():
+                if not raw_line or raw_line == "data: [DONE]":
+                    continue
+                if not raw_line.startswith("data: "):
+                    continue
+                try:
+                    chunk = json.loads(raw_line[6:])
+                    token = chunk["choices"][0].get("delta", {}).get("content", "")
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+                if not token:
+                    continue
+                line_buf += token
+                while "\n" in line_buf:
+                    completed, line_buf = line_buf.split("\n", 1)
+                    completed = completed.strip()
+                    if not completed:
+                        continue
+                    lo = completed.lower()
+                    if lo.startswith("ezinne:"):
+                        if current_speaker and current_parts:
+                            line = _flush(current_speaker, current_parts)
+                            if line:
+                                yield line
+                        current_speaker = "Ezinne"
+                        current_parts = [completed[7:].strip()]
+                    elif lo.startswith("abeo:"):
+                        if current_speaker and current_parts:
+                            line = _flush(current_speaker, current_parts)
+                            if line:
+                                yield line
+                        current_speaker = "Abeo"
+                        current_parts = [completed[5:].strip()]
+                    elif current_speaker:
+                        current_parts.append(completed)
+
+    if line_buf.strip() and current_speaker:
+        current_parts.append(line_buf.strip())
+    if current_speaker and current_parts:
+        line = _flush(current_speaker, current_parts)
+        if line:
+            yield line
+
+
+async def _llm_complete(prompt: str, max_tokens: int = 800, timeout: int = 60) -> str:
+    """Provider router for non-streaming completions.
+
+    Order: NVIDIA → Groq → Gemini → Ollama. Any 4xx/5xx triggers the next
+    provider, so a stale or rate-limited primary never blocks a request.
+    """
+    last_err: Exception | None = None
+    if USE_NVIDIA:
+        try:
+            return await _nvidia_complete(prompt, max_tokens=max_tokens, timeout=timeout)
+        except Exception as e:
+            last_err = e
+            print(f"[AI] NVIDIA primary failed ({type(e).__name__}: {e}) — falling through")
+    if USE_GROQ:
+        try:
+            return await _groq_complete(prompt, max_tokens=max_tokens, timeout=timeout)
+        except Exception as e:
+            last_err = e
+            print(f"[AI] Groq fallback failed ({type(e).__name__}: {e}) — falling through")
+    if USE_GEMINI:
+        try:
+            return await _gemini_complete(prompt, max_tokens=max_tokens, timeout=timeout)
+        except Exception as e:
+            last_err = e
+            print(f"[AI] Gemini fallback failed ({type(e).__name__}: {e}) — falling through")
+    try:
+        return await _ollama_generate(prompt, timeout=max(120, timeout))
+    except Exception as e:
+        if last_err:
+            raise last_err
+        raise e
 
 
 # ── Groq helper ───────────────────────────────────────────────────────────────
@@ -271,6 +439,18 @@ async def generate_listen_narration(text: str) -> str:
 
     prompt = _LISTEN_NARRATION_PROMPT.format(content=text)
 
+    if USE_NVIDIA:
+        try:
+            result = await _nvidia_complete(prompt, max_tokens=6500, timeout=180)
+            wc = len(result.split()) if result else 0
+            print(f"[AI] Listen narration NVIDIA returned {wc} words")
+            if result and wc >= 50:
+                set_json(cache_k, result, TTL_SCRIPT_HASH)
+                return result
+            print(f"[AI] NVIDIA narration too short ({wc} words) — trying fallback")
+        except Exception as e:
+            print(f"[AI] Listen narration NVIDIA failed: {type(e).__name__}: {e}")
+
     if USE_GROQ:
         try:
             result = await _groq_complete(prompt, max_tokens=6500, timeout=120)
@@ -332,19 +512,45 @@ async def summarize_document(text: str) -> str:
         "Be specific to THIS document. No filler. Plain English.\n\n"
         "Document:\n{content}\n\nStudy Guide:"
     )
-    if USE_GEMINI:
+    # Gemini wins for very long docs because of its 1M-token context window.
+    if USE_GEMINI and len(text.split()) > 12_000:
         capped = " ".join(text.split()[:GEMINI_MAX_WORDS])
-        result = await _gemini_complete(prompt_body.format(content=capped), max_tokens=600, timeout=30)
-        if result:
-            set_json(cache_k, result, TTL_SUMMARY_HASH)
-        return result
+        try:
+            result = await _gemini_complete(
+                prompt_body.format(content=capped), max_tokens=600, timeout=30
+            )
+            if result:
+                set_json(cache_k, result, TTL_SUMMARY_HASH)
+            return result
+        except Exception as e:
+            print(f"[AI] Summary Gemini failed: {type(e).__name__}: {e}")
+
     truncated = " ".join(text.split()[:10_000])
     prompt = prompt_body.format(content=truncated)
+    if USE_NVIDIA:
+        try:
+            result = await _nvidia_complete(prompt, max_tokens=600, timeout=60)
+            if result:
+                set_json(cache_k, result, TTL_SUMMARY_HASH)
+                return result
+        except Exception as e:
+            print(f"[AI] Summary NVIDIA failed: {type(e).__name__}: {e}")
     if USE_GROQ:
-        result = await _groq_complete(prompt, max_tokens=600, timeout=30)
-        if result:
-            set_json(cache_k, result, TTL_SUMMARY_HASH)
-        return result
+        try:
+            result = await _groq_complete(prompt, max_tokens=600, timeout=30)
+            if result:
+                set_json(cache_k, result, TTL_SUMMARY_HASH)
+                return result
+        except Exception as e:
+            print(f"[AI] Summary Groq failed: {type(e).__name__}: {e}")
+    if USE_GEMINI:
+        try:
+            result = await _gemini_complete(prompt, max_tokens=600, timeout=30)
+            if result:
+                set_json(cache_k, result, TTL_SUMMARY_HASH)
+                return result
+        except Exception as e:
+            print(f"[AI] Summary Gemini fallback failed: {type(e).__name__}: {e}")
     result = await _ollama_generate(prompt, timeout=120)
     if result:
         set_json(cache_k, result, TTL_SUMMARY_HASH)
@@ -501,7 +707,7 @@ async def _condense_long_doc(text: str) -> str:
         f"Excerpt:\n{sample}\n\nMain topics and concepts:"
     )
     try:
-        return await _groq_complete(prompt, max_tokens=400, timeout=20)
+        return await _llm_complete(prompt, max_tokens=400, timeout=30)
     except Exception:
         return sample
 
@@ -527,10 +733,19 @@ async def _extract_chapter_concepts(title: str, chapter_words: list[str]) -> str
         f"Key concepts (one per line):"
     )
     try:
-        result = await _groq_complete(prompt, max_tokens=180, timeout=20)
+        if USE_NVIDIA:
+            result = await _nvidia_complete(prompt, max_tokens=180, timeout=30)
+        else:
+            result = await _groq_complete(prompt, max_tokens=180, timeout=20)
         return result.strip()
     except Exception as e:
         print(f"[AI] Chapter '{title}' extraction failed: {e}")
+        # Last-ditch fallback: try the other primary if available
+        try:
+            if USE_NVIDIA and USE_GROQ:
+                return (await _groq_complete(prompt, max_tokens=180, timeout=20)).strip()
+        except Exception:
+            pass
         return " ".join(chapter_words[:60])   # fallback: first 60 words
 
 
@@ -817,7 +1032,7 @@ async def stream_podcast_lines(
             collected.append(line)
             yield line
 
-    if not USE_GROQ and not USE_GEMINI:
+    if not USE_NVIDIA and not USE_GROQ and not USE_GEMINI:
         async for line in _yield_and_collect(_ollama_stream_podcast(text)):
             yield line
         if collected:
@@ -827,31 +1042,57 @@ async def stream_podcast_lines(
     words = text.split()
     word_count = len(words)
 
-    # ── Short/medium/long doc: feed full text to Groq (Llama 3.3 = 128k ctx) ──
-    # ~40k words ≈ 55k tokens, fits comfortably in 128k context.
-    # Full-context generation produces FAR better podcasts than map-reduce
-    # because the model sees the whole document at once.
+    # ── Short/medium doc: feed full text directly to the LLM ─────────────────
+    # Llama 3.3 70B (NVIDIA + Groq) has 128k ctx; Gemini handles much more.
     if word_count <= 40000:
         content = " ".join(words)
-        if USE_GROQ:
+        # NVIDIA primary
+        if USE_NVIDIA:
+            ok = False
             try:
-                async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
+                async for line in _yield_and_collect(_nvidia_stream_podcast(content, mode=mode)):
                     yield line
+                ok = True
+            except Exception as e:
+                print(f"[AI] NVIDIA podcast stream failed: {type(e).__name__}: {e}")
+                collected.clear()
+            if ok:
                 if collected:
                     set_json(cache_k, collected, TTL_SCRIPT_HASH)
                 return
+        # Groq fallback
+        if USE_GROQ:
+            ok = False
+            try:
+                async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
+                    yield line
+                ok = True
             except httpx.HTTPStatusError as e:
-                if e.response.status_code != 429 or not USE_GEMINI:
-                    raise
-                print("[AI] Groq 429 — falling back to Gemini for short doc")
+                if e.response.status_code != 429:
+                    print(f"[AI] Groq error {e.response.status_code} — trying Gemini")
                 collected.clear()
-        async for line in _yield_and_collect(_gemini_stream_podcast(content, mode=mode)):
+            except Exception as e:
+                print(f"[AI] Groq podcast stream failed: {type(e).__name__}: {e}")
+                collected.clear()
+            if ok:
+                if collected:
+                    set_json(cache_k, collected, TTL_SCRIPT_HASH)
+                return
+        # Gemini fallback
+        if USE_GEMINI:
+            async for line in _yield_and_collect(_gemini_stream_podcast(content, mode=mode)):
+                yield line
+            if collected:
+                set_json(cache_k, collected, TTL_SCRIPT_HASH)
+            return
+        # Final fallback
+        async for line in _yield_and_collect(_ollama_stream_podcast(text)):
             yield line
         if collected:
             set_json(cache_k, collected, TTL_SCRIPT_HASH)
         return
 
-    # ── Long doc: map-reduce + Groq (Gemini bypassed — rate-limited on free tier) ─
+    # ── Long doc: prefer RAG when a topic is supplied, else map-reduce ───────
     if topic and doc_id:
         from services.rag import retrieve_relevant, is_indexed
         if is_indexed(doc_id):
@@ -859,6 +1100,16 @@ async def stream_podcast_lines(
             if rag_chunks:
                 content = " ".join(rag_chunks)
                 print(f"[AI] RAG retrieval: {len(rag_chunks)} chunks ({len(content.split())} words) for topic: '{topic[:60]}'")
+                if USE_NVIDIA:
+                    try:
+                        async for line in _yield_and_collect(_nvidia_stream_podcast(content, mode=mode)):
+                            yield line
+                        if collected:
+                            set_json(cache_k, collected, TTL_SCRIPT_HASH)
+                        return
+                    except Exception as e:
+                        print(f"[AI] NVIDIA RAG stream failed: {e} — trying Groq")
+                        collected.clear()
                 async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
                     yield line
                 if collected:
@@ -871,6 +1122,16 @@ async def stream_podcast_lines(
         ).start()
 
     content = await _map_reduce_condense(text)
+    if USE_NVIDIA:
+        try:
+            async for line in _yield_and_collect(_nvidia_stream_podcast(content, mode=mode)):
+                yield line
+            if collected:
+                set_json(cache_k, collected, TTL_SCRIPT_HASH)
+            return
+        except Exception as e:
+            print(f"[AI] NVIDIA map-reduce stream failed: {e} — trying Groq")
+            collected.clear()
     async for line in _yield_and_collect(_groq_stream_podcast(content, mode=mode)):
         yield line
     if collected:
@@ -895,11 +1156,27 @@ async def answer_question(context: str, question: str) -> str:
         f"Student's question: {question}\n\n"
         "Answer:"
     )
+    # Q&A prefers NVIDIA (consistent answers, generous context) then Gemini for
+    # very long context windows, then Groq, then Ollama.
+    if USE_NVIDIA:
+        try:
+            return await _nvidia_complete(prompt, max_tokens=450, timeout=45)
+        except Exception as e:
+            print(f"[AI] answer_question NVIDIA failed: {type(e).__name__}: {e}")
     if USE_GEMINI:
-        return await _gemini_complete(prompt, max_tokens=450, timeout=30)
+        try:
+            return await _gemini_complete(prompt, max_tokens=450, timeout=30)
+        except Exception as e:
+            print(f"[AI] answer_question Gemini failed: {type(e).__name__}: {e}")
     if USE_GROQ:
-        return await _groq_complete(prompt, max_tokens=450, timeout=30)
-    return "No AI available — please set GOOGLE_AI_API_KEY or GROQ_API_KEY."
+        try:
+            return await _groq_complete(prompt, max_tokens=450, timeout=30)
+        except Exception as e:
+            print(f"[AI] answer_question Groq failed: {type(e).__name__}: {e}")
+    try:
+        return await _ollama_generate(prompt, timeout=120)
+    except Exception:
+        return "No AI provider available — set NVIDIA_API_KEY, GROQ_API_KEY, or GOOGLE_AI_API_KEY."
 
 
 async def generate_podcast_script(text: str, mode: str = "standard") -> list[dict]:

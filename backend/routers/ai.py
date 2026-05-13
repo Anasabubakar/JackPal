@@ -2,7 +2,13 @@ import os
 import asyncio
 from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Request, Query
 from pydantic import BaseModel
-from services.ai import summarize_document, generate_podcast_script, stream_podcast_lines, answer_question
+from services.ai import (
+    summarize_document,
+    generate_podcast_script,
+    stream_podcast_lines,
+    answer_question,
+    get_ai_capabilities,
+)
 from services.cache import (
     delete_keys,
     get_json,
@@ -59,7 +65,7 @@ async def _podcast_pipeline(
 
     caps = get_tts_capabilities()
     engine = "premium" if caps.get("premium_available") else "fast"
-    tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else "edge-tts")
+    tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else str(caps.get("engine") or "unconfigured"))
     print(f"[Podcast] Using {tts_engine_name} ({engine}) for {mode} mode")
     print(f"[Podcast] Voices — Ezinne: {ezinne_voice}, Abeo: {abeo_voice}")
 
@@ -217,6 +223,14 @@ async def _run_supabase_podcast(doc_id: str, user_id: str, text: str, mode: str 
         print(f"[Podcast] DB status update failed: {e}")
 
     print(f"[Podcast] Complete — {len(script)} lines for {doc_id}")
+
+
+@router.get("/capabilities")
+async def ai_capabilities():
+    """Report which LLM + TTS providers are configured so the frontend can
+    surface a 'NVIDIA primary / Modal VoxCPM available' badge."""
+    from services.tts import get_tts_capabilities
+    return {"ai": get_ai_capabilities(), "tts": get_tts_capabilities()}
 
 
 @router.post("/podcast/{doc_id}")

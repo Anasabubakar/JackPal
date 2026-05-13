@@ -1,0 +1,1532 @@
+import csv
+import io
+import json
+import re
+import zipfile
+from datetime import datetime, timezone
+from typing import Literal
+
+from fastapi import APIRouter, File, HTTPException, Header, Query, UploadFile
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
+
+from services.auth_utils import get_user_id, is_local_mode
+from services.ai import answer_question, generate_podcast_script, summarize_document
+from services.content_filter import filter_document
+from services.extractor import extract_text
+from services.workspace_rag import (
+    build_cited_question,
+    build_numbered_context,
+    notebook_retrieve,
+    to_citations,
+)
+from services.ingest import (
+    classify_url,
+    from_drive as ingest_from_drive,
+    from_url as ingest_from_url,
+    from_youtube as ingest_from_youtube,
+)
+from services.research import run_research
+from services import artifacts as artifact_engine
+from services.local_storage import (
+    accept_invitation,
+    can_access_notebook,
+    create_artifact,
+    create_invitation,
+    create_note,
+    create_chat,
+    create_notebook,
+    create_research_job,
+    add_chat_turn,
+    cleanup_duplicate_sources,
+    delete_artifact,
+    delete_chat,
+    delete_note,
+    delete_notebook,
+    delete_source,
+    get_notebook,
+    get_notebook_role,
+    get_chat,
+    get_chat_turn,
+    get_research_job,
+    get_sharing,
+    list_chat_turns,
+    list_chats,
+    list_collaborators,
+    list_invitations,
+    set_turn_pinned,
+    list_accessible_notebooks,
+    list_artifacts,
+    list_notes,
+    list_sources,
+    remove_collaborator,
+    rename_notebook,
+    rename_chat,
+    rename_source,
+    revoke_invitation,
+    save_document_from_text,
+    set_sharing,
+    update_artifact,
+    update_collaborator_role,
+    update_note,
+    update_source,
+    upsert_source,
+)
+
+router = APIRouter(prefix="/workspaces", tags=["workspaces"])
+USE_LOCAL = is_local_mode()
+
+
+class NotebookCreate(BaseModel):
+    title: str
+    description: str | None = None
+
+
+class NotebookUpdate(BaseModel):
+    title: str
+
+
+class NoteCreate(BaseModel):
+    title: str
+    content: str
+    source_id: str | None = None
+    kind: str = "note"
+
+
+class NoteUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    kind: str | None = None
+
+
+class SourceTextCreate(BaseModel):
+    title: str
+    content: str
+
+
+class SourceUrlCreate(BaseModel):
+    title: str | None = None
+    url: str
+
+
+class SourceYoutubeCreate(BaseModel):
+    title: str | None = None
+    url: str
+
+
+class SourceDriveCreate(BaseModel):
+    title: str | None = None
+    url: str
+
+
+class ResearchCreate(BaseModel):
+    query: str
+    mode: Literal["fast", "deep"] = "fast"
+    import_urls: list[str] = Field(default_factory=list)
+
+
+class SharingUpdate(BaseModel):
+    public: bool = False
+    role: Literal["viewer", "editor"] = "viewer"
+
+
+class InvitationCreate(BaseModel):
+    """Body for issuing a notebook invitation.
+
+    ``role`` controls what the invitee can do once they accept.  ``expires_in``
+    is in seconds (default 7 days) and ``invitee_email`` is optional metadata
+    used purely for display in the owner's invitations list.
+    """
+
+    role: Literal["viewer", "editor"] = "viewer"
+    expires_in: int = Field(default=7 * 24 * 3600, ge=300, le=90 * 24 * 3600)
+    invitee_email: str | None = None
+
+
+class InvitationAccept(BaseModel):
+    token: str
+
+
+class CollaboratorRoleUpdate(BaseModel):
+    role: Literal["viewer", "editor"] = "viewer"
+
+
+class ArtifactCreate(BaseModel):
+    title: str | None = None
+    prompt: str | None = None
+    format: str | None = None
+
+
+class ChatRequest(BaseModel):
+    question: str
+    save_as_note: bool = False
+    source_ids: list[str] = Field(default_factory=list)
+    chat_id: str | None = None
+
+
+class SearchRequest(BaseModel):
+    query: str
+    source_ids: list[str] = Field(default_factory=list)
+    top_k: int = 8
+
+
+class ChatCreate(BaseModel):
+    title: str
+    source_ids: list[str] = Field(default_factory=list)
+
+
+class ChatUpdate(BaseModel):
+    title: str
+
+
+class TurnPinUpdate(BaseModel):
+    pinned: bool
+
+
+class TurnSaveAsNote(BaseModel):
+    """Body for save-existing-turn-as-note.
+
+    All fields are optional so a 0-byte JSON body still works — defaults
+    derive title and content from the turn itself.
+    """
+    title: str | None = None
+    include_citations: bool = True
+
+
+def _require_local() -> None:
+    if not USE_LOCAL:
+        raise HTTPException(status_code=501, detail="Workspace features are currently available in local mode only.")
+
+
+def _notebook_or_404(notebook_id: str, user_id: str, required: str = "viewer") -> dict:
+    """Resolve a notebook and enforce the minimum role.
+
+    ``required`` is the lowest role the caller must hold ("viewer", "editor"
+    or "owner"). Missing notebooks return 404; insufficient roles return 403
+    so the UI can distinguish "does not exist" from "no permission".
+    """
+    notebook = get_notebook(notebook_id, user_id)
+    if not notebook:
+        raise HTTPException(status_code=404, detail="Notebook not found.")
+    if required != "viewer" and not can_access_notebook(notebook_id, user_id, required=required):
+        raise HTTPException(
+            status_code=403,
+            detail=f"This action requires '{required}' access to the notebook.",
+        )
+    return notebook
+
+
+def _writer_or_404(notebook_id: str, user_id: str) -> dict:
+    """Mutating-endpoint gate: caller must be owner or editor."""
+    return _notebook_or_404(notebook_id, user_id, required="editor")
+
+
+def _owner_or_404(notebook_id: str, user_id: str) -> dict:
+    """Owner-only gate (sharing, invitations, notebook rename/delete)."""
+    return _notebook_or_404(notebook_id, user_id, required="owner")
+
+
+def _source_or_404(source_id: str, user_id: str) -> dict:
+    from services.local_storage import get_source
+
+    source = get_source(source_id, user_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return source
+
+
+def _note_or_404(notebook_id: str, note_id: str, user_id: str) -> dict:
+    from services.local_storage import _notes
+
+    _notebook_or_404(notebook_id, user_id)
+    note = _notes.get(note_id)
+    if not note or note["notebook_id"] != notebook_id:
+        raise HTTPException(status_code=404, detail="Note not found.")
+    return note
+
+
+def _artifact_or_404(notebook_id: str, artifact_id: str, user_id: str) -> dict:
+    from services.local_storage import _artifacts
+
+    _notebook_or_404(notebook_id, user_id)
+    artifact = _artifacts.get(artifact_id)
+    if not artifact or artifact["notebook_id"] != notebook_id:
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+    return artifact
+
+
+def _source_payload(source: dict) -> dict:
+    return {
+        "id": source["id"],
+        "notebook_id": source["notebook_id"],
+        "type": source["type"],
+        "title": source["title"],
+        "url": source.get("url"),
+        "document_id": source.get("document_id"),
+        "status": source.get("status", "ready"),
+        "refresh_state": source.get("refresh_state", "fresh"),
+        "created_at": source.get("created_at"),
+        "updated_at": source.get("updated_at"),
+    }
+
+
+def _notebook_payload(notebook: dict, user_id: str) -> dict:
+    sources = list_sources(notebook["id"], user_id)
+    notes = list_notes(notebook["id"], user_id)
+    artifacts = list_artifacts(notebook["id"], user_id)
+    sharing = get_sharing(notebook["id"], user_id)
+    role = get_notebook_role(notebook["id"], user_id) or "viewer"
+    return {
+        "id": notebook["id"],
+        "title": notebook["title"],
+        "description": notebook.get("description", ""),
+        "source_count": len(sources),
+        "note_count": len(notes),
+        "artifact_count": len(artifacts),
+        "sharing": sharing,
+        "role": role,
+        "is_owner": role == "owner",
+        "owner_user_id": notebook.get("user_id"),
+        "created_at": notebook.get("created_at"),
+        "updated_at": notebook.get("updated_at"),
+    }
+
+
+def _invitation_payload(inv: dict) -> dict:
+    return {
+        "id": inv["id"],
+        "notebook_id": inv["notebook_id"],
+        "role": inv.get("role", "viewer"),
+        "token": inv.get("token"),
+        "invitee_email": inv.get("invitee_email"),
+        "expires_at": inv.get("expires_at"),
+        "created_at": inv.get("created_at"),
+        "accepted_user_id": inv.get("accepted_user_id"),
+        "accepted_at": inv.get("accepted_at"),
+        "revoked": inv.get("revoked", False),
+    }
+
+
+def _collaborator_payload(collab: dict) -> dict:
+    return {
+        "user_id": collab.get("user_id"),
+        "role": collab.get("role", "viewer"),
+        "since": collab.get("since"),
+        "updated_at": collab.get("updated_at"),
+        "invitation_id": collab.get("invitation_id"),
+    }
+
+
+def _collect_corpus(notebook_id: str, user_id: str) -> str:
+    notebook = _notebook_or_404(notebook_id, user_id)
+    chunks: list[str] = []
+    for source in list_sources(notebook["id"], user_id):
+        if source.get("fulltext"):
+            chunks.append(f"# {source['title']}\n{source['fulltext']}".strip())
+    for note in list_notes(notebook["id"], user_id):
+        if note.get("content"):
+            chunks.append(f"## Note: {note['title']}\n{note['content']}".strip())
+    return "\n\n".join(chunks).strip()
+
+
+def _sentence_list(text: str, limit: int = 8) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    result = [p.strip() for p in parts if p.strip()]
+    return result[:limit]
+
+
+def _slug_title(title: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9]+", "-", title).strip("-").lower()
+    return safe or "source"
+
+
+def _make_markdown_table(rows: list[dict], headers: list[str]) -> str:
+    out = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
+    for row in rows:
+        out.append("| " + " | ".join(str(row.get(h, "")) for h in headers) + " |")
+    return "\n".join(out)
+
+
+async def _build_source_guide(text: str, title: str) -> str:
+    summary = await summarize_document(text[:12000] if text else "")
+    sentences = _sentence_list(text, limit=5)
+    bullets = "\n".join(f"- {item}" for item in sentences[:5]) if sentences else "- No extracted text available."
+    return f"# {title}\n\n## Summary\n{summary}\n\n## Key Passages\n{bullets}"
+
+
+async def _import_text_source(
+    notebook_id: str,
+    user_id: str,
+    title: str,
+    text: str,
+    *,
+    source_type: str = "text",
+    url: str | None = None,
+    extra_metadata: dict | None = None,
+) -> dict:
+    filename = f"{_slug_title(title)}.txt"
+    doc = save_document_from_text(user_id, filename, text, source_type=source_type)
+    metadata: dict = {"filename": filename}
+    if extra_metadata:
+        metadata.update(extra_metadata)
+    source = upsert_source(
+        notebook_id,
+        user_id,
+        source_type=source_type,
+        title=title,
+        content=text,
+        url=url,
+        document_id=doc["id"],
+        metadata=metadata,
+    )
+    return source
+
+
+async def _fetch_url(url: str) -> tuple[str, str]:
+    """Re-fetch remote content for source refresh (URL / YouTube / Drive)."""
+    kind = classify_url(url)
+    if kind == "youtube":
+        payload = await ingest_from_youtube(url)
+    elif kind == "drive":
+        payload = await ingest_from_drive(url)
+    else:
+        payload = await ingest_from_url(url)
+    title = str(payload.get("title") or url)
+    text = str(payload.get("text") or "")
+    return title, text
+
+
+@router.get("")
+@router.get("/")
+async def list_workspaces(authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    notebooks = list_accessible_notebooks(user_id)
+    return {"notebooks": [_notebook_payload(nb, user_id) for nb in notebooks]}
+
+
+@router.post("")
+@router.post("/")
+async def create_workspace(body: NotebookCreate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    notebook = create_notebook(user_id, body.title, body.description or "")
+    return _notebook_payload(notebook, user_id)
+
+
+@router.get("/{notebook_id}")
+async def get_workspace(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    return _notebook_payload(_notebook_or_404(notebook_id, user_id), user_id)
+
+
+@router.patch("/{notebook_id}")
+async def rename_workspace(notebook_id: str, body: NotebookUpdate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    notebook = rename_notebook(notebook_id, user_id, body.title)
+    if not notebook:
+        raise HTTPException(status_code=404, detail="Notebook not found.")
+    return _notebook_payload(notebook, user_id)
+
+
+@router.delete("/{notebook_id}")
+async def remove_workspace(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    if not delete_notebook(notebook_id, user_id):
+        raise HTTPException(status_code=404, detail="Notebook not found.")
+    return {"message": "Notebook deleted."}
+
+
+@router.get("/{notebook_id}/sources")
+async def get_sources(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"sources": [_source_payload(src) for src in list_sources(notebook_id, user_id)]}
+
+
+@router.post("/{notebook_id}/sources/text")
+async def add_text_source(notebook_id: str, body: SourceTextCreate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    source = await _import_text_source(notebook_id, user_id, body.title, body.content, source_type="text")
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/url")
+async def add_url_source(notebook_id: str, body: SourceUrlCreate, authorization: str = Header(...)):
+    """
+    Generic URL importer. Auto-detects YouTube/Drive vs regular web pages and
+    routes through the appropriate extractor in services.ingest. The frontend
+    can keep calling this single endpoint with any URL; explicit /youtube and
+    /drive endpoints below exist for clients that want to be precise.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="URL is required.")
+    try:
+        payload = await ingest_from_url(body.url)
+    except Exception as exc:
+        # Even on hard failure, persist a stub source so the user sees the
+        # attempt in their notebook and can retry / delete it.
+        payload = {
+            "title":    body.title or body.url,
+            "text":     f"Imported URL: {body.url}\n\nCould not fetch content: {exc}",
+            "type":     classify_url(body.url),
+            "url":      body.url,
+            "metadata": {"error": str(exc)},
+        }
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type=payload["type"],
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/youtube")
+async def add_youtube_source(notebook_id: str, body: SourceYoutubeCreate, authorization: str = Header(...)):
+    """
+    Explicit YouTube ingestion — pulls captions / transcript via yt-dlp.
+    Falls back to the video description if no transcript is available.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="YouTube URL is required.")
+    payload = await ingest_from_youtube(body.url)
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type="youtube",
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/drive")
+async def add_drive_source(notebook_id: str, body: SourceDriveCreate, authorization: str = Header(...)):
+    """
+    Import a publicly-shared Google Drive / Docs file.
+    Private files return a stub source explaining how to make it accessible.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="Drive URL is required.")
+    payload = await ingest_from_drive(body.url)
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type="drive",
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/file")
+async def add_file_source(
+    notebook_id: str,
+    file: UploadFile = File(...),
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    file_bytes = await file.read()
+    extracted = filter_document(file_bytes, file.filename or "upload").text
+    if not extracted.strip():
+        extracted = extract_text(file_bytes, file.filename or "upload")
+    if not extracted.strip():
+        raise HTTPException(status_code=422, detail="File appears empty or unreadable.")
+    source = await _import_text_source(notebook_id, user_id, file.filename or "Uploaded File", extracted, source_type="file")
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/research")
+async def research_sources(notebook_id: str, body: ResearchCreate, authorization: str = Header(...)):
+    """
+    Run a real research pass against the open web.
+
+    Pipeline (see services/research.run_research for details):
+      1. If ``body.query`` is set, ask the search backend for candidate URLs.
+         ``mode='deep'`` first expands the query into 3-5 sub-queries via the LLM.
+      2. Dedupe + rank, then ingest each candidate via services.ingest.
+      3. Synthesize a short overview via the LLM router (NVIDIA-first).
+      4. Also import any explicit ``import_urls`` the caller passed — those are
+         treated as must-haves, not subject to search ranking.
+      5. Persist every successfully-ingested source on the notebook so it shows
+         up in the source list like any other source, plus a "Research" note
+         that contains the synthesized overview and a bibliography.
+
+    The endpoint is idempotent only in the sense that re-running it produces
+    new sources/notes/jobs; nothing is mutated in place.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+
+    research: dict = {
+        "query": body.query,
+        "mode": body.mode,
+        "expanded": [],
+        "candidates": [],
+        "sources": [],
+        "failed": [],
+        "summary": "",
+        "provider": "none",
+    }
+    if body.query and body.query.strip():
+        try:
+            research = await run_research(body.query, mode=body.mode)
+        except Exception as exc:  # pragma: no cover — surface but never 500
+            research["failed"] = [{"query": body.query, "error": str(exc)}]
+
+    imports: list[dict] = []
+
+    # Persist each web hit as a notebook source so it shows up alongside
+    # manually-added URLs. We deliberately pass through _import_text_source so
+    # the same dedupe / document save / metadata plumbing runs.
+    for payload in research.get("sources", []):
+        try:
+            source = await _import_text_source(
+                notebook_id,
+                user_id,
+                payload["title"],
+                payload["text"],
+                source_type=payload.get("type", "url"),
+                url=payload.get("url"),
+                extra_metadata={
+                    **(payload.get("metadata") or {}),
+                    "research_query": body.query,
+                    "research_mode": body.mode,
+                },
+            )
+            imports.append(_source_payload(source))
+        except Exception as exc:
+            imports.append({"url": payload.get("url"), "title": payload.get("title"), "error": str(exc)})
+
+    # Also import any explicit URLs the caller passed (treated as must-haves).
+    for url in body.import_urls:
+        try:
+            source = await add_url_source(notebook_id, SourceUrlCreate(url=url), authorization)
+            imports.append(source["source"])
+        except Exception as exc:
+            imports.append({"url": url, "error": str(exc)})
+
+    job = create_research_job(
+        notebook_id,
+        user_id,
+        query=body.query,
+        mode=body.mode,
+        status="ready" if imports else "empty",
+        results={
+            "imports": imports,
+            "summary": research.get("summary", ""),
+            "expanded_queries": research.get("expanded", []),
+            "provider": research.get("provider", "none"),
+            "failed": research.get("failed", []),
+        },
+    )
+
+    # Build a research note that's actually useful — overview + bibliography.
+    bib_lines = []
+    for i, item in enumerate(imports, 1):
+        if "error" in item:
+            bib_lines.append(f"[{i}] {item.get('title') or item.get('url') or 'Source'} — failed: {item['error']}")
+        else:
+            title = item.get("title") or "Untitled"
+            link = item.get("url") or ""
+            bib_lines.append(f"[{i}] {title}{f' — {link}' if link else ''}")
+
+    overview = research.get("summary") or "(No summary was generated for this run.)"
+    note_body = (
+        f"Research query: {body.query}\n"
+        f"Mode: {body.mode}\n\n"
+        f"## Overview\n{overview}\n\n"
+        f"## Sources\n" + ("\n".join(bib_lines) if bib_lines else "(no sources imported)")
+    )
+    note = create_note(
+        notebook_id,
+        user_id,
+        title=f"Research: {body.query[:42]}" if body.query else "Research",
+        content=note_body,
+        kind="research",
+    )
+
+    return {
+        "job": job,
+        "note": note,
+        "sources": imports,
+        "summary": research.get("summary", ""),
+        "expanded_queries": research.get("expanded", []),
+        "provider": research.get("provider", "none"),
+        "failed": research.get("failed", []),
+    }
+
+
+@router.get("/{notebook_id}/sources/{source_id}")
+async def get_source_detail(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"source": _source_payload(_source_or_404(source_id, user_id))}
+
+
+@router.patch("/{notebook_id}/sources/{source_id}")
+async def rename_source_detail(
+    notebook_id: str,
+    source_id: str,
+    body: NotebookUpdate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    source = rename_source(source_id, user_id, body.title)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return {"source": _source_payload(source)}
+
+
+@router.delete("/{notebook_id}/sources/{source_id}")
+async def remove_source_detail(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not delete_source(source_id, user_id):
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return {"message": "Source deleted."}
+
+
+@router.get("/{notebook_id}/sources/{source_id}/fulltext")
+async def get_source_fulltext(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    source = _source_or_404(source_id, user_id)
+    return {"text": source.get("fulltext", "")}
+
+
+@router.get("/{notebook_id}/sources/{source_id}/guide")
+async def get_source_guide(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    source = _source_or_404(source_id, user_id)
+    guide = source.get("guide")
+    if guide:
+        return {"guide": guide}
+    # Generating and persisting a guide mutates the source — editors/owners only.
+    _writer_or_404(notebook_id, user_id)
+    guide = await _build_source_guide(source.get("fulltext", ""), source["title"])
+    update_source(source_id, user_id, {"guide": guide})
+    return {"guide": guide}
+
+
+@router.post("/{notebook_id}/sources/{source_id}/refresh")
+async def refresh_source(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    source = _source_or_404(source_id, user_id)
+    if source.get("type") not in {"url", "youtube", "drive"}:
+        raise HTTPException(status_code=400, detail="This source type cannot be refreshed.")
+    if source.get("url"):
+        try:
+            title, text = await _fetch_url(source["url"])
+            update_source(source_id, user_id, {"title": title, "fulltext": text, "content": text, "refresh_state": "fresh"})
+        except Exception as exc:
+            update_source(source_id, user_id, {"refresh_state": "stale", "status": "error", "metadata": {"error": str(exc)}})
+    return {"source": _source_payload(_source_or_404(source_id, user_id))}
+
+
+@router.get("/{notebook_id}/sources/{source_id}/freshness")
+async def source_freshness(notebook_id: str, source_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    source = _source_or_404(source_id, user_id)
+    return {"status": source.get("refresh_state", "fresh")}
+
+
+@router.get("/{notebook_id}/notes")
+async def get_notes(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"notes": list_notes(notebook_id, user_id)}
+
+
+@router.post("/{notebook_id}/notes")
+async def add_note(notebook_id: str, body: NoteCreate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    note = create_note(
+        notebook_id,
+        user_id,
+        title=body.title,
+        content=body.content,
+        source_id=body.source_id,
+        kind=body.kind,
+    )
+    return {"note": note}
+
+
+@router.patch("/{notebook_id}/notes/{note_id}")
+async def edit_note(notebook_id: str, note_id: str, body: NoteUpdate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    note = _note_or_404(notebook_id, note_id, user_id)
+    updates = {}
+    if body.title is not None:
+        updates["title"] = body.title
+    if body.content is not None:
+        updates["content"] = body.content
+    if body.kind is not None:
+        updates["kind"] = body.kind
+    updated = update_note(note_id, user_id, updates)
+    return {"note": updated or note}
+
+
+@router.delete("/{notebook_id}/notes/{note_id}")
+async def remove_note(notebook_id: str, note_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not delete_note(note_id, user_id):
+        raise HTTPException(status_code=404, detail="Note not found.")
+    return {"message": "Note deleted."}
+
+
+@router.post("/{notebook_id}/chat")
+async def notebook_chat(
+    notebook_id: str,
+    body: ChatRequest,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="Question is empty.")
+
+    sources = list_sources(notebook_id, user_id)
+    if body.source_ids:
+        wanted = {sid for sid in body.source_ids}
+        sources = [src for src in sources if src["id"] in wanted]
+
+    # 1. Retrieve top passages across the (possibly filtered) source set.
+    passages = notebook_retrieve(sources, question)
+
+    # 2. Build the cited context block. Fall back to "everything we have"
+    #    only when retrieval found nothing — usually means RAG is still
+    #    indexing or sources have no fulltext yet.
+    if passages:
+        context = build_numbered_context(passages)
+        cited_question = build_cited_question(question)
+    else:
+        context = "\n\n".join(
+            f"{src['title']}:\n{src.get('fulltext', '')}"
+            for src in sources
+            if src.get("fulltext")
+        )
+        if not context.strip():
+            context = _collect_corpus(notebook_id, user_id)
+        cited_question = question
+
+    if not context.strip():
+        raise HTTPException(status_code=422, detail="Notebook has no readable sources.")
+
+    answer = await answer_question(context, cited_question)
+
+    # 3. Citation payload — rich when RAG succeeded, slim fallback otherwise.
+    if passages:
+        citations = to_citations(passages)
+    else:
+        citations = [
+            {
+                "index":     i + 1,
+                "source_id": source["id"],
+                "title":     source["title"],
+                "type":      source["type"],
+                "url":       source.get("url"),
+                "excerpt":   (source.get("fulltext") or "")[:280],
+                "score":     0.0,
+            }
+            for i, source in enumerate(sources)
+            if source.get("fulltext")
+        ]
+
+    note = None
+    if body.save_as_note:
+        note = create_note(
+            notebook_id,
+            user_id,
+            title=f"Answer: {question[:40]}",
+            content=answer,
+            kind="answer",
+        )
+
+    chat = None
+    if body.chat_id:
+        chat = get_chat(body.chat_id, user_id)
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found.")
+    elif body.save_as_note:
+        chat = create_chat(notebook_id, user_id, f"Chat about {question[:40]}", body.source_ids)
+
+    if chat:
+        add_chat_turn(chat["id"], user_id, role="user", content=question, citations=[])
+        add_chat_turn(chat["id"], user_id, role="assistant", content=answer, citations=citations)
+
+    return {
+        "question":  question,
+        "answer":    answer,
+        "citations": citations,
+        "note":      note,
+        "chat_id":   chat["id"] if chat else None,
+    }
+
+
+@router.post("/{notebook_id}/search")
+async def notebook_search(
+    notebook_id: str,
+    body: SearchRequest,
+    authorization: str = Header(...),
+):
+    """Retrieval-only preview — returns the top passages without calling the LLM.
+
+    Used by the workspace UI for source filtering, "find in notebook" search,
+    and previewing what the chat endpoint would see before spending tokens.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    query = (body.query or "").strip()
+    if not query:
+        raise HTTPException(status_code=422, detail="Search query is empty.")
+
+    sources = list_sources(notebook_id, user_id)
+    if body.source_ids:
+        wanted = {sid for sid in body.source_ids}
+        sources = [src for src in sources if src["id"] in wanted]
+
+    passages = notebook_retrieve(sources, query, max_chunks=max(1, min(body.top_k, 20)))
+    return {
+        "query":       query,
+        "results":     to_citations(passages),
+        "source_count": len(sources),
+    }
+
+
+@router.get("/{notebook_id}/artifacts")
+async def get_artifacts(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"artifacts": list_artifacts(notebook_id, user_id)}
+
+
+@router.get("/{notebook_id}/chats")
+async def get_chats(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"chats": list_chats(notebook_id, user_id)}
+
+
+@router.post("/{notebook_id}/chats")
+async def create_saved_chat(notebook_id: str, body: ChatCreate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    chat = create_chat(notebook_id, user_id, body.title, body.source_ids)
+    return {"chat": chat}
+
+
+@router.get("/{notebook_id}/chats/{chat_id}")
+async def get_saved_chat(notebook_id: str, chat_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    return {"chat": chat, "turns": list_chat_turns(chat_id, user_id)}
+
+
+@router.patch("/{notebook_id}/chats/{chat_id}")
+async def rename_saved_chat(notebook_id: str, chat_id: str, body: ChatUpdate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    chat = rename_chat(chat_id, user_id, body.title)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    return {"chat": chat}
+
+
+@router.delete("/{notebook_id}/chats/{chat_id}")
+async def delete_saved_chat(notebook_id: str, chat_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not delete_chat(chat_id, user_id):
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    return {"message": "Chat deleted."}
+
+
+# ── Chat-turn level operations ──────────────────────────────────────────────
+# These let the dashboard retroactively act on individual messages: pin the
+# good ones, convert assistant answers into permanent notes the user can edit
+# and review later. Both endpoints map 1:1 onto NotebookLM's "save to note"
+# and "pin" affordances.
+
+
+@router.post("/{notebook_id}/chats/{chat_id}/turns/{turn_id}/save-as-note")
+async def save_turn_as_note(
+    notebook_id: str,
+    chat_id: str,
+    turn_id: str,
+    body: TurnSaveAsNote | None = None,
+    authorization: str = Header(...),
+):
+    """Persist a single chat turn as a note in the notebook.
+
+    Defaults:
+      * title — "Answer: <first 40 chars of turn content>"
+      * content — turn body, optionally followed by a citation list
+
+    Citations are inlined as a "Sources" footer so the note stays self
+    contained when exported or shared. The original chat turn is unchanged.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    body = body or TurnSaveAsNote()
+
+    turn = get_chat_turn(chat_id, turn_id, user_id)
+    if not turn:
+        raise HTTPException(status_code=404, detail="Chat turn not found.")
+    if turn["role"] != "assistant":
+        # Saving a user prompt as a note is rarely useful — guard the path
+        # so we don't accidentally save the user's question as the answer.
+        raise HTTPException(status_code=422, detail="Only assistant turns can be saved as notes.")
+
+    content = turn["content"]
+    citations = turn.get("citations") or []
+    if body.include_citations and citations:
+        cite_lines = []
+        for cite in citations:
+            idx = cite.get("index", "?")
+            title = cite.get("title") or "Source"
+            url = cite.get("url")
+            line = f"[{idx}] {title}" + (f" — {url}" if url else "")
+            cite_lines.append(line)
+        content = f"{content.rstrip()}\n\n## Sources\n" + "\n".join(cite_lines)
+
+    title = (body.title or f"Answer: {turn['content'][:40]}").strip()
+    note = create_note(
+        notebook_id,
+        user_id,
+        title=title or "Saved Answer",
+        content=content,
+        kind="answer",
+    )
+    return {"note": note, "turn_id": turn_id, "chat_id": chat_id}
+
+
+@router.post("/{notebook_id}/chats/{chat_id}/turns/{turn_id}/pin")
+async def pin_chat_turn(
+    notebook_id: str,
+    chat_id: str,
+    turn_id: str,
+    body: TurnPinUpdate,
+    authorization: str = Header(...),
+):
+    """Toggle the pinned flag on a chat turn.
+
+    The dashboard surfaces pinned turns in a dedicated "Saved answers"
+    panel so users don't have to scroll back through long chats to find
+    the canonical answer.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    turn = set_turn_pinned(chat_id, turn_id, user_id, pinned=body.pinned)
+    if not turn:
+        raise HTTPException(status_code=404, detail="Chat turn not found.")
+    return {"turn": turn}
+
+
+@router.post("/{notebook_id}/duplicates/cleanup")
+async def cleanup_sources(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    removed = cleanup_duplicate_sources(notebook_id, user_id)
+    return {"removed": [_source_payload(item) for item in removed]}
+
+
+async def _generate_artifact_content(
+    notebook_id: str,
+    user_id: str,
+    artifact_type: str,
+    prompt: str | None,
+) -> tuple[str, str, str]:
+    """Dispatch to the LLM-driven artifact engine in services.artifacts.
+
+    Each generator returns ``(title, content, fmt)`` directly. The router
+    persists that as-is — the engine owns prompt design, JSON shape, and
+    fallbacks for malformed LLM output.
+    """
+    corpus = _collect_corpus(notebook_id, user_id)
+    if not corpus.strip():
+        raise HTTPException(status_code=422, detail="Notebook has no source text to build from.")
+    sources = list_sources(notebook_id, user_id)
+
+    # Resolve known aliases — the dashboard hits both /quiz and /flashcards,
+    # plus a legacy /summary endpoint that should still produce a report.
+    if artifact_type in {"report", "summary"}:
+        return await artifact_engine.make_report(corpus, prompt)
+    if artifact_type == "study-guide":
+        return await artifact_engine.make_study_guide(corpus, prompt)
+    if artifact_type == "quiz":
+        return await artifact_engine.make_quiz(corpus, prompt)
+    if artifact_type in {"flashcard", "flashcards"}:
+        return await artifact_engine.make_flashcards(corpus, prompt)
+    if artifact_type == "mind-map":
+        return await artifact_engine.make_mind_map(corpus, prompt)
+    if artifact_type == "slide-deck":
+        return await artifact_engine.make_slide_deck(corpus, prompt)
+    if artifact_type == "infographic":
+        return await artifact_engine.make_infographic(corpus, prompt)
+    if artifact_type == "data-table":
+        return await artifact_engine.make_data_table(corpus, sources, prompt)
+    if artifact_type == "video":
+        return await artifact_engine.make_video_script(corpus, sources, prompt)
+    if artifact_type == "audio":
+        return await artifact_engine.make_audio_script(corpus, prompt)
+
+    # Unknown type → default to a report so the user still gets something
+    # rather than a 400. The artifact's metadata records the original type.
+    return await artifact_engine.make_report(corpus, prompt)
+
+
+@router.post("/{notebook_id}/artifacts/generate/{artifact_type}")
+async def generate_artifact(
+    notebook_id: str,
+    artifact_type: str,
+    body: ArtifactCreate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    title, content, fmt = await _generate_artifact_content(notebook_id, user_id, artifact_type, body.title or body.prompt)
+    artifact = create_artifact(
+        notebook_id,
+        user_id,
+        artifact_type=artifact_type,
+        title=title,
+        content=content,
+        fmt=body.format or fmt,
+        metadata={"prompt": body.prompt},
+    )
+    return {"artifact": artifact}
+
+
+@router.get("/{notebook_id}/artifacts/{artifact_id}")
+async def get_artifact_detail(notebook_id: str, artifact_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return {"artifact": _artifact_or_404(notebook_id, artifact_id, user_id)}
+
+
+@router.patch("/{notebook_id}/artifacts/{artifact_id}")
+async def update_artifact_detail(
+    notebook_id: str,
+    artifact_id: str,
+    body: ArtifactCreate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    artifact = update_artifact(
+        artifact_id,
+        user_id,
+        {
+            **({"title": body.title} if body.title is not None else {}),
+            **({"content": body.prompt} if body.prompt is not None else {}),
+            **({"format": body.format} if body.format is not None else {}),
+        },
+    )
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+    return {"artifact": artifact}
+
+
+@router.delete("/{notebook_id}/artifacts/{artifact_id}")
+async def remove_artifact_detail(notebook_id: str, artifact_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _writer_or_404(notebook_id, user_id)
+    if not delete_artifact(artifact_id, user_id):
+        raise HTTPException(status_code=404, detail="Artifact not found.")
+    return {"message": "Artifact deleted."}
+
+
+@router.get("/{notebook_id}/artifacts/{artifact_id}/download")
+async def download_artifact(notebook_id: str, artifact_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    artifact = _artifact_or_404(notebook_id, artifact_id, user_id)
+    content = artifact.get("content", "")
+    fmt = artifact.get("format", "text")
+
+    if artifact["type"] == "audio":
+        script = json.loads(content or "[]")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("script.json", json.dumps(script, indent=2))
+            zf.writestr("README.txt", "Audio overview script. Pair this with the existing document podcast flow for audio export.")
+        buf.seek(0)
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{artifact["title"]}.zip"'},
+        )
+
+    if fmt == "csv":
+        media_type = "text/csv"
+        ext = "csv"
+    elif fmt == "json":
+        media_type = "application/json"
+        ext = "json"
+    else:
+        media_type = "text/markdown"
+        ext = "md"
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{artifact["title"]}.{ext}"'},
+    )
+
+
+def _export_zip_stem(title: str, fallback: str) -> str:
+    stem = _slug_title(title) if title else fallback
+    return (stem or fallback)[:60]
+
+
+@router.get("/{notebook_id}/export")
+async def export_notebook_bundle(
+    notebook_id: str,
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+):
+    """Zip export of notebook manifest, source fulltext, notes, and artifacts."""
+    auth_header = authorization
+    if not auth_header and token:
+        auth_header = f"Bearer {token.strip()}"
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing or invalid token.")
+    user_id = get_user_id(auth_header)
+    _require_local()
+    nb = _notebook_or_404(notebook_id, user_id)
+    sources = list_sources(notebook_id, user_id)
+    notes = list_notes(notebook_id, user_id)
+    artifacts = list_artifacts(notebook_id, user_id)
+    zip_prefix = _export_zip_stem(nb.get("title") or "", "jackpal-notebook")
+    buf = io.BytesIO()
+    used: dict[str, int] = {}
+
+    def unique_path(folder: str, base: str, ext: str) -> str:
+        key = f"{folder}/{base}.{ext}"
+        n = used.get(key, 0)
+        used[key] = n + 1
+        if n == 0:
+            return f"{folder}/{base}.{ext}"
+        return f"{folder}/{base}-{n}.{ext}"
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "notebook.json",
+            json.dumps(
+                {
+                    "id": nb["id"],
+                    "title": nb.get("title"),
+                    "description": nb.get("description", ""),
+                    "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "counts": {"sources": len(sources), "notes": len(notes), "artifacts": len(artifacts)},
+                },
+                indent=2,
+            ),
+        )
+        for i, src in enumerate(sources):
+            stem = _export_zip_stem(src.get("title") or f"source-{i}", f"source-{i}")
+            text = src.get("fulltext") or src.get("content") or ""
+            meta = f"---\n{json.dumps({'id': src['id'], 'type': src.get('type'), 'url': src.get('url')}, indent=2)}\n---\n\n"
+            zf.writestr(unique_path("sources", stem, "txt"), meta + text)
+        for i, note in enumerate(notes):
+            stem = _export_zip_stem(note.get("title") or f"note-{i}", f"note-{i}")
+            body = f"# {note.get('title') or 'Note'}\n\n{note.get('content') or ''}"
+            zf.writestr(unique_path("notes", stem, "md"), body)
+        for i, art in enumerate(artifacts):
+            stem = _export_zip_stem(art.get("title") or f"artifact-{i}", f"artifact-{i}")
+            fmt = (art.get("format") or "text").strip().lower()
+            if fmt in {"csv", "json"}:
+                ext = fmt
+            elif art.get("type") == "audio":
+                ext = "json"
+                body = art.get("content") or "[]"
+            else:
+                ext = "md"
+                body = art.get("content") or ""
+            zf.writestr(unique_path("artifacts", stem, ext), body)
+        zf.writestr(
+            "README.txt",
+            "JackPal notebook export\n"
+            "------------------------\n"
+            "- notebook.json — metadata\n"
+            "- sources/*.txt — ingested source text (YAML-style front matter is JSON)\n"
+            "- notes/*.md\n"
+            "- artifacts/* — generated outputs\n",
+        )
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_prefix}-jackpal-export.zip"'},
+    )
+
+
+@router.get("/{notebook_id}/export/artifacts")
+async def export_notebook_artifacts_bundle(
+    notebook_id: str,
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+):
+    """Zip export of generated artifacts only (viewer+)."""
+    auth_header = authorization
+    if not auth_header and token:
+        auth_header = f"Bearer {token.strip()}"
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing or invalid token.")
+    user_id = get_user_id(auth_header)
+    _require_local()
+    nb = _notebook_or_404(notebook_id, user_id)
+    artifacts = list_artifacts(notebook_id, user_id)
+    zip_prefix = _export_zip_stem(nb.get("title") or "", "jackpal-notebook")
+    buf = io.BytesIO()
+    used: dict[str, int] = {}
+
+    def unique_path(folder: str, base: str, ext: str) -> str:
+        key = f"{folder}/{base}.{ext}"
+        n = used.get(key, 0)
+        used[key] = n + 1
+        if n == 0:
+            return f"{folder}/{base}.{ext}"
+        return f"{folder}/{base}-{n}.{ext}"
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "artifacts-manifest.json",
+            json.dumps(
+                {
+                    "notebook_id": nb["id"],
+                    "title": nb.get("title"),
+                    "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "artifact_count": len(artifacts),
+                },
+                indent=2,
+            ),
+        )
+        for i, art in enumerate(artifacts):
+            stem = _export_zip_stem(art.get("title") or f"artifact-{i}", f"artifact-{i}")
+            fmt = (art.get("format") or "text").strip().lower()
+            if fmt in {"csv", "json"}:
+                ext = fmt
+            elif art.get("type") == "audio":
+                ext = "json"
+                body = art.get("content") or "[]"
+            else:
+                ext = "md"
+                body = art.get("content") or ""
+            zf.writestr(unique_path("artifacts", stem, ext), body)
+        zf.writestr(
+            "README.txt",
+            "JackPal artifacts export\n"
+            "------------------------\n"
+            "- artifacts-manifest.json — notebook id + export time\n"
+            "- artifacts/* — generated outputs (same layout as full notebook export)\n",
+        )
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_prefix}-jackpal-artifacts.zip"'},
+    )
+
+
+@router.get("/{notebook_id}/sharing")
+async def get_sharing_state(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    return get_sharing(notebook_id, user_id)
+
+
+@router.post("/{notebook_id}/sharing")
+async def update_sharing_state(notebook_id: str, body: SharingUpdate, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    sharing = set_sharing(notebook_id, user_id, body.public, body.role)
+    return sharing
+
+
+@router.post("/invitations/accept")
+async def accept_workspace_invitation(body: InvitationAccept, authorization: str = Header(...)):
+    """Accept an invitation by token; caller becomes a collaborator with the invited role."""
+    user_id = get_user_id(authorization)
+    _require_local()
+    result = accept_invitation(body.token, user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Invalid, expired, or revoked invitation.")
+    nb = result["notebook"]
+    payload = {
+        "already_owner": bool(result.get("already_owner")),
+        "notebook": _notebook_payload(nb, user_id),
+        "invitation": _invitation_payload(result["invitation"]),
+    }
+    if result.get("collaborator"):
+        payload["collaborator"] = _collaborator_payload(result["collaborator"])
+    else:
+        payload["collaborator"] = None
+    return payload
+
+
+@router.post("/{notebook_id}/invitations")
+async def create_workspace_invitation(
+    notebook_id: str,
+    body: InvitationCreate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    inv = create_invitation(
+        notebook_id,
+        user_id,
+        role=body.role,
+        expires_in_seconds=body.expires_in,
+        invitee_email=body.invitee_email,
+    )
+    if not inv:
+        raise HTTPException(status_code=404, detail="Notebook not found.")
+    return {"invitation": _invitation_payload(inv)}
+
+
+@router.get("/{notebook_id}/invitations")
+async def list_workspace_invitations(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    items = list_invitations(notebook_id, user_id)
+    return {"invitations": [_invitation_payload(inv) for inv in items]}
+
+
+@router.delete("/{notebook_id}/invitations/{invitation_id}")
+async def revoke_workspace_invitation(
+    notebook_id: str,
+    invitation_id: str,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    inv = next((i for i in list_invitations(notebook_id, user_id) if i["id"] == invitation_id), None)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invitation not found.")
+    if not revoke_invitation(invitation_id, user_id):
+        raise HTTPException(status_code=404, detail="Invitation not found.")
+    inv["revoked"] = True
+    return {"message": "Invitation revoked.", "invitation": _invitation_payload(inv)}
+
+
+@router.get("/{notebook_id}/collaborators")
+async def list_workspace_collaborators(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    rows = list_collaborators(notebook_id, user_id)
+    return {"collaborators": [_collaborator_payload(c) for c in rows]}
+
+
+@router.patch("/{notebook_id}/collaborators/{collaborator_user_id}")
+async def patch_workspace_collaborator_role(
+    notebook_id: str,
+    collaborator_user_id: str,
+    body: CollaboratorRoleUpdate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    updated = update_collaborator_role(notebook_id, user_id, collaborator_user_id, body.role)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Collaborator not found.")
+    return {"collaborator": _collaborator_payload(updated)}
+
+
+@router.delete("/{notebook_id}/collaborators/{collaborator_user_id}")
+async def remove_workspace_collaborator(
+    notebook_id: str,
+    collaborator_user_id: str,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    if not remove_collaborator(notebook_id, user_id, collaborator_user_id):
+        raise HTTPException(status_code=404, detail="Collaborator not found.")
+    return {"message": "Collaborator removed."}
+
+
+@router.get("/{notebook_id}/research/{job_id}")
+async def get_research_state(notebook_id: str, job_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    job = get_research_job(job_id, user_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Research job not found.")
+    return job
