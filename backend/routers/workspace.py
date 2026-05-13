@@ -16,6 +16,12 @@ from services.auth_utils import get_user_id, is_local_mode
 from services.ai import answer_question, generate_podcast_script, summarize_document
 from services.content_filter import filter_document
 from services.extractor import extract_text
+from services.workspace_rag import (
+    build_cited_question,
+    build_numbered_context,
+    notebook_retrieve,
+    to_citations,
+)
 from services.local_storage import (
     create_artifact,
     create_note,
@@ -108,6 +114,12 @@ class ChatRequest(BaseModel):
     save_as_note: bool = False
     source_ids: list[str] = Field(default_factory=list)
     chat_id: str | None = None
+
+
+class SearchRequest(BaseModel):
+    query: str
+    source_ids: list[str] = Field(default_factory=list)
+    top_k: int = 8
 
 
 class ChatCreate(BaseModel):
@@ -538,21 +550,57 @@ async def notebook_chat(
     user_id = get_user_id(authorization)
     _require_local()
     _notebook_or_404(notebook_id, user_id)
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="Question is empty.")
+
     sources = list_sources(notebook_id, user_id)
     if body.source_ids:
         wanted = {sid for sid in body.source_ids}
         sources = [src for src in sources if src["id"] in wanted]
-    context = "\n\n".join(
-        f"{src['title']}:\n{src.get('fulltext', '')}"
-        for src in sources
-        if src.get("fulltext")
-    )
-    if not context.strip():
-        context = _collect_corpus(notebook_id, user_id)
+
+    # 1. Retrieve top passages across the (possibly filtered) source set.
+    passages = notebook_retrieve(sources, question)
+
+    # 2. Build the cited context block. Fall back to "everything we have"
+    #    only when retrieval found nothing — usually means RAG is still
+    #    indexing or sources have no fulltext yet.
+    if passages:
+        context = build_numbered_context(passages)
+        cited_question = build_cited_question(question)
+    else:
+        context = "\n\n".join(
+            f"{src['title']}:\n{src.get('fulltext', '')}"
+            for src in sources
+            if src.get("fulltext")
+        )
+        if not context.strip():
+            context = _collect_corpus(notebook_id, user_id)
+        cited_question = question
+
     if not context.strip():
         raise HTTPException(status_code=422, detail="Notebook has no readable sources.")
-    question = body.question.strip()
-    answer = await answer_question(context, question)
+
+    answer = await answer_question(context, cited_question)
+
+    # 3. Citation payload — rich when RAG succeeded, slim fallback otherwise.
+    if passages:
+        citations = to_citations(passages)
+    else:
+        citations = [
+            {
+                "index":     i + 1,
+                "source_id": source["id"],
+                "title":     source["title"],
+                "type":      source["type"],
+                "url":       source.get("url"),
+                "excerpt":   (source.get("fulltext") or "")[:280],
+                "score":     0.0,
+            }
+            for i, source in enumerate(sources)
+            if source.get("fulltext")
+        ]
+
     note = None
     if body.save_as_note:
         note = create_note(
@@ -562,14 +610,7 @@ async def notebook_chat(
             content=answer,
             kind="answer",
         )
-    citations = [
-        {
-            "source_id": source["id"],
-            "title": source["title"],
-            "type": source["type"],
-        }
-        for source in sources
-    ]
+
     chat = None
     if body.chat_id:
         chat = get_chat(body.chat_id, user_id)
@@ -579,9 +620,47 @@ async def notebook_chat(
         chat = create_chat(notebook_id, user_id, f"Chat about {question[:40]}", body.source_ids)
 
     if chat:
-        add_chat_turn(chat["id"], user_id, role="user", content=question, citations=citations)
+        add_chat_turn(chat["id"], user_id, role="user", content=question, citations=[])
         add_chat_turn(chat["id"], user_id, role="assistant", content=answer, citations=citations)
-    return {"question": question, "answer": answer, "note": note}
+
+    return {
+        "question":  question,
+        "answer":    answer,
+        "citations": citations,
+        "note":      note,
+        "chat_id":   chat["id"] if chat else None,
+    }
+
+
+@router.post("/{notebook_id}/search")
+async def notebook_search(
+    notebook_id: str,
+    body: SearchRequest,
+    authorization: str = Header(...),
+):
+    """Retrieval-only preview — returns the top passages without calling the LLM.
+
+    Used by the workspace UI for source filtering, "find in notebook" search,
+    and previewing what the chat endpoint would see before spending tokens.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    query = (body.query or "").strip()
+    if not query:
+        raise HTTPException(status_code=422, detail="Search query is empty.")
+
+    sources = list_sources(notebook_id, user_id)
+    if body.source_ids:
+        wanted = {sid for sid in body.source_ids}
+        sources = [src for src in sources if src["id"] in wanted]
+
+    passages = notebook_retrieve(sources, query, max_chunks=max(1, min(body.top_k, 20)))
+    return {
+        "query":       query,
+        "results":     to_citations(passages),
+        "source_count": len(sources),
+    }
 
 
 @router.get("/{notebook_id}/artifacts")

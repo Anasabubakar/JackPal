@@ -141,11 +141,21 @@ export type ResearchJob = {
   updated_at?: string;
 };
 
+export type WorkspaceCitation = {
+  index: number;
+  source_id: string;
+  title: string;
+  type: string;
+  url?: string | null;
+  excerpt: string;
+  score: number;
+};
+
 export type ChatTurn = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  citations?: Array<Record<string, unknown>>;
+  citations?: WorkspaceCitation[];
   created_at?: string;
 };
 
@@ -501,13 +511,38 @@ export async function askWorkspace(
   question: string,
   opts?: { saveAsNote?: boolean; sourceIds?: string[]; chatId?: string | null },
 ) {
-  return request<{ question: string; answer: string; note?: Note | null }>(`/workspaces/${workspaceId}/chat`, {
+  return request<{
+    question: string;
+    answer: string;
+    citations: WorkspaceCitation[];
+    note?: Note | null;
+    chat_id?: string | null;
+  }>(`/workspaces/${workspaceId}/chat`, {
     method: "POST",
     body: JSON.stringify({
       question,
       save_as_note: opts?.saveAsNote ?? false,
       source_ids: opts?.sourceIds ?? [],
       chat_id: opts?.chatId ?? null,
+    }),
+  });
+}
+
+export async function searchWorkspace(
+  workspaceId: string,
+  query: string,
+  opts?: { sourceIds?: string[]; topK?: number },
+) {
+  return request<{
+    query: string;
+    results: WorkspaceCitation[];
+    source_count: number;
+  }>(`/workspaces/${workspaceId}/search`, {
+    method: "POST",
+    body: JSON.stringify({
+      query,
+      source_ids: opts?.sourceIds ?? [],
+      top_k: opts?.topK ?? 8,
     }),
   });
 }
