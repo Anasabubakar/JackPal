@@ -65,7 +65,7 @@ async def _podcast_pipeline(
 
     caps = get_tts_capabilities()
     engine = "premium" if caps.get("premium_available") else "fast"
-    tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else "edge-tts")
+    tts_engine_name = "ElevenLabs" if caps.get("premium_elevenlabs") else ("YarnGPT2 local" if caps.get("premium_yarngpt_local") else str(caps.get("engine") or "unconfigured"))
     print(f"[Podcast] Using {tts_engine_name} ({engine}) for {mode} mode")
     print(f"[Podcast] Voices — Ezinne: {ezinne_voice}, Abeo: {abeo_voice}")
 

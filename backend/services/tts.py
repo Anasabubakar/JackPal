@@ -1,28 +1,30 @@
 """
 TTS service — Nigerian voice synthesis.
 
-Engine priority (premium mode):
-  1. Modal YarnGPT2b  (MODAL_YARNGPT_URL set) — authentic Nigerian voices, fast
-  2. Modal Chatterbox (MODAL_TTS_URL set)      — GPU voice clone fallback
-  3. YarnGPT API      (YARNGPT_API_KEY set)    — cloud, pay-per-use
-  4. edge-tts         (always available)       — free, Nigerian accent
-
 Fast mode:
-  edge-tts always (no cost, no deps beyond the package)
+  ElevenLabs (ELEVENLABS_API_KEY + Nigerian-English voice IDs)
+
+Engine priority (premium mode):
+  1. VoxCPM API       (VOXCPM_API_URL set)
+  2. Modal YarnGPT2b  (MODAL_YARNGPT_URL set) — authentic Nigerian voices, fast
+  3. ElevenLabs       (ELEVENLABS_API_KEY set + Nigerian-English voice IDs)
+  4. Modal Chatterbox (MODAL_TTS_URL set)      — GPU voice clone fallback
+  5. YarnGPT API      (YARNGPT_API_KEY set)    — cloud, pay-per-use
 
 Pidgin (lang="pcm"):
-  Meta MMS-TTS-pcm → edge-tts fallback
+  Meta MMS-TTS-pcm → ElevenLabs fallback
 """
 import io
 import os
 import asyncio
 import concurrent.futures
-from pathlib import Path
-
-import edge_tts
 
 # ── API keys ──────────────────────────────────────────────────────────────────
 
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+ELEVENLABS_OUTPUT_FORMAT = os.environ.get("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128")
+ELEVENLABS_API_URL = os.environ.get("ELEVENLABS_API_URL", "https://api.elevenlabs.io/v1")
 YARNGPT_API_KEY    = os.environ.get("YARNGPT_API_KEY", "")
 MODAL_YARNGPT_URL  = os.environ.get("MODAL_YARNGPT_URL", "")
 MODAL_TTS_URL      = os.environ.get("MODAL_TTS_URL", "")
@@ -52,25 +54,25 @@ def _mms_available() -> bool:
 
 # ── Voice map ─────────────────────────────────────────────────────────────────
 
-_F_CTRL = "Warm Nigerian English female narrator, clear and confident, natural pacing."
-_M_CTRL = "Confident Nigerian English male narrator, calm and articulate, natural pacing."
+_F_CTRL = "Warm Nigerian English female narrator, clear and confident, natural pacing. Do not use a US accent."
+_M_CTRL = "Confident Nigerian English male narrator, calm and articulate, natural pacing. Do not use a US accent."
 
 VOICE_MAP = {
-    "chinenye":  {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "jude":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "idera":     {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "emma":      {"api": "emma",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "umar":      {"api": "umar",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "joke":      {"api": "joke",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "zainab":    {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "osagie":    {"api": "osagie",   "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "remi":      {"api": "remi",     "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "tayo":      {"api": "tayo",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
+    "chinenye":  {"api": "chinenye", "elevenlabs_env": "ELEVENLABS_VOICE_CHINENYE_ID", "gender": "female", "voxcpm": _F_CTRL},
+    "jude":      {"api": "jude",     "elevenlabs_env": "ELEVENLABS_VOICE_JUDE_ID",     "gender": "male",   "voxcpm": _M_CTRL},
+    "idera":     {"api": "idera",    "elevenlabs_env": "ELEVENLABS_VOICE_IDERA_ID",    "gender": "male",   "voxcpm": _M_CTRL},
+    "emma":      {"api": "emma",     "elevenlabs_env": "ELEVENLABS_VOICE_EMMA_ID",     "gender": "female", "voxcpm": _F_CTRL},
+    "umar":      {"api": "umar",     "elevenlabs_env": "ELEVENLABS_VOICE_UMAR_ID",     "gender": "male",   "voxcpm": _M_CTRL},
+    "joke":      {"api": "joke",     "elevenlabs_env": "ELEVENLABS_VOICE_JOKE_ID",     "gender": "female", "voxcpm": _F_CTRL},
+    "zainab":    {"api": "zainab",   "elevenlabs_env": "ELEVENLABS_VOICE_ZAINAB_ID",   "gender": "female", "voxcpm": _F_CTRL},
+    "osagie":    {"api": "osagie",   "elevenlabs_env": "ELEVENLABS_VOICE_OSAGIE_ID",   "gender": "male",   "voxcpm": _M_CTRL},
+    "remi":      {"api": "remi",     "elevenlabs_env": "ELEVENLABS_VOICE_REMI_ID",     "gender": "female", "voxcpm": _F_CTRL},
+    "tayo":      {"api": "tayo",     "elevenlabs_env": "ELEVENLABS_VOICE_TAYO_ID",     "gender": "male",   "voxcpm": _M_CTRL},
     # Named aliases
-    "doyinsola": {"api": "chinenye", "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
-    "dayo":      {"api": "jude",     "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "yomi":      {"api": "idera",    "edge": "en-NG-AbeoNeural",   "gender": "male",   "voxcpm": _M_CTRL},
-    "awaye":     {"api": "zainab",   "edge": "en-NG-EzinneNeural", "gender": "female", "voxcpm": _F_CTRL},
+    "doyinsola": {"api": "chinenye", "elevenlabs_env": "ELEVENLABS_VOICE_CHINENYE_ID", "gender": "female", "voxcpm": _F_CTRL},
+    "dayo":      {"api": "jude",     "elevenlabs_env": "ELEVENLABS_VOICE_JUDE_ID",     "gender": "male",   "voxcpm": _M_CTRL},
+    "yomi":      {"api": "idera",    "elevenlabs_env": "ELEVENLABS_VOICE_IDERA_ID",    "gender": "male",   "voxcpm": _M_CTRL},
+    "awaye":     {"api": "zainab",   "elevenlabs_env": "ELEVENLABS_VOICE_ZAINAB_ID",   "gender": "female", "voxcpm": _F_CTRL},
 }
 
 PREMIUM_VOICES = set(VOICE_MAP.keys())
@@ -99,31 +101,63 @@ def resolve_voice_for_engine(voice: str | None, engine: str | None) -> str:
     return normalize_voice(voice)
 
 
+def _elevenlabs_voice_id(voice: str) -> str:
+    cfg = VOICE_MAP.get(voice, {})
+    env_name = cfg.get("elevenlabs_env")
+    voice_id = os.environ.get(env_name or "", "")
+    if not voice_id:
+        gender = cfg.get("gender")
+        fallback_env = "ELEVENLABS_NIGERIAN_FEMALE_VOICE_ID" if gender == "female" else "ELEVENLABS_NIGERIAN_MALE_VOICE_ID"
+        voice_id = os.environ.get(fallback_env, "")
+    if not voice_id:
+        raise RuntimeError(
+            f"ElevenLabs Nigerian English voice not configured for '{voice}'. "
+            f"Set {env_name} or a gender fallback ELEVENLABS_NIGERIAN_*_VOICE_ID. "
+            "Do not use generic US premade voice IDs."
+        )
+    return voice_id
+
+
+def _elevenlabs_configured_voices() -> set[str]:
+    configured: set[str] = set()
+    for voice, cfg in VOICE_MAP.items():
+        env_name = cfg.get("elevenlabs_env")
+        gender = cfg.get("gender")
+        fallback_env = "ELEVENLABS_NIGERIAN_FEMALE_VOICE_ID" if gender == "female" else "ELEVENLABS_NIGERIAN_MALE_VOICE_ID"
+        if os.environ.get(env_name or "") or os.environ.get(fallback_env):
+            configured.add(voice)
+    return configured
+
+
 # ── Capabilities ───────────────────────────────────────────────────────────────
 
 def get_tts_capabilities() -> dict:
+    elevenlabs = bool(ELEVENLABS_API_KEY) and bool(_elevenlabs_configured_voices())
     voxcpm     = bool(VOXCPM_API_URL)
     modal_yarn = bool(MODAL_YARNGPT_URL)
     modal_tts  = bool(MODAL_TTS_URL)
     yarn_api   = bool(YARNGPT_API_KEY)
     mms        = _mms_available()
-    premium    = voxcpm or modal_yarn or modal_tts or yarn_api
+    premium    = voxcpm or modal_yarn or elevenlabs or modal_tts or yarn_api
 
     if voxcpm:
         engine = "voxcpm_api"
     elif modal_yarn:
         engine = "modal_yarngpt"
+    elif elevenlabs:
+        engine = "elevenlabs"
     elif yarn_api:
         engine = "yarngpt_api"
     elif modal_tts:
         engine = "modal_chatterbox"
     else:
-        engine = "edge-tts"
+        engine = "unconfigured"
 
     return {
-        "fast_available":           True,
+        "fast_available":           elevenlabs,
         "premium_available":        premium,
         "premium_enabled":          premium,
+        "premium_elevenlabs":       elevenlabs,
         "premium_voxcpm":           voxcpm,
         "premium_voxcpm_cloning":   bool(VOXCPM_CLONE_URL),
         "premium_voxcpm_registry":  bool(VOXCPM_REGISTER_URL),
@@ -139,6 +173,12 @@ def get_tts_capabilities() -> dict:
 
 def start_background_download():
     """Log active TTS engines on startup."""
+    if ELEVENLABS_API_KEY:
+        configured = _elevenlabs_configured_voices()
+        if configured:
+            print(f"[TTS] ElevenLabs active — Nigerian English voices configured: {', '.join(sorted(configured))}.")
+        else:
+            print("[TTS] ElevenLabs API key set, but no Nigerian English voice IDs are configured.")
     if VOXCPM_API_URL:
         print("[TTS] VoxCPM API active — strongest premium synthesis path.")
     if MODAL_YARNGPT_URL:
@@ -147,8 +187,8 @@ def start_background_download():
         print("[TTS] YarnGPT API active — cloud, pay-per-use.")
     if MODAL_TTS_URL:
         print("[TTS] Modal Chatterbox active — GPU voice clone endpoint.")
-    if not MODAL_YARNGPT_URL and not YARNGPT_API_KEY and not MODAL_TTS_URL:
-        print("[TTS] No premium engine configured — using edge-tts (free mode).")
+    if not ELEVENLABS_API_KEY and not MODAL_YARNGPT_URL and not YARNGPT_API_KEY and not MODAL_TTS_URL:
+        print("[TTS] No TTS engine configured — set ELEVENLABS_API_KEY and Nigerian English voice IDs.")
     if _mms_available():
         print("[TTS] MMS-TTS-pcm available — Nigerian Pidgin support ready.")
 
@@ -183,9 +223,9 @@ async def synthesize_chunk(
     Generate audio bytes for a text chunk.
 
     Routing:
-      lang="pcm"  → MMS-TTS-pcm (Nigerian Pidgin) → edge-tts fallback
-      premium     → Modal YarnGPT → YarnGPT API → Modal Chatterbox → edge-tts
-      fast        → edge-tts
+      lang="pcm"  → MMS-TTS-pcm (Nigerian Pidgin) → ElevenLabs fallback
+      premium     → VoxCPM → Modal YarnGPT → ElevenLabs → YarnGPT API → Modal Chatterbox
+      fast        → ElevenLabs
     """
     engine = normalize_engine(engine)
     voice  = normalize_voice(voice)
@@ -196,8 +236,8 @@ async def synthesize_chunk(
             try:
                 return await _mms_pidgin_synthesize(text)
             except Exception as e:
-                print(f"[TTS] MMS failed ({e}), fallback edge-tts")
-        return await _edge_synthesize(text, voice)
+                print(f"[TTS] MMS failed ({e}), fallback ElevenLabs")
+        return await _elevenlabs_synthesize(text, voice)
 
     # ── Premium path ─────────────────────────────────────────────────────────
     if engine == "premium":
@@ -213,6 +253,12 @@ async def synthesize_chunk(
             except Exception as e:
                 print(f"[TTS] Modal YarnGPT failed ({e}), trying next engine")
 
+        if ELEVENLABS_API_KEY:
+            try:
+                return await _elevenlabs_synthesize(text, voice)
+            except Exception as e:
+                print(f"[TTS] ElevenLabs failed ({e}), trying next engine")
+
         if YARNGPT_API_KEY:
             try:
                 return await _yarn_api_synthesize(text, voice)
@@ -223,19 +269,70 @@ async def synthesize_chunk(
             try:
                 return await _modal_synthesize(text, voice, MODAL_TTS_URL)
             except Exception as e:
-                print(f"[TTS] Modal Chatterbox failed ({e}), falling back to edge-tts")
+                print(f"[TTS] Modal Chatterbox failed ({e})")
 
-    return await _edge_synthesize(text, voice)
+    return await _elevenlabs_synthesize(text, voice)
 
 
-async def stream_edge(text: str, voice: str = DEFAULT_VOICE):
-    """Async generator — stream edge-tts bytes directly (fast mode streaming)."""
+async def stream_tts(text: str, voice: str = DEFAULT_VOICE):
+    """Stream configured Nigerian-English TTS audio bytes."""
     voice = normalize_voice(voice)
-    edge_voice = VOICE_MAP.get(voice, {}).get("edge", "en-NG-EzinneNeural")
-    communicate = edge_tts.Communicate(text, edge_voice)
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            yield chunk["data"]
+    async for chunk in stream_elevenlabs(text, voice):
+        yield chunk
+
+
+async def stream_elevenlabs(text: str, voice: str = DEFAULT_VOICE):
+    """Async generator — stream ElevenLabs MP3 bytes using Nigerian English voice IDs."""
+    import aiohttp
+    voice = normalize_voice(voice)
+    voice_id = _elevenlabs_voice_id(voice)
+    url = f"{ELEVENLABS_API_URL.rstrip('/')}/text-to-speech/{voice_id}/stream"
+    params = {"output_format": ELEVENLABS_OUTPUT_FORMAT}
+    payload = _elevenlabs_payload(text, voice)
+    headers = {"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url,
+            params=params,
+            json=payload,
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=120),
+        ) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"ElevenLabs {resp.status}: {body[:200]}")
+            async for chunk in resp.content.iter_chunked(8192):
+                if chunk:
+                    yield chunk
+
+
+# ── ElevenLabs synthesizer ────────────────────────────────────────────────────
+
+def _elevenlabs_payload(text: str, voice: str) -> dict:
+    cfg = VOICE_MAP.get(voice, {})
+    # Accent is determined by the ElevenLabs voice ID. These settings keep the
+    # selected Nigerian-English voice stable instead of drifting toward generic US English.
+    return {
+        "text": text,
+        "model_id": ELEVENLABS_MODEL_ID,
+        "language_code": "en",
+        "voice_settings": {
+            "stability": 0.65,
+            "similarity_boost": 0.9,
+            "style": 0.15,
+            "use_speaker_boost": True,
+            "speed": 1.0 if cfg.get("gender") == "female" else 0.98,
+        },
+    }
+
+
+async def _elevenlabs_synthesize(text: str, voice: str) -> bytes:
+    if not ELEVENLABS_API_KEY:
+        raise RuntimeError("ElevenLabs is not configured. Set ELEVENLABS_API_KEY.")
+    buf = io.BytesIO()
+    async for chunk in stream_elevenlabs(text, voice):
+        buf.write(chunk)
+    return buf.getvalue()
 
 
 # ── YarnGPT API synthesizer ───────────────────────────────────────────────────
@@ -391,22 +488,6 @@ async def list_voice_clones() -> list[dict]:
                 return []
             data = await resp.json()
             return list(data.get("voices") or [])
-
-
-# ── edge-tts synthesizer ──────────────────────────────────────────────────────
-
-async def _edge_synthesize(text: str, voice: str) -> bytes:
-    voice_cfg  = VOICE_MAP.get(voice, {})
-    edge_voice = voice_cfg.get("edge", "en-NG-AbeoNeural")
-    is_male    = voice_cfg.get("gender") == "male"
-    rate       = "+12%" if is_male else "+6%"
-    pitch      = "-4Hz" if is_male else "+2Hz"
-    communicate = edge_tts.Communicate(text, edge_voice, rate=rate, pitch=pitch)
-    buf = io.BytesIO()
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            buf.write(chunk["data"])
-    return buf.getvalue()
 
 
 # ── Audio post-processor — louder + faster ────────────────────────────────────

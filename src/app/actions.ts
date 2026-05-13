@@ -138,6 +138,17 @@ const sendResendNotification = async (subject: string, html: string) => {
   }
 };
 
+import { synthesizeSpeech } from '@/lib/elevenlabs';
+
+export async function generateTTS(text: string, voiceId?: string) {
+  try {
+    const base64Audio = await synthesizeSpeech(text, voiceId);
+    return { success: true, audio: base64Audio };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function subscribeToNewsletter(formData: FormData) {
   const email = sanitize(formData.get('email'));
 

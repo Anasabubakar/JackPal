@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Header, Query, BackgroundTasks, Re
 from fastapi.responses import FileResponse, StreamingResponse
 from typing import Optional
 from starlette.background import BackgroundTask
-from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_edge, synthesize_chunk
+from services.tts import DEFAULT_ENGINE, DEFAULT_VOICE, get_tts_capabilities, normalize_engine, resolve_voice_for_engine, split_into_chunks, stream_tts, synthesize_chunk
 from services.cache import (
     delete_keys,
     get_json,
@@ -37,8 +37,8 @@ USE_LOCAL = is_local_mode()
 
 
 async def _tts_stream_generator(text: str, voice: str):
-    """Pipe edge-tts bytes directly to client as they arrive. Zero disk I/O."""
-    async for chunk in stream_edge(text, voice):
+    """Pipe ElevenLabs bytes directly to client as they arrive. Zero disk I/O."""
+    async for chunk in stream_tts(text, voice):
         yield chunk
 
 
@@ -66,7 +66,7 @@ async def stream_audio_direct(
     """
     Stream Nigerian voice audio directly to browser — no disk writes.
     Browser starts playing within ~1s as first bytes arrive.
-    Supports: en-NG-EzinneNeural, en-NG-AbeoNeural
+    Requires ElevenLabs Nigerian-English voice IDs.
     """
     auth_header = authorization or (f"Bearer {token}" if token else None)
     if not auth_header:

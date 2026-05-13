@@ -71,8 +71,8 @@ The backend is being built as a **separate FastAPI (Python) service** that the N
 - Content library — list, rename, delete documents per user
 
 ### Text-to-Speech Pipeline (Milestone 3)
-- Extracted text → AI audio conversion (Google Cloud TTS — 1M chars/month free)
-- Natural-sounding voices, adjustable speed
+- Extracted text → ElevenLabs audio conversion using configured Nigerian-English voice IDs
+- Natural-sounding Nigerian English voices, adjustable speed
 - Audio stored securely, tied to user account
 - Section-by-section chunking for long documents
 
@@ -199,7 +199,7 @@ The backend team will add setup instructions to `/backend/README.md` once the Fa
 | File storage | Supabase Storage |
 | AI backend | FastAPI (Python) |
 | PDF extraction | PyMuPDF |
-| Text-to-speech | Google Cloud TTS (1M chars/month free) |
+| Text-to-speech | ElevenLabs with Nigerian-English voice IDs |
 | LLM / summaries | Groq API (llama3, free tier) |
 | Local dev LLM | Ollama |
 | Backend hosting | Render / Railway (free tier) |

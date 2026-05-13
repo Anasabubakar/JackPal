@@ -219,6 +219,7 @@ export type TtsCapabilities = {
   premium_model_ready: boolean;
   premium_loaded: boolean;
   premium_available: boolean;
+  premium_elevenlabs?: boolean;
   premium_voxcpm?: boolean;
   premium_modal_yarngpt?: boolean;
   premium_modal_tts?: boolean;
