@@ -89,8 +89,34 @@ export type Notebook = {
     public: boolean;
     role: "viewer" | "editor";
   };
+  /** Effective role for the current user (workspace sharing Phase 8). */
+  role?: "owner" | "editor" | "viewer";
+  is_owner?: boolean;
+  owner_user_id?: string;
   created_at?: string;
   updated_at?: string;
+};
+
+export type WorkspaceInvitation = {
+  id: string;
+  notebook_id: string;
+  role: "viewer" | "editor";
+  token?: string | null;
+  invitee_email?: string | null;
+  /** Unix timestamp (seconds) when the invite expires. */
+  expires_at?: number;
+  created_at?: string;
+  accepted_user_id?: string | null;
+  accepted_at?: string | null;
+  revoked?: boolean;
+};
+
+export type WorkspaceCollaborator = {
+  user_id: string;
+  role: "viewer" | "editor";
+  since?: string;
+  updated_at?: string;
+  invitation_id?: string;
 };
 
 export type Source = {
@@ -649,6 +675,70 @@ export async function setWorkspaceSharing(workspaceId: string, publicValue: bool
   return request<{ notebook_id: string; public: boolean; role: "viewer" | "editor" }>(`/workspaces/${workspaceId}/sharing`, {
     method: "POST",
     body: JSON.stringify({ public: publicValue, role }),
+  });
+}
+
+export async function acceptWorkspaceInvitation(token: string) {
+  return request<{
+    already_owner: boolean;
+    notebook: Notebook;
+    collaborator: WorkspaceCollaborator | null;
+    invitation: WorkspaceInvitation;
+  }>("/workspaces/invitations/accept", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export async function createWorkspaceInvitation(
+  workspaceId: string,
+  opts: {
+    role?: "viewer" | "editor";
+    expires_in?: number;
+    invitee_email?: string | null;
+  } = {},
+) {
+  return request<{ invitation: WorkspaceInvitation }>(`/workspaces/${workspaceId}/invitations`, {
+    method: "POST",
+    body: JSON.stringify({
+      role: opts.role ?? "viewer",
+      expires_in: opts.expires_in ?? 7 * 24 * 3600,
+      invitee_email: opts.invitee_email,
+    }),
+  });
+}
+
+export async function listWorkspaceInvitations(workspaceId: string) {
+  const data = await request<{ invitations: WorkspaceInvitation[] }>(`/workspaces/${workspaceId}/invitations`);
+  return data.invitations;
+}
+
+export async function revokeWorkspaceInvitation(workspaceId: string, invitationId: string) {
+  return request<{ message: string; invitation: WorkspaceInvitation }>(
+    `/workspaces/${workspaceId}/invitations/${invitationId}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function listWorkspaceCollaborators(workspaceId: string) {
+  const data = await request<{ collaborators: WorkspaceCollaborator[] }>(`/workspaces/${workspaceId}/collaborators`);
+  return data.collaborators;
+}
+
+export async function updateWorkspaceCollaboratorRole(
+  workspaceId: string,
+  collaboratorUserId: string,
+  role: "viewer" | "editor",
+) {
+  return request<{ collaborator: WorkspaceCollaborator }>(`/workspaces/${workspaceId}/collaborators/${collaboratorUserId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function removeWorkspaceCollaborator(workspaceId: string, collaboratorUserId: string) {
+  return request<{ message: string }>(`/workspaces/${workspaceId}/collaborators/${collaboratorUserId}`, {
+    method: "DELETE",
   });
 }
 

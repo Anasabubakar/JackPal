@@ -28,7 +28,10 @@ from services.ingest import (
 from services.research import run_research
 from services import artifacts as artifact_engine
 from services.local_storage import (
+    accept_invitation,
+    can_access_notebook,
     create_artifact,
+    create_invitation,
     create_note,
     create_chat,
     create_notebook,
@@ -41,23 +44,29 @@ from services.local_storage import (
     delete_notebook,
     delete_source,
     get_notebook,
+    get_notebook_role,
     get_chat,
     get_chat_turn,
     get_research_job,
     get_sharing,
     list_chat_turns,
     list_chats,
+    list_collaborators,
+    list_invitations,
     set_turn_pinned,
     list_artifacts,
     list_notes,
     list_notebooks,
     list_sources,
+    remove_collaborator,
     rename_notebook,
     rename_chat,
     rename_source,
+    revoke_invitation,
     save_document_from_text,
     set_sharing,
     update_artifact,
+    update_collaborator_role,
     update_note,
     update_source,
     upsert_source,
@@ -120,6 +129,27 @@ class SharingUpdate(BaseModel):
     role: Literal["viewer", "editor"] = "viewer"
 
 
+class InvitationCreate(BaseModel):
+    """Body for issuing a notebook invitation.
+
+    ``role`` controls what the invitee can do once they accept.  ``expires_in``
+    is in seconds (default 7 days) and ``invitee_email`` is optional metadata
+    used purely for display in the owner's invitations list.
+    """
+
+    role: Literal["viewer", "editor"] = "viewer"
+    expires_in: int = Field(default=7 * 24 * 3600, ge=300, le=90 * 24 * 3600)
+    invitee_email: str | None = None
+
+
+class InvitationAccept(BaseModel):
+    token: str
+
+
+class CollaboratorRoleUpdate(BaseModel):
+    role: Literal["viewer", "editor"] = "viewer"
+
+
 class ArtifactCreate(BaseModel):
     title: str | None = None
     prompt: str | None = None
@@ -167,11 +197,32 @@ def _require_local() -> None:
         raise HTTPException(status_code=501, detail="Workspace features are currently available in local mode only.")
 
 
-def _notebook_or_404(notebook_id: str, user_id: str) -> dict:
+def _notebook_or_404(notebook_id: str, user_id: str, required: str = "viewer") -> dict:
+    """Resolve a notebook and enforce the minimum role.
+
+    ``required`` is the lowest role the caller must hold ("viewer", "editor"
+    or "owner"). Missing notebooks return 404; insufficient roles return 403
+    so the UI can distinguish "does not exist" from "no permission".
+    """
     notebook = get_notebook(notebook_id, user_id)
     if not notebook:
         raise HTTPException(status_code=404, detail="Notebook not found.")
+    if required != "viewer" and not can_access_notebook(notebook_id, user_id, required=required):
+        raise HTTPException(
+            status_code=403,
+            detail=f"This action requires '{required}' access to the notebook.",
+        )
     return notebook
+
+
+def _writer_or_404(notebook_id: str, user_id: str) -> dict:
+    """Mutating-endpoint gate: caller must be owner or editor."""
+    return _notebook_or_404(notebook_id, user_id, required="editor")
+
+
+def _owner_or_404(notebook_id: str, user_id: str) -> dict:
+    """Owner-only gate (sharing, invitations, notebook rename/delete)."""
+    return _notebook_or_404(notebook_id, user_id, required="owner")
 
 
 def _source_or_404(source_id: str, user_id: str) -> dict:
@@ -221,6 +272,7 @@ def _notebook_payload(notebook: dict, user_id: str) -> dict:
     notes = list_notes(notebook["id"], user_id)
     artifacts = list_artifacts(notebook["id"], user_id)
     sharing = get_sharing(notebook["id"], user_id)
+    role = get_notebook_role(notebook["id"], user_id) or "viewer"
     return {
         "id": notebook["id"],
         "title": notebook["title"],
@@ -229,8 +281,36 @@ def _notebook_payload(notebook: dict, user_id: str) -> dict:
         "note_count": len(notes),
         "artifact_count": len(artifacts),
         "sharing": sharing,
+        "role": role,
+        "is_owner": role == "owner",
+        "owner_user_id": notebook.get("user_id"),
         "created_at": notebook.get("created_at"),
         "updated_at": notebook.get("updated_at"),
+    }
+
+
+def _invitation_payload(inv: dict) -> dict:
+    return {
+        "id": inv["id"],
+        "notebook_id": inv["notebook_id"],
+        "role": inv.get("role", "viewer"),
+        "token": inv.get("token"),
+        "invitee_email": inv.get("invitee_email"),
+        "expires_at": inv.get("expires_at"),
+        "created_at": inv.get("created_at"),
+        "accepted_user_id": inv.get("accepted_user_id"),
+        "accepted_at": inv.get("accepted_at"),
+        "revoked": inv.get("revoked", False),
+    }
+
+
+def _collaborator_payload(collab: dict) -> dict:
+    return {
+        "user_id": collab.get("user_id"),
+        "role": collab.get("role", "viewer"),
+        "since": collab.get("since"),
+        "updated_at": collab.get("updated_at"),
+        "invitation_id": collab.get("invitation_id"),
     }
 
 
@@ -328,6 +408,7 @@ async def get_workspace(notebook_id: str, authorization: str = Header(...)):
 async def rename_workspace(notebook_id: str, body: NotebookUpdate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
+    _owner_or_404(notebook_id, user_id)
     notebook = rename_notebook(notebook_id, user_id, body.title)
     if not notebook:
         raise HTTPException(status_code=404, detail="Notebook not found.")
@@ -338,6 +419,7 @@ async def rename_workspace(notebook_id: str, body: NotebookUpdate, authorization
 async def remove_workspace(notebook_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
+    _owner_or_404(notebook_id, user_id)
     if not delete_notebook(notebook_id, user_id):
         raise HTTPException(status_code=404, detail="Notebook not found.")
     return {"message": "Notebook deleted."}
@@ -355,7 +437,7 @@ async def get_sources(notebook_id: str, authorization: str = Header(...)):
 async def add_text_source(notebook_id: str, body: SourceTextCreate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     source = await _import_text_source(notebook_id, user_id, body.title, body.content, source_type="text")
     return {"source": _source_payload(source)}
 
@@ -370,7 +452,7 @@ async def add_url_source(notebook_id: str, body: SourceUrlCreate, authorization:
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not body.url:
         raise HTTPException(status_code=422, detail="URL is required.")
     try:
@@ -405,7 +487,7 @@ async def add_youtube_source(notebook_id: str, body: SourceYoutubeCreate, author
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not body.url:
         raise HTTPException(status_code=422, detail="YouTube URL is required.")
     payload = await ingest_from_youtube(body.url)
@@ -429,7 +511,7 @@ async def add_drive_source(notebook_id: str, body: SourceDriveCreate, authorizat
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not body.url:
         raise HTTPException(status_code=422, detail="Drive URL is required.")
     payload = await ingest_from_drive(body.url)
@@ -453,7 +535,7 @@ async def add_file_source(
 ):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     file_bytes = await file.read()
     extracted = filter_document(file_bytes, file.filename or "upload").text
     if not extracted.strip():
@@ -485,7 +567,7 @@ async def research_sources(notebook_id: str, body: ResearchCreate, authorization
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
 
     research: dict = {
         "query": body.query,
@@ -603,7 +685,7 @@ async def rename_source_detail(
 ):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     source = rename_source(source_id, user_id, body.title)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found.")
@@ -614,7 +696,7 @@ async def rename_source_detail(
 async def remove_source_detail(notebook_id: str, source_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not delete_source(source_id, user_id):
         raise HTTPException(status_code=404, detail="Source not found.")
     return {"message": "Source deleted."}
@@ -646,7 +728,7 @@ async def get_source_guide(notebook_id: str, source_id: str, authorization: str 
 async def refresh_source(notebook_id: str, source_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     source = _source_or_404(source_id, user_id)
     if source.get("type") not in {"url", "youtube", "drive"}:
         raise HTTPException(status_code=400, detail="This source type cannot be refreshed.")
@@ -680,7 +762,7 @@ async def get_notes(notebook_id: str, authorization: str = Header(...)):
 async def add_note(notebook_id: str, body: NoteCreate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     note = create_note(
         notebook_id,
         user_id,
@@ -696,7 +778,7 @@ async def add_note(notebook_id: str, body: NoteCreate, authorization: str = Head
 async def edit_note(notebook_id: str, note_id: str, body: NoteUpdate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     note = _note_or_404(note_id, user_id)
     updates = {}
     if body.title is not None:
@@ -713,7 +795,7 @@ async def edit_note(notebook_id: str, note_id: str, body: NoteUpdate, authorizat
 async def remove_note(notebook_id: str, note_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not delete_note(note_id, user_id):
         raise HTTPException(status_code=404, detail="Note not found.")
     return {"message": "Note deleted."}
@@ -727,7 +809,7 @@ async def notebook_chat(
 ):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="Question is empty.")
@@ -861,7 +943,7 @@ async def get_chats(notebook_id: str, authorization: str = Header(...)):
 async def create_saved_chat(notebook_id: str, body: ChatCreate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     chat = create_chat(notebook_id, user_id, body.title, body.source_ids)
     return {"chat": chat}
 
@@ -881,7 +963,7 @@ async def get_saved_chat(notebook_id: str, chat_id: str, authorization: str = He
 async def rename_saved_chat(notebook_id: str, chat_id: str, body: ChatUpdate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     chat = rename_chat(chat_id, user_id, body.title)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found.")
@@ -892,7 +974,7 @@ async def rename_saved_chat(notebook_id: str, chat_id: str, body: ChatUpdate, au
 async def delete_saved_chat(notebook_id: str, chat_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not delete_chat(chat_id, user_id):
         raise HTTPException(status_code=404, detail="Chat not found.")
     return {"message": "Chat deleted."}
@@ -924,7 +1006,7 @@ async def save_turn_as_note(
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     body = body or TurnSaveAsNote()
 
     turn = get_chat_turn(chat_id, turn_id, user_id)
@@ -974,7 +1056,7 @@ async def pin_chat_turn(
     """
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     turn = set_turn_pinned(chat_id, turn_id, user_id, pinned=body.pinned)
     if not turn:
         raise HTTPException(status_code=404, detail="Chat turn not found.")
@@ -985,7 +1067,7 @@ async def pin_chat_turn(
 async def cleanup_sources(notebook_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     removed = cleanup_duplicate_sources(notebook_id, user_id)
     return {"removed": [_source_payload(item) for item in removed]}
 
@@ -1044,7 +1126,7 @@ async def generate_artifact(
 ):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     title, content, fmt = await _generate_artifact_content(notebook_id, user_id, artifact_type, body.title or body.prompt)
     artifact = create_artifact(
         notebook_id,
@@ -1075,7 +1157,7 @@ async def update_artifact_detail(
 ):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     artifact = update_artifact(
         artifact_id,
         user_id,
@@ -1094,7 +1176,7 @@ async def update_artifact_detail(
 async def remove_artifact_detail(notebook_id: str, artifact_id: str, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _writer_or_404(notebook_id, user_id)
     if not delete_artifact(artifact_id, user_id):
         raise HTTPException(status_code=404, detail="Artifact not found.")
     return {"message": "Artifact deleted."}
@@ -1151,9 +1233,117 @@ async def get_sharing_state(notebook_id: str, authorization: str = Header(...)):
 async def update_sharing_state(notebook_id: str, body: SharingUpdate, authorization: str = Header(...)):
     user_id = get_user_id(authorization)
     _require_local()
-    _notebook_or_404(notebook_id, user_id)
+    _owner_or_404(notebook_id, user_id)
     sharing = set_sharing(notebook_id, user_id, body.public, body.role)
     return sharing
+
+
+@router.post("/invitations/accept")
+async def accept_workspace_invitation(body: InvitationAccept, authorization: str = Header(...)):
+    """Accept an invitation by token; caller becomes a collaborator with the invited role."""
+    user_id = get_user_id(authorization)
+    _require_local()
+    result = accept_invitation(body.token, user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Invalid, expired, or revoked invitation.")
+    nb = result["notebook"]
+    payload = {
+        "already_owner": bool(result.get("already_owner")),
+        "notebook": _notebook_payload(nb, user_id),
+        "invitation": _invitation_payload(result["invitation"]),
+    }
+    if result.get("collaborator"):
+        payload["collaborator"] = _collaborator_payload(result["collaborator"])
+    else:
+        payload["collaborator"] = None
+    return payload
+
+
+@router.post("/{notebook_id}/invitations")
+async def create_workspace_invitation(
+    notebook_id: str,
+    body: InvitationCreate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    inv = create_invitation(
+        notebook_id,
+        user_id,
+        role=body.role,
+        expires_in_seconds=body.expires_in,
+        invitee_email=body.invitee_email,
+    )
+    if not inv:
+        raise HTTPException(status_code=404, detail="Notebook not found.")
+    return {"invitation": _invitation_payload(inv)}
+
+
+@router.get("/{notebook_id}/invitations")
+async def list_workspace_invitations(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    items = list_invitations(notebook_id, user_id)
+    return {"invitations": [_invitation_payload(inv) for inv in items]}
+
+
+@router.delete("/{notebook_id}/invitations/{invitation_id}")
+async def revoke_workspace_invitation(
+    notebook_id: str,
+    invitation_id: str,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    inv = next((i for i in list_invitations(notebook_id, user_id) if i["id"] == invitation_id), None)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invitation not found.")
+    if not revoke_invitation(invitation_id, user_id):
+        raise HTTPException(status_code=404, detail="Invitation not found.")
+    inv["revoked"] = True
+    return {"message": "Invitation revoked.", "invitation": _invitation_payload(inv)}
+
+
+@router.get("/{notebook_id}/collaborators")
+async def list_workspace_collaborators(notebook_id: str, authorization: str = Header(...)):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    rows = list_collaborators(notebook_id, user_id)
+    return {"collaborators": [_collaborator_payload(c) for c in rows]}
+
+
+@router.patch("/{notebook_id}/collaborators/{collaborator_user_id}")
+async def patch_workspace_collaborator_role(
+    notebook_id: str,
+    collaborator_user_id: str,
+    body: CollaboratorRoleUpdate,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    updated = update_collaborator_role(notebook_id, user_id, collaborator_user_id, body.role)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Collaborator not found.")
+    return {"collaborator": _collaborator_payload(updated)}
+
+
+@router.delete("/{notebook_id}/collaborators/{collaborator_user_id}")
+async def remove_workspace_collaborator(
+    notebook_id: str,
+    collaborator_user_id: str,
+    authorization: str = Header(...),
+):
+    user_id = get_user_id(authorization)
+    _require_local()
+    _owner_or_404(notebook_id, user_id)
+    if not remove_collaborator(notebook_id, user_id, collaborator_user_id):
+        raise HTTPException(status_code=404, detail="Collaborator not found.")
+    return {"message": "Collaborator removed."}
 
 
 @router.get("/{notebook_id}/research/{job_id}")

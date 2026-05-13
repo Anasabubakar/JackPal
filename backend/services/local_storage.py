@@ -2,7 +2,7 @@
 Local dev storage — works without Supabase.
 Stores files and audio on disk, records in memory.
 """
-import uuid, os, time, json
+import uuid, os, time, json, secrets
 from pathlib import Path
 from services.cache import (
     delete_keys,
@@ -49,6 +49,8 @@ def _load_db() -> dict:
         "research_jobs": {},
         "chats": {},
         "chat_turns": {},
+        "invitations": {},
+        "collaborators": {},
     }
 
 
@@ -71,6 +73,8 @@ def _save_db():
         "research_jobs": _research_jobs,
         "chats": _chats,
         "chat_turns": _chat_turns,
+        "invitations": _invitations,
+        "collaborators": _collaborators,
     }
     DB_FILE.write_text(json.dumps(data))
 
@@ -90,6 +94,10 @@ _sharing: dict[str, dict] = _db.get("sharing", {})
 _research_jobs: dict[str, dict] = _db.get("research_jobs", {})
 _chats: dict[str, dict] = _db.get("chats", {})
 _chat_turns: dict[str, list[dict]] = _db.get("chat_turns", {})
+# Pending or accepted invitation links.  Keyed by invitation_id.
+_invitations: dict[str, dict] = _db.get("invitations", {})
+# Per-notebook collaborator map: ``{notebook_id: {user_id: {role, since, ...}}}``.
+_collaborators: dict[str, dict[str, dict]] = _db.get("collaborators", {})
 
 
 def _timestamp() -> str:
@@ -477,6 +485,10 @@ def get_notebook(notebook_id: str, user_id: str) -> dict | None:
         return None
     if _LOCAL_DEV or nb["user_id"] == user_id:
         return nb
+    # Accepted collaborator (any role) can read the notebook.
+    collaborators = _collaborators.get(notebook_id, {})
+    if user_id and user_id in collaborators:
+        return nb
     return None
 
 
@@ -520,6 +532,10 @@ def delete_notebook(notebook_id: str, user_id: str) -> bool:
         if artifact["notebook_id"] == notebook_id:
             _artifacts.pop(artifact["id"], None)
     _sharing.pop(notebook_id, None)
+    _collaborators.pop(notebook_id, None)
+    for inv_id, inv in list(_invitations.items()):
+        if inv.get("notebook_id") == notebook_id:
+            _invitations.pop(inv_id, None)
     _notebooks.pop(notebook_id, None)
     _save_db()
     return True
@@ -891,6 +907,205 @@ def set_turn_pinned(chat_id: str, turn_id: str, user_id: str, *, pinned: bool) -
     turn["pinned"] = bool(pinned)
     _save_db()
     return turn
+
+
+# ---------------------------------------------------------------------------
+# Sharing: invitations, collaborators, role resolution
+# ---------------------------------------------------------------------------
+
+ROLE_ORDER = {"viewer": 1, "editor": 2, "owner": 3}
+INVITATION_DEFAULT_TTL_SECONDS = 7 * 24 * 3600
+
+
+def _normalize_role(role: str | None, default: str = "viewer") -> str:
+    role = (role or "").strip().lower()
+    if role in {"viewer", "editor"}:
+        return role
+    if role == "owner":
+        return "owner"
+    return default
+
+
+def _role_at_least(actual: str | None, required: str) -> bool:
+    if not actual:
+        return False
+    return ROLE_ORDER.get(actual, 0) >= ROLE_ORDER.get(required, 0)
+
+
+def get_notebook_role(notebook_id: str, user_id: str | None) -> str | None:
+    """Return the effective role for ``user_id`` on a notebook.
+
+    Returns ``"owner"`` / ``"editor"`` / ``"viewer"`` for explicit access.  In
+    local-dev mode the caller is treated as the owner so legacy single-user
+    flows keep working.  Returns ``None`` when the user has no access.
+    """
+    nb = _notebooks.get(notebook_id)
+    if not nb:
+        return None
+    if _LOCAL_DEV:
+        return "owner"
+    if user_id and nb.get("user_id") == user_id:
+        return "owner"
+    if user_id:
+        collab = _collaborators.get(notebook_id, {}).get(user_id)
+        if collab:
+            return _normalize_role(collab.get("role"))
+    sharing = _sharing.get(notebook_id)
+    if sharing and sharing.get("public"):
+        # Public sharing currently exposes read-only access.
+        return _normalize_role(sharing.get("role"), default="viewer")
+    return None
+
+
+def can_access_notebook(notebook_id: str, user_id: str | None, required: str = "viewer") -> bool:
+    role = get_notebook_role(notebook_id, user_id)
+    return _role_at_least(role, required)
+
+
+def create_invitation(
+    notebook_id: str,
+    owner_id: str,
+    role: str = "viewer",
+    expires_in_seconds: int = INVITATION_DEFAULT_TTL_SECONDS,
+    invitee_email: str | None = None,
+) -> dict | None:
+    nb = get_notebook(notebook_id, owner_id)
+    if not nb:
+        return None
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return None
+    record = {
+        "id": _new_id(),
+        "notebook_id": notebook_id,
+        "owner_id": owner_id,
+        "invitee_email": (invitee_email or "").strip().lower() or None,
+        "role": _normalize_role(role),
+        "token": secrets.token_urlsafe(24),
+        "created_at": _timestamp(),
+        "expires_at": time.time() + max(int(expires_in_seconds), 60),
+        "accepted_user_id": None,
+        "accepted_at": None,
+        "revoked": False,
+    }
+    _invitations[record["id"]] = record
+    _save_db()
+    return record
+
+
+def list_invitations(notebook_id: str, owner_id: str) -> list[dict]:
+    nb = get_notebook(notebook_id, owner_id)
+    if not nb:
+        return []
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return []
+    records = [inv for inv in _invitations.values() if inv.get("notebook_id") == notebook_id]
+    return sorted(records, key=lambda inv: inv["created_at"], reverse=True)
+
+
+def revoke_invitation(invitation_id: str, owner_id: str) -> bool:
+    inv = _invitations.get(invitation_id)
+    if not inv:
+        return False
+    nb = _notebooks.get(inv.get("notebook_id", ""))
+    if not nb:
+        return False
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return False
+    inv["revoked"] = True
+    _save_db()
+    return True
+
+
+def find_invitation_by_token(token: str) -> dict | None:
+    token = (token or "").strip()
+    if not token:
+        return None
+    for inv in _invitations.values():
+        if inv.get("token") == token:
+            return inv
+    return None
+
+
+def accept_invitation(token: str, user_id: str) -> dict | None:
+    """Convert an invitation token into a collaborator record.
+
+    Returns a dict ``{"notebook": ..., "collaborator": ..., "invitation": ...}``
+    on success or ``None`` when the token is invalid/expired/revoked.
+    """
+    inv = find_invitation_by_token(token)
+    if not inv:
+        return None
+    if inv.get("revoked"):
+        return None
+    expires_at = inv.get("expires_at") or 0
+    if expires_at and time.time() > float(expires_at):
+        return None
+    notebook_id = inv.get("notebook_id")
+    nb = _notebooks.get(notebook_id or "")
+    if not nb:
+        return None
+    if not _LOCAL_DEV and nb.get("user_id") == user_id:
+        # Owners do not need to accept their own invitations.
+        return {"notebook": nb, "collaborator": None, "invitation": inv, "already_owner": True}
+    role = _normalize_role(inv.get("role"))
+    collaborators = _collaborators.setdefault(notebook_id, {})
+    record = collaborators.get(user_id) or {}
+    record.update(
+        {
+            "user_id": user_id,
+            "role": role,
+            "invitation_id": inv["id"],
+            "since": record.get("since") or _timestamp(),
+            "updated_at": _timestamp(),
+        }
+    )
+    collaborators[user_id] = record
+    inv["accepted_user_id"] = user_id
+    inv["accepted_at"] = _timestamp()
+    _save_db()
+    return {"notebook": nb, "collaborator": record, "invitation": inv, "already_owner": False}
+
+
+def list_collaborators(notebook_id: str, owner_id: str) -> list[dict]:
+    nb = get_notebook(notebook_id, owner_id)
+    if not nb:
+        return []
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return []
+    return sorted(_collaborators.get(notebook_id, {}).values(), key=lambda c: c.get("since", ""))
+
+
+def remove_collaborator(notebook_id: str, owner_id: str, target_user_id: str) -> bool:
+    nb = _notebooks.get(notebook_id)
+    if not nb:
+        return False
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return False
+    collaborators = _collaborators.get(notebook_id, {})
+    if target_user_id not in collaborators:
+        return False
+    collaborators.pop(target_user_id, None)
+    if not collaborators:
+        _collaborators.pop(notebook_id, None)
+    _save_db()
+    return True
+
+
+def update_collaborator_role(
+    notebook_id: str, owner_id: str, target_user_id: str, role: str
+) -> dict | None:
+    nb = _notebooks.get(notebook_id)
+    if not nb:
+        return None
+    if not _LOCAL_DEV and nb.get("user_id") != owner_id:
+        return None
+    collaborators = _collaborators.get(notebook_id, {})
+    if target_user_id not in collaborators:
+        return None
+    collaborators[target_user_id]["role"] = _normalize_role(role)
+    collaborators[target_user_id]["updated_at"] = _timestamp()
+    _save_db()
+    return collaborators[target_user_id]
 
 
 def cleanup_duplicate_sources(notebook_id: str, user_id: str) -> list[dict]:
