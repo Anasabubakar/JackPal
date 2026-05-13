@@ -398,7 +398,31 @@ export async function addWorkspaceTextSource(workspaceId: string, title: string,
 }
 
 export async function addWorkspaceUrlSource(workspaceId: string, title: string | null, url: string) {
+  // Backend auto-detects YouTube / Drive / generic web. Frontend can keep
+  // calling this single endpoint with any URL.
   return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/url`, {
+    method: "POST",
+    body: JSON.stringify({ title, url }),
+  });
+}
+
+export async function addWorkspaceYoutubeSource(
+  workspaceId: string,
+  title: string | null,
+  url: string,
+) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/youtube`, {
+    method: "POST",
+    body: JSON.stringify({ title, url }),
+  });
+}
+
+export async function addWorkspaceDriveSource(
+  workspaceId: string,
+  title: string | null,
+  url: string,
+) {
+  return request<{ source: Source }>(`/workspaces/${workspaceId}/sources/drive`, {
     method: "POST",
     body: JSON.stringify({ title, url }),
   });

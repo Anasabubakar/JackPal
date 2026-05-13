@@ -1,13 +1,10 @@
 import csv
-import html
 import io
 import json
 import re
 import zipfile
 from typing import Literal
-from urllib.parse import urlparse
 
-import httpx
 from fastapi import APIRouter, File, HTTPException, Header, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -21,6 +18,12 @@ from services.workspace_rag import (
     build_numbered_context,
     notebook_retrieve,
     to_citations,
+)
+from services.ingest import (
+    classify_url,
+    from_drive as ingest_from_drive,
+    from_url as ingest_from_url,
+    from_youtube as ingest_from_youtube,
 )
 from services.local_storage import (
     create_artifact,
@@ -88,6 +91,16 @@ class SourceTextCreate(BaseModel):
 
 
 class SourceUrlCreate(BaseModel):
+    title: str | None = None
+    url: str
+
+
+class SourceYoutubeCreate(BaseModel):
+    title: str | None = None
+    url: str
+
+
+class SourceDriveCreate(BaseModel):
     title: str | None = None
     url: str
 
@@ -215,26 +228,6 @@ def _collect_corpus(notebook_id: str, user_id: str) -> str:
     return "\n\n".join(chunks).strip()
 
 
-def _strip_html(raw_html: str) -> str:
-    raw_html = re.sub(r"<script\b.*?</script>", " ", raw_html, flags=re.I | re.S)
-    raw_html = re.sub(r"<style\b.*?</style>", " ", raw_html, flags=re.I | re.S)
-    raw_html = re.sub(r"<[^>]+>", " ", raw_html)
-    raw_html = html.unescape(raw_html)
-    raw_html = re.sub(r"\s+", " ", raw_html)
-    return raw_html.strip()
-
-
-async def _fetch_url(url: str) -> tuple[str, str]:
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        body = resp.text
-    title_match = re.search(r"<title[^>]*>(.*?)</title>", body, flags=re.I | re.S)
-    title = html.unescape(title_match.group(1)).strip() if title_match else urlparse(url).netloc or "Web Source"
-    text = _strip_html(body)
-    return title, text
-
-
 def _sentence_list(text: str, limit: int = 8) -> list[str]:
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
     result = [p.strip() for p in parts if p.strip()]
@@ -268,9 +261,13 @@ async def _import_text_source(
     *,
     source_type: str = "text",
     url: str | None = None,
+    extra_metadata: dict | None = None,
 ) -> dict:
     filename = f"{_slug_title(title)}.txt"
     doc = save_document_from_text(user_id, filename, text, source_type=source_type)
+    metadata: dict = {"filename": filename}
+    if extra_metadata:
+        metadata.update(extra_metadata)
     source = upsert_source(
         notebook_id,
         user_id,
@@ -279,7 +276,7 @@ async def _import_text_source(
         content=text,
         url=url,
         document_id=doc["id"],
-        metadata={"filename": filename},
+        metadata=metadata,
     )
     return source
 
@@ -347,20 +344,86 @@ async def add_text_source(notebook_id: str, body: SourceTextCreate, authorizatio
 
 @router.post("/{notebook_id}/sources/url")
 async def add_url_source(notebook_id: str, body: SourceUrlCreate, authorization: str = Header(...)):
+    """
+    Generic URL importer. Auto-detects YouTube/Drive vs regular web pages and
+    routes through the appropriate extractor in services.ingest. The frontend
+    can keep calling this single endpoint with any URL; explicit /youtube and
+    /drive endpoints below exist for clients that want to be precise.
+    """
     user_id = get_user_id(authorization)
     _require_local()
     _notebook_or_404(notebook_id, user_id)
-    title = body.title
-    text = ""
-    if body.url:
-        try:
-            fetched_title, fetched_text = await _fetch_url(body.url)
-            title = title or fetched_title
-            text = fetched_text
-        except Exception as exc:
-            title = title or body.url
-            text = f"Imported URL: {body.url}\n\nCould not fetch content: {exc}"
-    source = await _import_text_source(notebook_id, user_id, title or body.url, text, source_type="url", url=body.url)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="URL is required.")
+    try:
+        payload = await ingest_from_url(body.url)
+    except Exception as exc:
+        # Even on hard failure, persist a stub source so the user sees the
+        # attempt in their notebook and can retry / delete it.
+        payload = {
+            "title":    body.title or body.url,
+            "text":     f"Imported URL: {body.url}\n\nCould not fetch content: {exc}",
+            "type":     classify_url(body.url),
+            "url":      body.url,
+            "metadata": {"error": str(exc)},
+        }
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type=payload["type"],
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/youtube")
+async def add_youtube_source(notebook_id: str, body: SourceYoutubeCreate, authorization: str = Header(...)):
+    """
+    Explicit YouTube ingestion — pulls captions / transcript via yt-dlp.
+    Falls back to the video description if no transcript is available.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="YouTube URL is required.")
+    payload = await ingest_from_youtube(body.url)
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type="youtube",
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
+    return {"source": _source_payload(source)}
+
+
+@router.post("/{notebook_id}/sources/drive")
+async def add_drive_source(notebook_id: str, body: SourceDriveCreate, authorization: str = Header(...)):
+    """
+    Import a publicly-shared Google Drive / Docs file.
+    Private files return a stub source explaining how to make it accessible.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    if not body.url:
+        raise HTTPException(status_code=422, detail="Drive URL is required.")
+    payload = await ingest_from_drive(body.url)
+    source = await _import_text_source(
+        notebook_id,
+        user_id,
+        body.title or payload["title"],
+        payload["text"],
+        source_type="drive",
+        url=payload.get("url"),
+        extra_metadata=payload.get("metadata"),
+    )
     return {"source": _source_payload(source)}
 
 
