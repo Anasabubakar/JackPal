@@ -841,6 +841,25 @@ export async function downloadWorkspaceBundle(workspaceId: string) {
   return { blob, filename: match?.[1] || "jackpal-notebook-export.zip" };
 }
 
+/** Zip of artifacts/ only (viewer+). */
+export async function downloadWorkspaceArtifactsBundle(workspaceId: string) {
+  const token = getToken();
+  if (!token) throw new Error("Missing session token.");
+  const res = await fetch(
+    `${BASE_URL}/workspaces/${workspaceId}/export/artifacts?token=${encodeURIComponent(token)}`,
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Export failed" }));
+    throw new Error(
+      typeof err.detail === "string" ? err.detail : Array.isArray(err.detail) ? err.detail[0]?.msg || "Export failed" : "Export failed",
+    );
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get("content-disposition") || "";
+  const match = cd.match(/filename="?([^"]+)"?/i);
+  return { blob, filename: match?.[1] || "jackpal-artifacts-export.zip" };
+}
+
 // ── Voice cloning (VoxCPM) ───────────────────────────────────────────────────
 
 export type VoiceCapabilities = {

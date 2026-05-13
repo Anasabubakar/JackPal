@@ -38,7 +38,16 @@ import {
   FastForward,
   Bookmark,
   RefreshCw,
+  BookOpen,
+  ListChecks,
+  Layers,
+  Network,
+  LayoutTemplate,
+  Table,
+  Sparkles,
+  MessageSquare,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { JackpalsLogo } from "@/components/brand/JackpalsLogo";
@@ -56,6 +65,7 @@ import {
   listDocuments,
   uploadDocument,
   generateAudio,
+  getTtsCapabilities,
   getAudioChunks,
   getAudioStatus,
   downloadAudioArchive,
@@ -99,6 +109,7 @@ import {
   deleteWorkspaceChat,
   cleanupWorkspaceDuplicates,
   downloadWorkspaceBundle,
+  downloadWorkspaceArtifactsBundle,
   saveChatTurnAsNote,
   setChatTurnPinned,
   type Document,
@@ -111,6 +122,7 @@ import {
   type SavedChat,
   type ChatTurn,
   type WorkspaceCitation,
+  type TtsCapabilities,
 } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -123,8 +135,22 @@ const PODCAST_HOSTS = [
   { voice: "jude",     name: "Abeo",   role: "Breaks it down" },
 ];
 
+const ARTIFACT_DEFS: { type: string; label: string; blurb: string; Icon: LucideIcon }[] = [
+  { type: "audio", label: "Audio brief", blurb: "Narrated overview of the corpus", Icon: AudioLines },
+  { type: "video", label: "Video overview", blurb: "Structured scene outline for an overview clip", Icon: Video },
+  { type: "slide-deck", label: "Slide deck", blurb: "Slides with narration beats you can export", Icon: LayoutTemplate },
+  { type: "quiz", label: "Quiz", blurb: "Self-check questions grounded in sources", Icon: ListChecks },
+  { type: "flashcard", label: "Flashcards", blurb: "Front/back cards for drills and review", Icon: Layers },
+  { type: "infographic", label: "Infographic", blurb: "Dense visual summary of key ideas", Icon: ImageIcon },
+  { type: "report", label: "Report", blurb: "Structured written synthesis", Icon: FileText },
+  { type: "data-table", label: "Data table", blurb: "Comparable facts in rows and columns", Icon: Table },
+  { type: "mind-map", label: "Mind map", blurb: "Hierarchy of concepts and links", Icon: Network },
+  { type: "study-guide", label: "Study guide", blurb: "Outline-style guide for revision", Icon: BookOpen },
+];
+
+const SPEED_OPTIONS = [0.9, 1, 1.25, 1.5, 1.75];
+
 function DashboardPage() {
-  const SPEED_OPTIONS = [0.9, 1, 1.25, 1.5, 1.75];
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('home');
@@ -291,8 +317,14 @@ function DashboardPage() {
   const [lastWorkspaceCitations, setLastWorkspaceCitations] = useState<WorkspaceCitation[]>([]);
   const [saveChatAsNote, setSaveChatAsNote] = useState(false);
   const [workspaceExporting, setWorkspaceExporting] = useState(false);
+  const [workspaceArtifactsExporting, setWorkspaceArtifactsExporting] = useState(false);
   const [workspaceFileName, setWorkspaceFileName] = useState("");
   const workspaceFileInputRef = useRef<HTMLInputElement>(null);
+  const [ttsCaps, setTtsCaps] = useState<TtsCapabilities | null>(null);
+  const [listenEngine, setListenEngine] = useState<"fast" | "premium">("fast");
+  const [chatCorpusScope, setChatCorpusScope] = useState<"all" | "pick">("all");
+  const [chatPickSourceIds, setChatPickSourceIds] = useState<string[]>([]);
+  const [artifactViewerId, setArtifactViewerId] = useState<string | null>(null);
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -334,16 +366,49 @@ function DashboardPage() {
     // Warm up Render backend so user's first Listen/Podcast click hits an
     // awake container instead of paying 30-50s cold-start.
     fetch(`${API_URL}/audio/capabilities`).catch(() => {});
+    void getTtsCapabilities()
+      .then((caps) => {
+        setTtsCaps(caps);
+        const savedEng = localStorage.getItem("jackpal_listen_engine");
+        if (savedEng === "premium" && caps.premium_available) setListenEngine("premium");
+      })
+      .catch(() => {});
     return () => mq.removeEventListener("change", syncLayout);
   }, [router]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem("jackpal_listen_engine", listenEngine);
+  }, [mounted, listenEngine]);
+
+  useEffect(() => {
+    if (ttsCaps && !ttsCaps.premium_available && listenEngine === "premium") {
+      setListenEngine("fast");
+    }
+  }, [ttsCaps, listenEngine]);
 
   useEffect(() => {
     if (!selectedWorkspaceId) return;
     setActiveWorkspaceSourceId(null);
     setActiveWorkspaceSourceText("");
     setActiveWorkspaceSourceGuide("");
+    setChatCorpusScope("all");
+    setChatPickSourceIds([]);
     loadWorkspaceDetails(selectedWorkspaceId);
   }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    setChatPickSourceIds((prev) => prev.filter((id) => workspaceSources.some((s) => s.id === id)));
+  }, [workspaceSources]);
+
+  useEffect(() => {
+    if (!artifactViewerId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setArtifactViewerId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [artifactViewerId]);
 
   useEffect(() => {
     setLastResearchRun(null);
@@ -402,13 +467,21 @@ function DashboardPage() {
           sinceReady: doc.ready_chunks ?? 0,
           waitSeconds: 20,
         });
-        if (s.status !== doc.status || s.ready_chunks !== doc.ready_chunks) {
+        const mergedEngine = s.audio_engine ?? doc.audio_engine;
+        const mergedVoice = s.audio_voice ?? doc.audio_voice;
+        const statusChanged =
+          s.status !== doc.status
+          || s.ready_chunks !== doc.ready_chunks
+          || mergedEngine !== doc.audio_engine
+          || mergedVoice !== doc.audio_voice;
+        if (statusChanged) {
           return {
             ...doc,
             status: s.status as Document["status"],
             ready_chunks: s.ready_chunks,
             total_chunks: s.total_chunks,
-            audio_voice: s.audio_voice ?? doc.audio_voice,
+            audio_voice: mergedVoice,
+            audio_engine: mergedEngine,
           };
         }
       } catch { /* network blip — loop will retry */ }
@@ -428,7 +501,14 @@ function DashboardPage() {
         const next = documentsRef.current.map(d => {
           const u = byId.get(d.id);
           if (!u) return d;
-          if (u.status !== d.status || u.ready_chunks !== d.ready_chunks) anyChanged = true;
+          if (
+            u.status !== d.status
+            || u.ready_chunks !== d.ready_chunks
+            || u.audio_engine !== d.audio_engine
+            || u.audio_voice !== d.audio_voice
+          ) {
+            anyChanged = true;
+          }
           return u;
         });
         if (anyChanged) setDocuments(next);
@@ -724,12 +804,23 @@ function DashboardPage() {
   }
 
   async function handleWorkspaceAsk() {
-    if (!selectedWorkspaceId || workspaceBusy || !chatQuestion.trim()) return;
+    const selectedWs = selectedWorkspaceId
+      ? workspaces.find((item) => item.id === selectedWorkspaceId) ?? null
+      : null;
+    const wsRole = selectedWs ? (selectedWs.role ?? "owner") : "owner";
+    const canAsk = wsRole === "owner" || wsRole === "editor";
+    if (!selectedWorkspaceId || workspaceBusy || !chatQuestion.trim() || !canAsk) return;
+    if (chatCorpusScope === "pick" && chatPickSourceIds.length === 0) {
+      setWorkspaceError("Pick at least one source, or switch to “All sources”.");
+      return;
+    }
+    setWorkspaceError("");
     setWorkspaceBusy("Thinking...");
     try {
       const result = await askWorkspace(selectedWorkspaceId, chatQuestion.trim(), {
         saveAsNote: saveChatAsNote,
         chatId: activeChatId,
+        sourceIds: chatCorpusScope === "pick" ? chatPickSourceIds : undefined,
       });
       setWorkspaceAnswer(result.answer);
       setLastWorkspaceCitations(result.citations ?? []);
@@ -762,7 +853,7 @@ function DashboardPage() {
   }
 
   async function handleDownloadWorkspaceBundle() {
-    if (!selectedWorkspaceId || workspaceExporting) return;
+    if (!selectedWorkspaceId || workspaceExporting || workspaceArtifactsExporting) return;
     setWorkspaceExporting(true);
     setWorkspaceError("");
     try {
@@ -779,6 +870,27 @@ function DashboardPage() {
       setWorkspaceError(err instanceof Error ? err.message : "Could not export notebook.");
     } finally {
       setWorkspaceExporting(false);
+    }
+  }
+
+  async function handleDownloadWorkspaceArtifactsBundle() {
+    if (!selectedWorkspaceId || workspaceExporting || workspaceArtifactsExporting) return;
+    setWorkspaceArtifactsExporting(true);
+    setWorkspaceError("");
+    try {
+      const { blob, filename } = await downloadWorkspaceArtifactsBundle(selectedWorkspaceId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setWorkspaceError(err instanceof Error ? err.message : "Could not export artifacts.");
+    } finally {
+      setWorkspaceArtifactsExporting(false);
     }
   }
 
@@ -975,9 +1087,13 @@ function DashboardPage() {
     setIsAudioLoading(true);
     loadDocumentText(doc.id);
 
+    const engine = listenEngine === "premium" && ttsCaps?.premium_available ? "premium" : "fast";
+    const docEngine = doc.audio_engine ?? "fast";
+
     // If pre-generated chunks exist → instant chunk playlist
     const hasMatchingReadyAudio = ((doc.ready_chunks ?? 0) > 0 || doc.status === "audio_ready")
-      && doc.audio_voice === selectedVoice;
+      && doc.audio_voice === selectedVoice
+      && docEngine === engine;
     if (hasMatchingReadyAudio) {
       try {
         const { chunks } = await getAudioChunks(doc.id);
@@ -994,7 +1110,7 @@ function DashboardPage() {
         : item
     )));
     try {
-      const status = await generateAudio(doc.id, selectedVoice, "fast");
+      const status = await generateAudio(doc.id, selectedVoice, engine);
       setDocuments((prev) => prev.map((item) => (
         item.id === doc.id
           ? {
@@ -1003,6 +1119,7 @@ function DashboardPage() {
               ready_chunks: status.ready_chunks,
               total_chunks: status.total_chunks,
               audio_voice: status.audio_voice ?? selectedVoice,
+              audio_engine: status.audio_engine ?? engine,
             }
           : item
       )));
@@ -1685,7 +1802,7 @@ function DashboardPage() {
               {firstName}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:justify-end">
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:justify-end flex-wrap">
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -1695,6 +1812,41 @@ function DashboardPage() {
               onFocus={e => (e.currentTarget.style.borderColor = "var(--blue)")}
               onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
             />
+            <div
+              className="inline-flex rounded-xl p-0.5 gap-0.5 flex-shrink-0"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--glass-border)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+              }}
+              role="group"
+              aria-label="Listen audio engine"
+            >
+              {(["fast", "premium"] as const).map((eng) => {
+                const disabled = eng === "premium" && !ttsCaps?.premium_available;
+                const active = listenEngine === eng;
+                return (
+                  <button
+                    key={eng}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setListenEngine(eng)}
+                    className="px-2.5 py-1.5 rounded-[10px] text-[9px] font-bold uppercase tracking-widest transition-all min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: active ? "rgba(44, 123, 229, 0.35)" : "transparent",
+                      color: active ? "var(--text-1)" : "var(--text-3)",
+                      border: active ? "1px solid rgba(44,123,229,0.45)" : "1px solid transparent",
+                      boxShadow: active ? "0 0 20px rgba(44,123,229,0.15)" : undefined,
+                    }}
+                    title={eng === "premium" && !ttsCaps?.premium_available ? "Premium TTS not configured" : undefined}
+                  >
+                    {eng === "fast" ? "Fast" : "Premium"}
+                  </button>
+                );
+              })}
+            </div>
             <label
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer transition-all"
               style={{ background: "var(--blue)", color: "white" }}
@@ -1896,6 +2048,19 @@ function DashboardPage() {
                           Ready
                         </span>
                       )}
+                      {doc.audio_engine === "premium" && doc.status === "audio_ready" && (
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+                          style={{
+                            background: "rgba(44, 123, 229, 0.2)",
+                            color: "var(--blue)",
+                            border: "1px solid rgba(44,123,229,0.35)",
+                          }}
+                          title="Generated with premium TTS"
+                        >
+                          Vox
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1993,16 +2158,28 @@ function DashboardPage() {
             </div>
             </div>
             {selectedWorkspaceId && (
-              <button
-                type="button"
-                onClick={() => void handleDownloadWorkspaceBundle()}
-                disabled={workspaceExporting}
-                className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
-                style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
-              >
-                {workspaceExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                Export .zip
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadWorkspaceBundle()}
+                  disabled={workspaceExporting || workspaceArtifactsExporting}
+                  className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                >
+                  {workspaceExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  Export .zip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadWorkspaceArtifactsBundle()}
+                  disabled={workspaceExporting || workspaceArtifactsExporting}
+                  className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                >
+                  {workspaceArtifactsExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  Export artifacts
+                </button>
+              </>
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -2182,8 +2359,38 @@ function DashboardPage() {
                   />
                 ) : null}
 
+                <nav
+                  className="sticky top-0 z-30 flex flex-wrap items-center gap-1 p-1.5 rounded-2xl -mx-1 mb-1"
+                  style={{
+                    background: "rgba(12, 12, 18, 0.75)",
+                    backdropFilter: "blur(20px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                    border: "1px solid var(--glass-border)",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+                  }}
+                  aria-label="Jump to workspace section"
+                >
+                  {[
+                    { id: "ws-corpus" as const, label: "Corpus", Icon: LayoutGrid },
+                    { id: "ws-dialogue" as const, label: "Dialogue", Icon: MessageSquare },
+                    { id: "ws-outputs" as const, label: "Outputs", Icon: Sparkles },
+                    { id: "ws-voice" as const, label: "Voice", Icon: Mic2 },
+                  ].map(({ id, label, Icon: NavIcon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] hover:bg-white/[0.06]"
+                      style={{ color: "var(--text-2)" }}
+                    >
+                      <NavIcon size={14} strokeWidth={1.75} className="opacity-80" aria-hidden />
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+
                 <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-4">
-                  <div className="space-y-4">
+                  <div id="ws-corpus" className="space-y-4 scroll-mt-28">
                     {selectedWorkspaceId ? (
                       <WorkspaceNotebookSearch workspaceId={selectedWorkspaceId} />
                     ) : null}
@@ -2194,8 +2401,10 @@ function DashboardPage() {
                         {(["text", "url", "file", "research"] as const).map((mode) => (
                           <button
                             key={mode}
+                            type="button"
+                            disabled={!canEditNotebook}
                             onClick={() => setSourceMode(mode)}
-                            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest"
+                            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-40"
                             style={{
                               background: sourceMode === mode ? "var(--surface-2)" : "transparent",
                               border: "1px solid var(--border)",
@@ -2421,7 +2630,8 @@ function DashboardPage() {
                   </section>
                   </div>
 
-                  <section className="studio studio-glass-card studio-glass-interactive rounded-2xl p-4 space-y-4">
+                  <div className="space-y-4">
+                  <section id="ws-dialogue" className="studio studio-glass-card studio-glass-interactive rounded-2xl p-4 space-y-4 scroll-mt-28">
                     <div className="grid gap-4">
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-2">
@@ -2579,6 +2789,59 @@ function DashboardPage() {
                       <div>
                         <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Chat</div>
                         <div className="studio studio-glass-inset rounded-xl p-3 space-y-2">
+                        <div className="flex flex-wrap gap-2" role="group" aria-label="Corpus scope for this question">
+                          {(["all", "pick"] as const).map((scope) => (
+                            <button
+                              key={scope}
+                              type="button"
+                              disabled={!canEditNotebook}
+                              onClick={() => {
+                                setChatCorpusScope(scope);
+                                if (scope === "all") setChatPickSourceIds([]);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[36px] disabled:opacity-50 transition-all"
+                              style={{
+                                background: chatCorpusScope === scope ? "rgba(44, 123, 229, 0.25)" : "transparent",
+                                border: chatCorpusScope === scope ? "1px solid rgba(44,123,229,0.45)" : "1px solid var(--border)",
+                                color: "var(--text-2)",
+                              }}
+                            >
+                              {scope === "all" ? "All sources" : "Pick sources"}
+                            </button>
+                          ))}
+                        </div>
+                        {chatCorpusScope === "pick" && (
+                          <div className="flex flex-wrap gap-1.5 pt-1" aria-label="Select sources for this question">
+                            {workspaceSources.length === 0 ? (
+                              <span className="text-[10px]" style={{ color: "var(--text-3)" }}>Add sources in Corpus first.</span>
+                            ) : (
+                              workspaceSources.map((s) => {
+                                const on = chatPickSourceIds.includes(s.id);
+                                return (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    disabled={!canEditNotebook}
+                                    onClick={() =>
+                                      setChatPickSourceIds((prev) =>
+                                        prev.includes(s.id) ? prev.filter((x) => x !== s.id) : [...prev, s.id]
+                                      )
+                                    }
+                                    className="max-w-full truncate px-2 py-1 rounded-lg text-[10px] font-semibold min-h-[32px] disabled:opacity-40 transition-all"
+                                    style={{
+                                      background: on ? "var(--teal-dim)" : "var(--surface-2)",
+                                      border: `1px solid ${on ? "var(--teal)" : "var(--border)"}`,
+                                      color: on ? "var(--teal)" : "var(--text-2)",
+                                    }}
+                                    title={s.title}
+                                  >
+                                    {s.title}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
                         <label className="flex items-center gap-2 cursor-pointer select-none" style={{ color: "var(--text-3)" }}>
                           <input
                             type="checkbox"
@@ -2625,53 +2888,156 @@ function DashboardPage() {
                         )}
                         </div>
                       </div>
+                    </div>
+                  </section>
 
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Artifacts</div>
-                        <div className="flex flex-wrap gap-2">
-                          {["audio", "report", "study-guide", "quiz", "flashcard", "mind-map", "slide-deck", "infographic", "data-table", "video"].map((type) => (
+                  <section id="ws-outputs" className="studio studio-glass-card studio-glass-interactive rounded-2xl p-4 space-y-4 scroll-mt-28">
+                        <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-3)" }}>Artifacts</div>
+                        <p className="text-[11px] mb-3" style={{ color: "var(--text-3)" }}>
+                          Generate study outputs from your corpus. Each run is saved below for download.
+                        </p>
+                        <div className="grid sm:grid-cols-2 gap-2">
+                          {ARTIFACT_DEFS.map(({ type, label, blurb, Icon: ArtIcon }) => (
                             <button
                               key={type}
                               type="button"
                               onClick={() => handleWorkspaceGenerate(type)}
                               disabled={!canEditNotebook || !!workspaceBusy}
-                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-40"
-                              style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                              className="text-left rounded-xl p-3 transition-all disabled:opacity-40 min-h-[88px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] hover:bg-white/[0.04]"
+                              style={{
+                                background: "var(--surface-2)",
+                                border: "1px solid var(--border)",
+                              }}
                             >
-                              {type}
+                              <div className="flex items-start gap-2">
+                                <span
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                                  style={{ background: "rgba(44,123,229,0.12)", color: "var(--blue)" }}
+                                >
+                                  <ArtIcon size={16} strokeWidth={1.75} aria-hidden />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block text-[12px] font-semibold" style={{ color: "var(--text-1)" }}>{label}</span>
+                                  <span className="block text-[10px] mt-0.5 leading-snug" style={{ color: "var(--text-3)" }}>{blurb}</span>
+                                </span>
+                              </div>
                             </button>
                           ))}
                         </div>
                         <div className="mt-3 space-y-2">
-                          {workspaceArtifacts.map((artifact) => (
+                          {workspaceArtifacts.length === 0 ? (
+                            <div className="rounded-xl p-4 text-[12px] text-center" style={{ background: "var(--surface-2)", color: "var(--text-3)" }}>
+                              No artifacts yet — pick a format above.
+                            </div>
+                          ) : (
+                          workspaceArtifacts.map((artifact) => (
                             <div key={artifact.id} className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                               <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="text-[13px] font-medium" style={{ color: "var(--text-1)" }}>{artifact.title}</div>
+                                <div className="min-w-0">
+                                  <div className="text-[13px] font-medium truncate" style={{ color: "var(--text-1)" }}>{artifact.title}</div>
                                   <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{artifact.type} · {artifact.format ?? "markdown"}</div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => handleDownloadWorkspaceArtifact(artifact.id)} className="p-1 rounded" style={{ color: "var(--text-3)" }}>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => setArtifactViewerId(artifact.id)}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest min-h-[32px]"
+                                    style={{ border: "1px solid var(--border)", color: "var(--teal)" }}
+                                  >
+                                    Read
+                                  </button>
+                                  <button type="button" onClick={() => void handleDownloadWorkspaceArtifact(artifact.id)} className="p-1.5 rounded" style={{ color: "var(--text-3)" }} aria-label="Download artifact">
                                     <Download size={12} />
                                   </button>
                                   <button disabled={!canEditNotebook} onClick={async () => {
                                     if (!selectedWorkspaceId || !confirm("Delete this artifact?")) return;
                                     await deleteWorkspaceArtifact(selectedWorkspaceId, artifact.id);
+                                    if (artifactViewerId === artifact.id) setArtifactViewerId(null);
                                     await loadWorkspaceDetails(selectedWorkspaceId);
-                                  }} className="disabled:opacity-40" style={{ color: "#f87171" }}>
+                                  }} className="disabled:opacity-40 p-1.5 rounded" style={{ color: "#f87171" }} aria-label="Delete artifact">
                                     <Trash2 size={11} />
                                   </button>
                                 </div>
                               </div>
-                              <pre className="mt-2 text-[11px] whitespace-pre-wrap max-h-36 overflow-y-auto studio-scroll" style={{ color: "var(--text-2)" }}>{artifact.content}</pre>
+                              <p className="mt-2 text-[11px] line-clamp-2 whitespace-pre-wrap" style={{ color: "var(--text-3)" }}>{artifact.content}</p>
                             </div>
-                          ))}
+                          ))
+                          )}
                         </div>
+                  </section>
+                  </div>
+                </div>
+
+                <section id="ws-voice" className="scroll-mt-28">
+                  <VoiceClonePanel />
+                </section>
+
+                {artifactViewerId && (
+                  <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="artifact-modal-title">
+                    <button
+                      type="button"
+                      className="absolute inset-0 cursor-default"
+                      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+                      onClick={() => setArtifactViewerId(null)}
+                      aria-label="Close artifact viewer"
+                    />
+                    {(() => {
+                      const art = workspaceArtifacts.find((a) => a.id === artifactViewerId);
+                      return (
+                    <div
+                      className="relative z-10 w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl"
+                      style={{
+                        background: "rgba(18, 18, 24, 0.92)",
+                        border: "1px solid var(--glass-border)",
+                        backdropFilter: "blur(24px)",
+                        WebkitBackdropFilter: "blur(24px)",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3 p-4 border-b shrink-0" style={{ borderColor: "var(--border)" }}>
+                        <div className="min-w-0">
+                          <h2 id="artifact-modal-title" className="text-[15px] font-semibold truncate" style={{ color: "var(--text-1)", fontFamily: "var(--font-syne)" }}>
+                            {art?.title ?? "Artifact"}
+                          </h2>
+                          <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: "var(--text-3)" }}>
+                            {art?.type ?? ""} {art?.format ? `· ${art.format}` : ""}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setArtifactViewerId(null)}
+                          className="p-2 rounded-lg shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                          style={{ color: "var(--text-3)" }}
+                          aria-label="Close"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <pre className="flex-1 overflow-y-auto studio-scroll p-4 text-[12px] whitespace-pre-wrap leading-relaxed min-h-0" style={{ color: "var(--text-2)" }}>
+                        {art?.content ?? ""}
+                      </pre>
+                      <div className="flex flex-wrap gap-2 p-3 border-t shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                        <button
+                          type="button"
+                          onClick={() => art && void handleDownloadWorkspaceArtifact(art.id)}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white"
+                          style={{ background: "var(--blue)" }}
+                        >
+                          <Download size={14} /> Download
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setArtifactViewerId(null)}
+                          className="px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                          style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
+                        >
+                          Close
+                        </button>
                       </div>
                     </div>
-                  </section>
-                </div>
-                <VoiceClonePanel />
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             )}
           </div>

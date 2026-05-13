@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
               <span className="text-[#2585C7] italic underline decoration-8 decoration-[#2585C7]/20">Account.</span>
             </h1>
             <p className="text-lg text-white/60 font-medium leading-relaxed">
-              Don't let a lost password stop your progress. We'll help you get back to your studies in no time.
+              {`Don't let a lost password stop your progress. We'll help you get back to your studies in no time.`}
             </p>
           </div>
         </div>
@@ -108,7 +108,9 @@ export default function ForgotPasswordPage() {
                <div className="space-y-2">
                   <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Check Your Email</h2>
                   <p className="text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em] leading-relaxed max-w-xs mx-auto">
-                    We've sent a recovery link to <strong>{email}</strong>. Please check your inbox and spam folder.
+                    {`We've sent a recovery link to `}
+                    <strong>{email}</strong>
+                    {`. Please check your inbox and spam folder.`}
                   </p>
                </div>
                <Link 

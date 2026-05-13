@@ -61,7 +61,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
   const [inviteeEmail, setInviteeEmail] = useState("");
   const [expiresPreset, setExpiresPreset] = useState<string>("604800");
 
-  const nowSec = Math.floor(Date.now() / 1000);
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   const expiresInSeconds = useMemo(() => {
     const n = Number(expiresPreset);

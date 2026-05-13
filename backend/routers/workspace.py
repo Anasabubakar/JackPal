@@ -735,9 +735,12 @@ async def get_source_guide(notebook_id: str, source_id: str, authorization: str 
     _notebook_or_404(notebook_id, user_id)
     source = _source_or_404(source_id, user_id)
     guide = source.get("guide")
-    if not guide:
-        guide = await _build_source_guide(source.get("fulltext", ""), source["title"])
-        update_source(source_id, user_id, {"guide": guide})
+    if guide:
+        return {"guide": guide}
+    # Generating and persisting a guide mutates the source — editors/owners only.
+    _writer_or_404(notebook_id, user_id)
+    guide = await _build_source_guide(source.get("fulltext", ""), source["title"])
+    update_source(source_id, user_id, {"guide": guide})
     return {"guide": guide}
 
 
@@ -1322,6 +1325,74 @@ async def export_notebook_bundle(
         content=buf.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{zip_prefix}-jackpal-export.zip"'},
+    )
+
+
+@router.get("/{notebook_id}/export/artifacts")
+async def export_notebook_artifacts_bundle(
+    notebook_id: str,
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+):
+    """Zip export of generated artifacts only (viewer+)."""
+    auth_header = authorization
+    if not auth_header and token:
+        auth_header = f"Bearer {token.strip()}"
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing or invalid token.")
+    user_id = get_user_id(auth_header)
+    _require_local()
+    nb = _notebook_or_404(notebook_id, user_id)
+    artifacts = list_artifacts(notebook_id, user_id)
+    zip_prefix = _export_zip_stem(nb.get("title") or "", "jackpal-notebook")
+    buf = io.BytesIO()
+    used: dict[str, int] = {}
+
+    def unique_path(folder: str, base: str, ext: str) -> str:
+        key = f"{folder}/{base}.{ext}"
+        n = used.get(key, 0)
+        used[key] = n + 1
+        if n == 0:
+            return f"{folder}/{base}.{ext}"
+        return f"{folder}/{base}-{n}.{ext}"
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "artifacts-manifest.json",
+            json.dumps(
+                {
+                    "notebook_id": nb["id"],
+                    "title": nb.get("title"),
+                    "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "artifact_count": len(artifacts),
+                },
+                indent=2,
+            ),
+        )
+        for i, art in enumerate(artifacts):
+            stem = _export_zip_stem(art.get("title") or f"artifact-{i}", f"artifact-{i}")
+            fmt = (art.get("format") or "text").strip().lower()
+            if fmt in {"csv", "json"}:
+                ext = fmt
+            elif art.get("type") == "audio":
+                ext = "json"
+                body = art.get("content") or "[]"
+            else:
+                ext = "md"
+                body = art.get("content") or ""
+            zf.writestr(unique_path("artifacts", stem, ext), body)
+        zf.writestr(
+            "README.txt",
+            "JackPal artifacts export\n"
+            "------------------------\n"
+            "- artifacts-manifest.json — notebook id + export time\n"
+            "- artifacts/* — generated outputs (same layout as full notebook export)\n",
+        )
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_prefix}-jackpal-artifacts.zip"'},
     )
 
 

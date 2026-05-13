@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AUDIO_PREVIEW_VOICES } from "@/lib/audioPreviews";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { WaitlistProvider, useWaitlist } from "@/components/landing/WaitlistModal";
@@ -493,10 +493,24 @@ function SocialProof() {
   const [active, setActive] = useState(0);
   const [dragDelta, setDragDelta] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(360);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const directionRef = useRef<"horizontal" | "vertical" | null>(null);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const sync = () => {
+      const w = el.offsetWidth;
+      setContainerWidth(w > 0 ? w : 360);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Auto-advance — pauses while the user is interacting
   useEffect(() => {
@@ -535,7 +549,7 @@ function SocialProof() {
 
   const handleTouchEnd = () => {
     if (directionRef.current === "horizontal") {
-      const w = containerRef.current?.offsetWidth ?? 320;
+      const w = containerWidth;
       const threshold = Math.max(40, w * 0.18);
       if (dragDelta > threshold) {
         setActive((i) => Math.max(0, i - 1));
@@ -548,10 +562,6 @@ function SocialProof() {
     setIsDragging(false);
   };
 
-  // `??` only falls back on null/undefined — when the carousel is hidden
-  // on desktop, offsetWidth is 0 and we'd divide by zero, producing NaN
-  // for every transform/opacity downstream. Use `||` so 0 also falls back.
-  const containerWidth = containerRef.current?.offsetWidth || 360;
   const dragPercent = (dragDelta / containerWidth) * 100;
   const trackOffset = -active * 100 + dragPercent;
   const cardTransition = isDragging
@@ -727,7 +737,7 @@ function HowItWorks() {
           <div className="jp-voice-copy">
             <h2>Voices that actually sound like <span>you</span>.</h2>
             <p>
-              Our Nigerian AI voices aren't just text-to-speech. They carry rhythm, warmth, and familiarity.
+              Our Nigerian AI voices aren&apos;t just text-to-speech. They carry rhythm, warmth, and familiarity.
               When you hear something that sounds like home, your brain stays present.
             </p>
             <ul>
