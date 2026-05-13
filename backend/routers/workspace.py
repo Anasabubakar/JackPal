@@ -42,10 +42,12 @@ from services.local_storage import (
     delete_source,
     get_notebook,
     get_chat,
+    get_chat_turn,
     get_research_job,
     get_sharing,
     list_chat_turns,
     list_chats,
+    set_turn_pinned,
     list_artifacts,
     list_notes,
     list_notebooks,
@@ -144,6 +146,20 @@ class ChatCreate(BaseModel):
 
 class ChatUpdate(BaseModel):
     title: str
+
+
+class TurnPinUpdate(BaseModel):
+    pinned: bool
+
+
+class TurnSaveAsNote(BaseModel):
+    """Body for save-existing-turn-as-note.
+
+    All fields are optional so a 0-byte JSON body still works — defaults
+    derive title and content from the turn itself.
+    """
+    title: str | None = None
+    include_citations: bool = True
 
 
 def _require_local() -> None:
@@ -880,6 +896,89 @@ async def delete_saved_chat(notebook_id: str, chat_id: str, authorization: str =
     if not delete_chat(chat_id, user_id):
         raise HTTPException(status_code=404, detail="Chat not found.")
     return {"message": "Chat deleted."}
+
+
+# ── Chat-turn level operations ──────────────────────────────────────────────
+# These let the dashboard retroactively act on individual messages: pin the
+# good ones, convert assistant answers into permanent notes the user can edit
+# and review later. Both endpoints map 1:1 onto NotebookLM's "save to note"
+# and "pin" affordances.
+
+
+@router.post("/{notebook_id}/chats/{chat_id}/turns/{turn_id}/save-as-note")
+async def save_turn_as_note(
+    notebook_id: str,
+    chat_id: str,
+    turn_id: str,
+    body: TurnSaveAsNote | None = None,
+    authorization: str = Header(...),
+):
+    """Persist a single chat turn as a note in the notebook.
+
+    Defaults:
+      * title — "Answer: <first 40 chars of turn content>"
+      * content — turn body, optionally followed by a citation list
+
+    Citations are inlined as a "Sources" footer so the note stays self
+    contained when exported or shared. The original chat turn is unchanged.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    body = body or TurnSaveAsNote()
+
+    turn = get_chat_turn(chat_id, turn_id, user_id)
+    if not turn:
+        raise HTTPException(status_code=404, detail="Chat turn not found.")
+    if turn["role"] != "assistant":
+        # Saving a user prompt as a note is rarely useful — guard the path
+        # so we don't accidentally save the user's question as the answer.
+        raise HTTPException(status_code=422, detail="Only assistant turns can be saved as notes.")
+
+    content = turn["content"]
+    citations = turn.get("citations") or []
+    if body.include_citations and citations:
+        cite_lines = []
+        for cite in citations:
+            idx = cite.get("index", "?")
+            title = cite.get("title") or "Source"
+            url = cite.get("url")
+            line = f"[{idx}] {title}" + (f" — {url}" if url else "")
+            cite_lines.append(line)
+        content = f"{content.rstrip()}\n\n## Sources\n" + "\n".join(cite_lines)
+
+    title = (body.title or f"Answer: {turn['content'][:40]}").strip()
+    note = create_note(
+        notebook_id,
+        user_id,
+        title=title or "Saved Answer",
+        content=content,
+        kind="answer",
+    )
+    return {"note": note, "turn_id": turn_id, "chat_id": chat_id}
+
+
+@router.post("/{notebook_id}/chats/{chat_id}/turns/{turn_id}/pin")
+async def pin_chat_turn(
+    notebook_id: str,
+    chat_id: str,
+    turn_id: str,
+    body: TurnPinUpdate,
+    authorization: str = Header(...),
+):
+    """Toggle the pinned flag on a chat turn.
+
+    The dashboard surfaces pinned turns in a dedicated "Saved answers"
+    panel so users don't have to scroll back through long chats to find
+    the canonical answer.
+    """
+    user_id = get_user_id(authorization)
+    _require_local()
+    _notebook_or_404(notebook_id, user_id)
+    turn = set_turn_pinned(chat_id, turn_id, user_id, pinned=body.pinned)
+    if not turn:
+        raise HTTPException(status_code=404, detail="Chat turn not found.")
+    return {"turn": turn}
 
 
 @router.post("/{notebook_id}/duplicates/cleanup")

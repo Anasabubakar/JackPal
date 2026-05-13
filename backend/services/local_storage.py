@@ -859,10 +859,36 @@ def add_chat_turn(
         "role": role,
         "content": content,
         "citations": citations or [],
+        "pinned": False,
         "created_at": _timestamp(),
     }
     _chat_turns.setdefault(chat_id, []).append(turn)
     chat["updated_at"] = _timestamp()
+    _save_db()
+    return turn
+
+
+def get_chat_turn(chat_id: str, turn_id: str, user_id: str) -> dict | None:
+    """Return a single turn by id, scoped to the requesting user.
+
+    Used by ``save_turn_as_note`` and ``set_turn_pinned`` so they don't have
+    to scan the whole turn list in the router.
+    """
+    chat = get_chat(chat_id, user_id)
+    if not chat:
+        return None
+    for turn in _chat_turns.get(chat_id, []):
+        if turn["id"] == turn_id:
+            return turn
+    return None
+
+
+def set_turn_pinned(chat_id: str, turn_id: str, user_id: str, *, pinned: bool) -> dict | None:
+    """Mark or unmark a chat turn as pinned. Mutates in place."""
+    turn = get_chat_turn(chat_id, turn_id, user_id)
+    if not turn:
+        return None
+    turn["pinned"] = bool(pinned)
     _save_db()
     return turn
 

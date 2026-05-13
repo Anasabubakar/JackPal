@@ -156,6 +156,11 @@ export type ChatTurn = {
   role: "user" | "assistant";
   content: string;
   citations?: WorkspaceCitation[];
+  /**
+   * Whether the user has flagged this turn as worth keeping. The dashboard
+   * filters on this to render the "Saved answers" panel.
+   */
+  pinned?: boolean;
   created_at?: string;
 };
 
@@ -672,6 +677,49 @@ export async function renameWorkspaceChat(workspaceId: string, chatId: string, t
 
 export async function deleteWorkspaceChat(workspaceId: string, chatId: string) {
   return request(`/workspaces/${workspaceId}/chats/${chatId}`, { method: "DELETE" });
+}
+
+/**
+ * Convert an existing assistant chat turn into a permanent note attached
+ * to the notebook. Citations on the turn are inlined as a Markdown "Sources"
+ * footer by default. Pass `includeCitations: false` to skip that.
+ */
+export async function saveChatTurnAsNote(
+  workspaceId: string,
+  chatId: string,
+  turnId: string,
+  opts: { title?: string; includeCitations?: boolean } = {},
+) {
+  return request<{ note: Note; turn_id: string; chat_id: string }>(
+    `/workspaces/${workspaceId}/chats/${chatId}/turns/${turnId}/save-as-note`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        title: opts.title,
+        include_citations: opts.includeCitations ?? true,
+      }),
+    },
+  );
+}
+
+/**
+ * Toggle the pinned state on a chat turn. Pinned turns appear in a
+ * dedicated panel in the dashboard so users can revisit the answers they
+ * care about without scrolling.
+ */
+export async function setChatTurnPinned(
+  workspaceId: string,
+  chatId: string,
+  turnId: string,
+  pinned: boolean,
+) {
+  return request<{ turn: ChatTurn }>(
+    `/workspaces/${workspaceId}/chats/${chatId}/turns/${turnId}/pin`,
+    {
+      method: "POST",
+      body: JSON.stringify({ pinned }),
+    },
+  );
 }
 
 export async function cleanupWorkspaceDuplicates(workspaceId: string) {
