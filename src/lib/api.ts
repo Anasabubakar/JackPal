@@ -449,7 +449,21 @@ export async function addWorkspaceResearch(
   query: string,
   opts?: { mode?: "fast" | "deep"; importUrls?: string[] },
 ) {
-  return request<{ job: ResearchJob; note?: Note; sources: Array<Record<string, unknown>> }>(
+  // Backend now performs real web search (Tavily / Brave / Serper / DuckDuckGo)
+  // and ingests every successful hit as a notebook source. `summary` is an
+  // LLM-synthesised overview of all imported sources, `expanded_queries` are
+  // the sub-queries the LLM generated in `deep` mode, and `provider` reports
+  // which search backend handled the run (so the UI can warn about quota /
+  // missing API keys when it falls back to the zero-key DuckDuckGo path).
+  return request<{
+    job: ResearchJob;
+    note?: Note;
+    sources: Array<Record<string, unknown>>;
+    summary?: string;
+    expanded_queries?: string[];
+    provider?: string;
+    failed?: Array<{ url?: string; title?: string; error?: string }>;
+  }>(
     `/workspaces/${workspaceId}/sources/research`,
     {
       method: "POST",

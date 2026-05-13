@@ -25,6 +25,7 @@ from services.ingest import (
     from_url as ingest_from_url,
     from_youtube as ingest_from_youtube,
 )
+from services.research import run_research
 from services.local_storage import (
     create_artifact,
     create_note,
@@ -448,27 +449,124 @@ async def add_file_source(
 
 @router.post("/{notebook_id}/sources/research")
 async def research_sources(notebook_id: str, body: ResearchCreate, authorization: str = Header(...)):
+    """
+    Run a real research pass against the open web.
+
+    Pipeline (see services/research.run_research for details):
+      1. If ``body.query`` is set, ask the search backend for candidate URLs.
+         ``mode='deep'`` first expands the query into 3-5 sub-queries via the LLM.
+      2. Dedupe + rank, then ingest each candidate via services.ingest.
+      3. Synthesize a short overview via the LLM router (NVIDIA-first).
+      4. Also import any explicit ``import_urls`` the caller passed — those are
+         treated as must-haves, not subject to search ranking.
+      5. Persist every successfully-ingested source on the notebook so it shows
+         up in the source list like any other source, plus a "Research" note
+         that contains the synthesized overview and a bibliography.
+
+    The endpoint is idempotent only in the sense that re-running it produces
+    new sources/notes/jobs; nothing is mutated in place.
+    """
     user_id = get_user_id(authorization)
     _require_local()
     _notebook_or_404(notebook_id, user_id)
+
+    research: dict = {
+        "query": body.query,
+        "mode": body.mode,
+        "expanded": [],
+        "candidates": [],
+        "sources": [],
+        "failed": [],
+        "summary": "",
+        "provider": "none",
+    }
+    if body.query and body.query.strip():
+        try:
+            research = await run_research(body.query, mode=body.mode)
+        except Exception as exc:  # pragma: no cover — surface but never 500
+            research["failed"] = [{"query": body.query, "error": str(exc)}]
+
     imports: list[dict] = []
+
+    # Persist each web hit as a notebook source so it shows up alongside
+    # manually-added URLs. We deliberately pass through _import_text_source so
+    # the same dedupe / document save / metadata plumbing runs.
+    for payload in research.get("sources", []):
+        try:
+            source = await _import_text_source(
+                notebook_id,
+                user_id,
+                payload["title"],
+                payload["text"],
+                source_type=payload.get("type", "url"),
+                url=payload.get("url"),
+                extra_metadata={
+                    **(payload.get("metadata") or {}),
+                    "research_query": body.query,
+                    "research_mode": body.mode,
+                },
+            )
+            imports.append(_source_payload(source))
+        except Exception as exc:
+            imports.append({"url": payload.get("url"), "title": payload.get("title"), "error": str(exc)})
+
+    # Also import any explicit URLs the caller passed (treated as must-haves).
     for url in body.import_urls:
         try:
             source = await add_url_source(notebook_id, SourceUrlCreate(url=url), authorization)
             imports.append(source["source"])
         except Exception as exc:
             imports.append({"url": url, "error": str(exc)})
-    job = create_research_job(notebook_id, user_id, query=body.query, mode=body.mode, status="ready", results=imports)
+
+    job = create_research_job(
+        notebook_id,
+        user_id,
+        query=body.query,
+        mode=body.mode,
+        status="ready" if imports else "empty",
+        results={
+            "imports": imports,
+            "summary": research.get("summary", ""),
+            "expanded_queries": research.get("expanded", []),
+            "provider": research.get("provider", "none"),
+            "failed": research.get("failed", []),
+        },
+    )
+
+    # Build a research note that's actually useful — overview + bibliography.
+    bib_lines = []
+    for i, item in enumerate(imports, 1):
+        if "error" in item:
+            bib_lines.append(f"[{i}] {item.get('title') or item.get('url') or 'Source'} — failed: {item['error']}")
+        else:
+            title = item.get("title") or "Untitled"
+            link = item.get("url") or ""
+            bib_lines.append(f"[{i}] {title}{f' — {link}' if link else ''}")
+
+    overview = research.get("summary") or "(No summary was generated for this run.)"
+    note_body = (
+        f"Research query: {body.query}\n"
+        f"Mode: {body.mode}\n\n"
+        f"## Overview\n{overview}\n\n"
+        f"## Sources\n" + ("\n".join(bib_lines) if bib_lines else "(no sources imported)")
+    )
     note = create_note(
         notebook_id,
         user_id,
-        title=f"Research: {body.query[:42]}",
-        content=f"Research query: {body.query}\n\nImported sources:\n" + "\n".join(
-            f"- {item.get('title') or item.get('url') or 'Source'}" for item in imports
-        ),
+        title=f"Research: {body.query[:42]}" if body.query else "Research",
+        content=note_body,
         kind="research",
     )
-    return {"job": job, "note": note, "sources": imports}
+
+    return {
+        "job": job,
+        "note": note,
+        "sources": imports,
+        "summary": research.get("summary", ""),
+        "expanded_queries": research.get("expanded", []),
+        "provider": research.get("provider", "none"),
+        "failed": research.get("failed", []),
+    }
 
 
 @router.get("/{notebook_id}/sources/{source_id}")
