@@ -68,17 +68,15 @@ VOICE_MAP = {
     "osagie":    {"api": "osagie",   "elevenlabs_env": "ELEVENLABS_VOICE_OSAGIE_ID",   "gender": "male",   "voxcpm": _M_CTRL},
     "remi":      {"api": "remi",     "elevenlabs_env": "ELEVENLABS_VOICE_REMI_ID",     "gender": "female", "voxcpm": _F_CTRL},
     "tayo":      {"api": "tayo",     "elevenlabs_env": "ELEVENLABS_VOICE_TAYO_ID",     "gender": "male",   "voxcpm": _M_CTRL},
-    # Named aliases
-    "doyinsola": {"api": "chinenye", "elevenlabs_env": "ELEVENLABS_VOICE_CHINENYE_ID", "gender": "female", "voxcpm": _F_CTRL},
-    "dayo":      {"api": "jude",     "elevenlabs_env": "ELEVENLABS_VOICE_JUDE_ID",     "gender": "male",   "voxcpm": _M_CTRL},
-    "yomi":      {"api": "idera",    "elevenlabs_env": "ELEVENLABS_VOICE_IDERA_ID",    "gender": "male",   "voxcpm": _M_CTRL},
-    "awaye":     {"api": "zainab",   "elevenlabs_env": "ELEVENLABS_VOICE_ZAINAB_ID",   "gender": "female", "voxcpm": _F_CTRL},
+    # Named aliases for the host voices
+    "ezinne":    {"api": "chinenye", "elevenlabs_env": "ELEVENLABS_VOICE_CHINENYE_ID", "gender": "female", "voxcpm": _F_CTRL},
+    "abeo":      {"api": "jude",     "elevenlabs_env": "ELEVENLABS_VOICE_JUDE_ID",     "gender": "male",   "voxcpm": _M_CTRL},
 }
 
 PREMIUM_VOICES = set(VOICE_MAP.keys())
 FAST_VOICES    = set(VOICE_MAP.keys())
 
-DEFAULT_VOICE  = "doyinsola"
+DEFAULT_VOICE  = "ezinne"
 DEFAULT_ENGINE = "fast"
 
 # Voices with WAVs uploaded to Modal's persistent volume

@@ -39,6 +39,7 @@ import {
   Table,
 } from 'lucide-react';
 import type { Artifact } from '@/lib/api';
+import { Markdown } from '@/components/ui/Markdown';
 
 // ── Icon map for infographic sections ──────────────────────────────────────────
 
@@ -55,140 +56,6 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   book:      <BookOpen size={20} />,
   table:     <Table size={20} />,
 };
-
-// ── Simple markdown renderer (no external dep) ─────────────────────────────────
-
-function MarkdownRenderer({ content }: { content: string }) {
-  const lines = content.split('\n');
-  const elements: React.ReactNode[] = [];
-  let i = 0;
-
-  const renderInline = (text: string): React.ReactNode => {
-    // bold, italic, code
-    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
-    return parts.map((part, idx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={idx}>{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith('`') && part.endsWith('`')) {
-        return (
-          <code
-            key={idx}
-            className="px-1 py-0.5 rounded text-[11px]"
-            style={{ background: 'var(--surface-2)', color: 'var(--blue)' }}
-          >
-            {part.slice(1, -1)}
-          </code>
-        );
-      }
-      if (part.startsWith('*') && part.endsWith('*')) {
-        return <em key={idx}>{part.slice(1, -1)}</em>;
-      }
-      return part;
-    });
-  };
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (line.startsWith('# ')) {
-      elements.push(
-        <h1
-          key={i}
-          className="text-[20px] font-bold mt-6 mb-2"
-          style={{ color: 'var(--text-1)', fontFamily: 'var(--font-syne)' }}
-        >
-          {renderInline(line.slice(2))}
-        </h1>,
-      );
-    } else if (line.startsWith('## ')) {
-      elements.push(
-        <h2
-          key={i}
-          className="text-[15px] font-bold mt-5 mb-1.5 pt-3 border-t"
-          style={{
-            color: 'var(--text-1)',
-            borderColor: 'var(--border)',
-            fontFamily: 'var(--font-syne)',
-          }}
-        >
-          {renderInline(line.slice(3))}
-        </h2>,
-      );
-    } else if (line.startsWith('### ')) {
-      elements.push(
-        <h3
-          key={i}
-          className="text-[13px] font-semibold mt-3 mb-1"
-          style={{ color: 'var(--text-1)' }}
-        >
-          {renderInline(line.slice(4))}
-        </h3>,
-      );
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      const items: React.ReactNode[] = [];
-      while (
-        i < lines.length &&
-        (lines[i].startsWith('- ') || lines[i].startsWith('* '))
-      ) {
-        items.push(
-          <li key={i} className="ml-4 list-disc">
-            {renderInline(lines[i].slice(2))}
-          </li>,
-        );
-        i++;
-      }
-      elements.push(
-        <ul key={`ul-${i}`} className="space-y-1 my-2 text-[13px]" style={{ color: 'var(--text-2)' }}>
-          {items}
-        </ul>,
-      );
-      continue;
-    } else if (/^\d+\.\s/.test(line)) {
-      const items: React.ReactNode[] = [];
-      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
-        items.push(
-          <li key={i} className="ml-4 list-decimal">
-            {renderInline(lines[i].replace(/^\d+\.\s/, ''))}
-          </li>,
-        );
-        i++;
-      }
-      elements.push(
-        <ol key={`ol-${i}`} className="space-y-1 my-2 text-[13px]" style={{ color: 'var(--text-2)' }}>
-          {items}
-        </ol>,
-      );
-      continue;
-    } else if (line.startsWith('> ')) {
-      elements.push(
-        <blockquote
-          key={i}
-          className="border-l-2 pl-3 py-1 my-2 text-[13px] italic"
-          style={{ borderColor: 'var(--blue)', color: 'var(--text-3)' }}
-        >
-          {renderInline(line.slice(2))}
-        </blockquote>,
-      );
-    } else if (line.trim() === '' || line.trim() === '---') {
-      if (line.trim() === '---') {
-        elements.push(
-          <hr key={i} className="my-4" style={{ borderColor: 'var(--border)' }} />,
-        );
-      } else {
-        elements.push(<div key={i} className="h-2" />);
-      }
-    } else if (line.trim()) {
-      elements.push(
-        <p key={i} className="text-[13px] leading-relaxed" style={{ color: 'var(--text-2)' }}>
-          {renderInline(line)}
-        </p>,
-      );
-    }
-    i++;
-  }
-  return <div className="space-y-1">{elements}</div>;
-}
 
 // ── Quiz viewer ────────────────────────────────────────────────────────────────
 
@@ -215,9 +82,9 @@ function QuizViewer({ data }: { data: QuizQuestion[] }) {
       if (isAnswered) return;
       setSelected(idx);
       setAnswered((prev) => ({ ...prev, [current]: idx }));
-      if (idx === q.answer_index) setScore((s) => s + 1);
+      if (q && idx === q.answer_index) setScore((s) => s + 1);
     },
-    [isAnswered, current, q?.answer_index],
+    [isAnswered, current, q],
   );
 
   const handleNext = () => {
@@ -969,7 +836,7 @@ export function ArtifactViewer({ artifact }: { artifact: Artifact }) {
 
   // Markdown prose (report, study-guide, summary)
   if (format === 'markdown' && content) {
-    return <MarkdownRenderer content={content} />;
+    return <Markdown content={content} />;
   }
 
   // Fallback: raw text

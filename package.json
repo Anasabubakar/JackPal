@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@animateicons/react": "^0.3.3",
     "@elevenlabs/elevenlabs-js": "^2.47.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",

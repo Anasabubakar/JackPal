@@ -1,32 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  /* ── Studio / dashboard palette (unchanged) ── */
-  --ink: #0C0A07;
-  --surface: #141210;
-  --surface-2: #1C1915;
-  --surface-3: #231F1B;
-  --border: #2C2520;
-  --border-dim: #1E1B17;
-  --text-1: #EDE8DE;
-  --text-2: #9A9080;
-  --text-3: #524840;
-  --blue: #2C7BE5;
-  --blue-dim: rgba(44, 123, 229, 0.14);
+  /* ── Studio / dashboard palette (Speechify Inspired) ── */
+  --ink: #000000;
+  --sidebar-bg: #0C0C0C;
+  --surface: #121212;
+  --surface-2: #1A1A1A;
+  --surface-3: #242424;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text-1: #FFFFFF;
+  --text-2: #A1A1A1;
+  --text-3: #666666;
+  --brand-blue: #3C58FF;
+  --brand-blue-hover: #2B46E5;
+  --blue-dim: rgba(60, 88, 255, 0.12);
   --teal: #2A9A78;
   --teal-dim: rgba(42, 154, 120, 0.12);
 
-  /* ── Liquid glass (web / studio) — one blur layer per surface; no blur on nested inset fills ── */
-  --glass-blur: 14px;
-  --glass-saturate: 1.28;
-  --glass-bg: rgba(22, 20, 17, 0.56);
-  --glass-bg-strong: rgba(20, 18, 15, 0.78);
-  --glass-bg-inset: rgba(28, 25, 21, 0.68);
-  --glass-border: rgba(255, 255, 255, 0.085);
-  --glass-border-bright: rgba(255, 255, 255, 0.14);
-  --glass-shadow: 0 16px 44px rgba(0, 0, 0, 0.34);
-  --glass-shadow-card: 0 22px 56px rgba(0, 0, 0, 0.38);
-  --glass-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  /* ── Glassmorphism ── */
+  --glass-blur: 24px;
+  --glass-bg: rgba(18, 18, 18, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   /* ── Landing page palette ── */
   --lp-dark:      #060C22;

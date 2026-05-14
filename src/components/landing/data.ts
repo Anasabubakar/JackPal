@@ -58,32 +58,32 @@ export const featureCards = [
   {
     icon: "🎙️",
     title: "Nigerian Voices",
-    description: "Four distinct AI voices with authentic Nigerian accents. Adaora, Zainab, Nonso, and Jude — familiar, warm, and built for extended listening.",
+    description: "Authentic AI voices with local accents. Ezinne, Abeo, Joseph, and Joy — familiar, warm, and built for extended listening sessions.",
+  },
+  {
+    icon: "📚",
+    title: "Study Workspaces",
+    description: "Organize sources into notebooks. Chat with your entire course corpus, save AI insights as notes, and generate specialized study layers.",
+  },
+  {
+    icon: "🔍",
+    title: "Deep Research",
+    description: "Automate your bibliography. Our AI research engine crawls the web, curates relevant sources, and imports them directly into your notebook.",
+  },
+  {
+    icon: "🛠️",
+    title: "Artifact Factory",
+    description: "Instantly generate quizzes, flashcards, mind maps, and slide decks from your study material. Dynamic revision tools built for retention.",
   },
   {
     icon: "📄",
-    title: "Upload Anything",
-    description: "PDFs, Word docs, links, plain text, lecture slides. Paste it or upload it and Jackpals converts it to audio. No formatting required.",
+    title: "Multi-Source Ingest",
+    description: "Import from YouTube, Google Drive, PDFs, or web links. Jackpals extracts the core text so you can focus on the learning.",
   },
   {
     icon: "📶",
-    title: "Offline Access",
-    description: "Downloads are optimised for low storage and slow connections. Once it's on your device, listen anywhere — no data needed.",
-  },
-  {
-    icon: "🎓",
-    title: "Private Seminar",
-    description: "Studying a hard topic? Switch to Private Seminar mode. Jackpals reads, pauses, and explains concepts the way a patient tutor would.",
-  },
-  {
-    icon: "📷",
-    title: "Vision Scan",
-    description: "Point your camera at a handwritten note, textbook page, or whiteboard. Jackpals reads it out loud in under 3 seconds.",
-  },
-  {
-    icon: "⚡",
-    title: "Study Faster",
-    description: "Speed controls, bookmarks, and chapter skipping let you move through material at 2x speed once you've found your rhythm.",
+    title: "Offline Mastery",
+    description: "Download audio briefs and artifacts to your device. Study anywhere in Nigeria — from the Danfo to the village — no data required.",
   },
 ];
 
