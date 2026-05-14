@@ -44,6 +44,8 @@ export type User = {
   id: string;
   email: string;
   full_name: string;
+  /** Avatar URL when the backend provides one */
+  profile_url?: string | null;
 };
 
 export type Document = {

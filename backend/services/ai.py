@@ -551,10 +551,14 @@ async def summarize_document(text: str) -> str:
                 return result
         except Exception as e:
             print(f"[AI] Summary Gemini fallback failed: {type(e).__name__}: {e}")
-    result = await _ollama_generate(prompt, timeout=120)
-    if result:
-        set_json(cache_k, result, TTL_SUMMARY_HASH)
-    return result
+    try:
+        result = await _ollama_generate(prompt, timeout=120)
+        if result:
+            set_json(cache_k, result, TTL_SUMMARY_HASH)
+            return result
+    except Exception as e:
+        print(f"[AI] Summary Ollama failed ({type(e).__name__}): Ollama not running locally.")
+    return ""
 
 
 # ── Nigerian podcast prompt ───────────────────────────────────────────────────
@@ -924,7 +928,10 @@ async def _extract_facts_ollama(text: str) -> list[str]:
         f"Text:\n{truncated}\n\n"
         "1."
     )
-    raw = await _ollama_generate(prompt, timeout=90)
+    try:
+        raw = await _ollama_generate(prompt, timeout=90)
+    except Exception:
+        raw = ""
     facts = []
     for line in ("1." + raw).splitlines():
         line = line.strip()

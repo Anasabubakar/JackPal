@@ -143,9 +143,9 @@ import { synthesizeSpeech } from '@/lib/elevenlabs';
 export async function generateTTS(text: string, voiceId?: string) {
   try {
     const base64Audio = await synthesizeSpeech(text, voiceId);
-    return { success: true, audio: base64Audio };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: true as const, audio: base64Audio };
+  } catch (error: unknown) {
+    return { success: false as const, error: error instanceof Error ? error.message : 'TTS failed' };
   }
 }
 

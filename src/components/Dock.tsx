@@ -1,109 +1,119 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Home, Library, FolderOpen, User, Plus, FileText } from 'lucide-react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
-
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  href: string;
-}
-
-const dashboardNavItems: NavItem[] = [
-  { id: 'dashboard', label: 'Home', icon: Home, href: '/dashboard' },
-  { id: 'library', label: 'Library', icon: Library, href: '/library' },
-  { id: 'files', label: 'Files', icon: FolderOpen, href: '/files' },
-  { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
-];
 
 interface DockProps {
   onCenterAction?: () => void;
+  onNavigate?: (id: string) => void;
+  activeItem?: string;
 }
 
-export function Dock({ onCenterAction }: DockProps) {
-  const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState('');
-  const [mounted, setMounted] = useState(false);
+export function Dock({ onCenterAction, onNavigate, activeItem = 'inbox' }: DockProps) {
+  const [active, setActive] = useState(activeItem);
+  const [fabOpen, setFabOpen] = useState(false);
 
-  const navItems = dashboardNavItems;
-
-  useEffect(() => {
-    setMounted(true);
-    const handleActiveTab = () => {
-      const current = navItems.find(item => {
-        if (item.href.startsWith('#')) {
-          return typeof window !== 'undefined' && window.location.hash === item.href;
-        }
-        return pathname === item.href;
-      });
-      if (current) {
-        setActiveTab(current.id);
-      }
-    };
-
-    handleActiveTab();
-    window.addEventListener('hashchange', handleActiveTab);
-    return () => window.removeEventListener('hashchange', handleActiveTab);
-  }, [pathname, navItems]);
-
-  if (!mounted) return null;
+  const items = [
+    { id: 'inbox', label: 'Inbox', icon: (
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect x="3" y="5.5" width="20" height="15" rx="3" stroke="currentColor"/>
+        <path d="M3 10.5l10 6.5 10-6.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )},
+    { id: 'cal', label: 'Calendar', icon: (
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect x="3" y="5" width="20" height="18" rx="3" stroke="currentColor"/>
+        <path d="M3 11h20" stroke="currentColor" strokeLinecap="round"/>
+        <path d="M9 3v4M17 3v4" stroke="currentColor" strokeLinecap="round"/>
+        <rect x="8" y="14" width="3.5" height="3.5" rx="1" stroke="currentColor" strokeWidth="1.6"/>
+      </svg>
+    )},
+    { id: 'saved', label: 'Saved', icon: (
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h11A2.5 2.5 0 0 1 21 5.5v17l-8-4.5-8 4.5V5.5z" stroke="currentColor" strokeLinejoin="round"/>
+        <path d="M10 10.5h6" stroke="currentColor" strokeLinecap="round"/>
+      </svg>
+    )},
+    { id: 'notes', label: 'Notes', icon: (
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect x="4" y="3" width="18" height="20" rx="3" stroke="currentColor"/>
+        <path d="M4 17h13" stroke="currentColor" strokeLinecap="round"/>
+        <path d="M17 17v6" stroke="currentColor" strokeLinecap="round"/>
+        <path d="M8.5 8.5h9M8.5 12.5h6" stroke="currentColor" strokeLinecap="round"/>
+      </svg>
+    )},
+  ];
 
   return (
-    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] flex items-center justify-center w-full px-6">
-      <div className="flex items-center gap-4">
-        {/* Glassmorphic Pill Navigation */}
-        <div 
-          className="flex items-center gap-1 p-1.5 rounded-full bg-white/72 backdrop-blur-[24px] border border-white/90 shadow-[0_12px_40px_rgba(160,160,180,0.22),0_2px_8px_rgba(160,160,180,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
-        >
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.id}
-                href={item.href}
-                className={cn(
-                  "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.2,0.64,1)] outline-none cursor-pointer overflow-hidden rounded-full",
-                  isActive
-                    ? "bg-[#2585C7]/85 px-5 py-3 shadow-[0_2px_12px_rgba(37,133,199,0.13),inset_0_1px_0_rgba(255,255,255,0.8)] text-white min-w-[120px]"
-                    : "px-3.5 py-3 text-[#02013D]/40 hover:text-[#2585C7] min-w-[48px]"
-                )}
-              >
-                <Icon className={cn("h-[22px] w-[22px] flex-shrink-0", isActive ? "stroke-[2.2px]" : "stroke-[1.8px]")} />
-                <span 
-                  className={cn(
-                    "text-[15px] font-semibold tracking-tight whitespace-nowrap transition-all duration-300",
-                    isActive ? "opacity-100 ml-2.5 w-auto" : "opacity-0 w-0 h-0"
-                  )}
-                >
-                  {item.label}
-                </span>
-              </a>
-            );
-          })}
-        </div>
-
-        {/* Floating Action Button (Plus) */}
+    <nav 
+      className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] flex items-center bg-[rgba(255,255,255,0.82)] border-[1.5px] border-[rgba(255,255,255,0.95)] rounded-[999px] px-[18px] py-[10px] shadow-[0_12px_48px_rgba(0,0,0,0.10),0_2px_0_rgba(255,255,255,0.9)_inset] backdrop-blur-[20px]"
+    >
+      {items.slice(0, 2).map(item => (
         <button
-          onClick={() => {
-            if (onCenterAction) {
-              onCenterAction();
-            }
-          }}
-          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#2585C7] to-[#61E3F0] shadow-[0_8px_28px_rgba(37,133,199,0.48),0_2px_8px_rgba(37,133,199,0.28),inset_0_1px_0_rgba(255,255,255,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
-          aria-label="Upload Content"
+          key={item.id}
+          onClick={() => { setActive(item.id); onNavigate?.(item.id); }}
+          className={cn(
+            "flex-1 flex flex-col items-center gap-[5px] p-[6px_0] rounded-[999px] cursor-pointer transition-[background,transform] duration-180 ease-out relative select-none",
+            active === item.id ? "active" : ""
+          )}
         >
-          <Plus className="h-7 w-7 text-white stroke-[2.4px]" />
-          
-          {/* Label Tooltip */}
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#02013D] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
-            Upload
+          <div className="w-[30px] h-[30px] flex items-center justify-center transition-transform duration-220 ease-[cubic-bezier(.34,1.56,.64,1)]">
+            <div className={cn(
+              "transition-[stroke,stroke-width] duration-200",
+              active === item.id ? "stroke-[#0f0f0f] stroke-[2.3]" : "stroke-[#b0b0b8] stroke-[1.8]"
+            )}>
+              {item.icon}
+            </div>
           </div>
+          <span className={cn(
+            "text-[11px] tracking-[0.01em] transition-[color,font-weight] duration-[.2s,.15s] font-['DM_Sans',sans-serif]",
+            active === item.id ? "text-[#0f0f0f] font-[800]" : "text-[#b0b0b8] font-[500]"
+          )}>{item.label}</span>
+          {active === item.id && <div className="absolute bottom-0 w-[4px] h-[4px] rounded-full bg-[#0f0f0f]" />}
+        </button>
+      ))}
+
+      <div className="flex-shrink-0 w-[58px] h-[58px] flex items-center justify-center -my-[12px] mx-[6px] relative z-[3]">
+        <button 
+          onClick={() => { setFabOpen(!fabOpen); onCenterAction?.(); }}
+          className={cn(
+            "w-[54px] h-[54px] rounded-full flex items-center justify-center cursor-pointer relative overflow-hidden transition-[transform,box-shadow] duration-250 ease-[cubic-bezier(.34,1.56,.64,1)]",
+            "bg-[radial-gradient(circle_at_35%_30%,#8b9fff_0%,#5e72eb_45%,#4451d6_100%)]",
+            "shadow-[0_6px_28px_rgba(78,90,220,0.55),0_1px_0_rgba(255,255,255,0.28)_inset]",
+            fabOpen ? "open" : ""
+          )}
+        >
+          <div className="absolute -top-[40%] -left-[40%] w-[80%] h-[70%] bg-[rgba(255,255,255,0.18)] rounded-full rotate-[-30deg]" />
+          <svg className={cn("transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)]", fabOpen ? "rotate-[135deg]" : "")} width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <path d="M11 4v14M4 11h14" stroke="white" strokeWidth="2.8" strokeLinecap="round"/>
+          </svg>
         </button>
       </div>
-    </div>
+
+      {items.slice(2).map(item => (
+        <button
+          key={item.id}
+          onClick={() => { setActive(item.id); onNavigate?.(item.id); }}
+          className={cn(
+            "flex-1 flex flex-col items-center gap-[5px] p-[6px_0] rounded-[999px] cursor-pointer transition-[background,transform] duration-180 ease-out relative select-none",
+            active === item.id ? "active" : ""
+          )}
+        >
+          <div className="w-[30px] h-[30px] flex items-center justify-center transition-transform duration-220 ease-[cubic-bezier(.34,1.56,.64,1)]">
+            <div className={cn(
+              "transition-[stroke,stroke-width] duration-200",
+              active === item.id ? "stroke-[#0f0f0f] stroke-[2.3]" : "stroke-[#b0b0b8] stroke-[1.8]"
+            )}>
+              {item.icon}
+            </div>
+          </div>
+          <span className={cn(
+            "text-[11px] tracking-[0.01em] transition-[color,font-weight] duration-[.2s,.15s] font-['DM_Sans',sans-serif]",
+            active === item.id ? "text-[#0f0f0f] font-[800]" : "text-[#b0b0b8] font-[500]"
+          )}>{item.label}</span>
+          {active === item.id && <div className="absolute bottom-0 w-[4px] h-[4px] rounded-full bg-[#0f0f0f]" />}
+        </button>
+      ))}
+    </nav>
   );
 }

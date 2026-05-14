@@ -69,24 +69,18 @@ _BUDGET_VIDEO = 1800
 
 
 async def make_report(corpus: str, prompt: str | None) -> tuple[str, str, str]:
-    """A polished, multi-section study report.
-
-    Uses the existing ``summarize_document`` for the long-form pass (which
-    already knows how to map-reduce on large corpora) and wraps it with a
-    structured outline so the user gets headings + bullets + a TL;DR rather
-    than a wall of text.
-    """
+    """A polished, multi-section study report."""
     title = _title(prompt, fallback="Research Report")
     base = await summarize_document(corpus[:14000])
     sectioner = (
-        f"You are an editor turning a study summary into a structured report.\n\n"
+        f"You are an expert academic editor turning a study summary into a professional structured report.\n\n"
         f"Title: {title}\n"
         f"User angle (optional): {prompt or '(none — be neutral)'}\n\n"
         f"Source summary:\n{base[:6000]}\n\n"
-        "Rewrite as a Markdown report with: an H1 title; a 2-sentence TL;DR; "
-        "3-5 H2 sections, each with 3-6 bullet points; a 'Key Takeaways' "
-        "section at the end with 3-5 bullets; and a 'Open Questions' section "
-        "with 2-3 bullets. No filler, no preamble, no apologies."
+        "Rewrite as a Markdown report with: an H1 title; a clear 2-sentence TL;DR; "
+        "3-5 H2 sections, each with 3-6 bullet points highlighting deep insights; "
+        "a 'Key Takeaways' section with actionable points; and an 'Open Questions' "
+        "section for further study. Use professional Standard English. No filler."
     )
     try:
         body = await _llm_complete(sectioner, max_tokens=_BUDGET_REPORT)
@@ -100,12 +94,13 @@ async def make_study_guide(corpus: str, prompt: str | None) -> tuple[str, str, s
     """A study guide tuned for revision — concept list, Q&A, glossary."""
     title = _title(prompt, fallback="Study Guide")
     instr = (
-        "Build a Markdown study guide for the material below. Output four "
+        "Build a comprehensive Markdown study guide for the material below. Output four "
         "sections with these exact H2 headings: '## Key Concepts' (5-8 bullets, "
         "each a concept + one-line definition), '## Practice Questions' (4-6 "
-        "open-ended questions), '## Worked Answers' (mirroring the questions, "
-        "concise), '## Glossary' (6-10 terms as bold-term: definition).\n\n"
-        f"Topic / angle: {prompt or '(use the dominant theme of the material)'}\n\n"
+        "challenging exam-style questions), '## Worked Answers' (concise, step-by-step), "
+        "'## Glossary' (6-10 terms as bold-term: definition). "
+        "Include one helpful analogy per section to aid memory (e.g. comparing a network to a market).\n\n"
+        f"Topic / angle: {prompt or '(use the dominant theme)'}\n\n"
         f"Material:\n{corpus[:12000]}"
     )
     body = await _llm_complete(instr, max_tokens=_BUDGET_REPORT)
