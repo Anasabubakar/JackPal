@@ -3,7 +3,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePathname, useRouter } from 'next/navigation';
 import {
   CloudUploadIcon,
   MicIcon,
@@ -19,49 +18,45 @@ interface DockProps {
 
 export function Dock({ onCenterAction, onNavigate, activeItem }: DockProps) {
   const navItems = [
-    { id: 'imported', label: 'Imported', icon: CloudUploadIcon },
-    { id: 'podcasts', label: 'Podcasts', icon: MicIcon },
-    { id: 'studio', label: 'Studio', icon: SparklesIcon },
-    { id: 'workspaces', label: 'Workspaces', icon: LayoutGridIcon },
+    { id: 'imported', label: 'Home', icon: CloudUploadIcon },
+    { id: 'podcasts', label: 'Library', icon: MicIcon },
+    { id: 'studio', label: 'Files', icon: SparklesIcon },
+    { id: 'workspaces', label: 'User', icon: LayoutGridIcon },
   ];
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] flex items-center justify-center w-full px-6 pointer-events-none">
-      <div className="flex items-center gap-4 pointer-events-auto">
-        <div className="flex items-center gap-1 p-2 rounded-full bg-[rgba(255,255,255,0.08)] backdrop-blur-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-          {navItems.map((item) => {
-            const isActive = activeItem === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate?.(item.id)}
-                className={cn(
-                  "flex items-center justify-center p-3 rounded-full transition-all duration-300",
-                  isActive
-                    ? "bg-[var(--brand-blue)] text-white shadow-lg"
-                    : "text-[var(--text-3)] hover:text-[var(--text-1)]"
-                )}
-              >
-                <Icon size={24} isAnimated={isActive} />
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Floating Action Button (Plus) */}
-        <button
-          onClick={() => onCenterAction?.()}
-          className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#2585C7] to-[#61E3F0] shadow-[0_8px_28px_rgba(37,133,199,0.48),0_2px_8px_rgba(37,133,199,0.28),inset_0_1px_0_rgba(255,255,255,0.4)] transition-transform duration-150 hover:scale-[1.06] active:scale-[0.95] group relative"
-          aria-label="Upload Content"
-        >
-          <Plus className="h-7 w-7 text-white stroke-[2.4px]" />
-          
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#02013D] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none whitespace-nowrap">
-            Upload
-          </div>
-        </button>
+    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-4 pointer-events-none">
+      <div 
+        className="flex items-center gap-6 p-2 pr-8 rounded-full bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 pointer-events-auto"
+      >
+        {navItems.map((item) => {
+          const isActive = activeItem === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onNavigate?.(item.id)}
+              className={cn(
+                "flex items-center gap-3 transition-all duration-300 rounded-full px-5 py-3",
+                isActive
+                  ? "bg-[#2585C7] text-white shadow-lg"
+                  : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <Icon size={22} isAnimated={isActive} />
+              {isActive && <span className="text-[14px] font-semibold">{item.label}</span>}
+            </button>
+          );
+        })}
       </div>
+
+      <button
+        onClick={() => onCenterAction?.()}
+        className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br from-[#2585C7] to-[#61E3F0] text-white shadow-lg shadow-blue-500/30 transition-transform hover:scale-105 active:scale-95 pointer-events-auto"
+        aria-label="Add"
+      >
+        <Plus size={28} />
+      </button>
     </div>
   );
 }
