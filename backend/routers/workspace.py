@@ -194,8 +194,7 @@ class TurnSaveAsNote(BaseModel):
 
 
 def _require_local() -> None:
-    if not USE_LOCAL:
-        raise HTTPException(status_code=501, detail="Workspace features are currently available in local mode only.")
+    pass  # Workspace features work in both local and Supabase-connected mode
 
 
 def _notebook_or_404(notebook_id: str, user_id: str, required: str = "viewer") -> dict:
