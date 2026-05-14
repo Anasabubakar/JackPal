@@ -22,7 +22,7 @@ import concurrent.futures
 # ── API keys ──────────────────────────────────────────────────────────────────
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
-ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_turbo_v2_5")
 ELEVENLABS_OUTPUT_FORMAT = os.environ.get("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128")
 ELEVENLABS_API_URL = os.environ.get("ELEVENLABS_API_URL", "https://api.elevenlabs.io/v1")
 YARNGPT_API_KEY    = os.environ.get("YARNGPT_API_KEY", "")
@@ -310,18 +310,19 @@ async def stream_elevenlabs(text: str, voice: str = DEFAULT_VOICE):
 
 def _elevenlabs_payload(text: str, voice: str) -> dict:
     cfg = VOICE_MAP.get(voice, {})
-    # Accent is determined by the ElevenLabs voice ID. These settings keep the
-    # selected Nigerian-English voice stable instead of drifting toward generic US English.
+    # Higher stability (0.75) + similarity_boost (0.95) keeps the Nigerian English
+    # accent from drifting toward generic US English across long synthesises.
+    # eleven_turbo_v2_5 supports language_code="en" for English accent anchoring.
     return {
         "text": text,
         "model_id": ELEVENLABS_MODEL_ID,
         "language_code": "en",
         "voice_settings": {
-            "stability": 0.65,
-            "similarity_boost": 0.9,
-            "style": 0.15,
+            "stability": 0.75,
+            "similarity_boost": 0.95,
+            "style": 0.20,
             "use_speaker_boost": True,
-            "speed": 1.0 if cfg.get("gender") == "female" else 0.98,
+            "speed": 1.0 if cfg.get("gender") == "female" else 0.97,
         },
     }
 

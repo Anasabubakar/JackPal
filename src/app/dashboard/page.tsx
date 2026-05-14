@@ -59,6 +59,7 @@ import { FadeUp, SlideIn, SpringScale } from "@/components/ui/MotionPrimitives";
 import { NotebookCollaborationPanel } from "@/components/workspace/NotebookCollaborationPanel";
 import { WorkspaceNotebookSearch } from "@/components/workspace/WorkspaceNotebookSearch";
 import { VoiceClonePanel } from "@/components/workspace/VoiceClonePanel";
+import { ArtifactViewer } from "@/components/workspace/ArtifactViewer";
 import {
   getUser,
   logout,
@@ -2621,10 +2622,20 @@ function DashboardPage() {
                       )}
                     </div>
                     {(activeWorkspaceSourceText || activeWorkspaceSourceGuide) && (
-                      <div className="space-y-3">
-                        <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Source details</div>
-                        {activeWorkspaceSourceGuide && <pre className="text-[11px] whitespace-pre-wrap rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{activeWorkspaceSourceGuide}</pre>}
-                        {activeWorkspaceSourceText && <pre className="text-[11px] whitespace-pre-wrap rounded-xl p-3 max-h-48 overflow-y-auto studio-scroll" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{activeWorkspaceSourceText}</pre>}
+                      <div className="space-y-3 rounded-2xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                        <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Source preview</div>
+                        {activeWorkspaceSourceGuide && (
+                          <div className="rounded-xl p-3" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--blue)" }}>AI Guide</div>
+                            <p className="text-[11px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-2)" }}>{activeWorkspaceSourceGuide}</p>
+                          </div>
+                        )}
+                        {activeWorkspaceSourceText && (
+                          <div className="rounded-xl p-3 max-h-56 overflow-y-auto studio-scroll" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--teal)" }}>Full text</div>
+                            <p className="text-[11px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-2)" }}>{activeWorkspaceSourceText}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </section>
@@ -2868,19 +2879,41 @@ function DashboardPage() {
                             Ask
                           </button>
                         </div>
-                        {workspaceAnswer && <pre className="mt-2 text-[11px] whitespace-pre-wrap rounded-xl p-3" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>{workspaceAnswer}</pre>}
+                        {workspaceAnswer && (
+                          <div
+                            className="mt-2 rounded-xl p-4 text-[12px] leading-relaxed space-y-1"
+                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-2)", whiteSpace: "pre-wrap" }}
+                          >
+                            {workspaceAnswer}
+                          </div>
+                        )}
                         {lastWorkspaceCitations.length > 0 && (
-                          <div className="mt-3 rounded-xl p-3 space-y-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                          <div className="mt-2 rounded-xl p-3 space-y-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                             <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>Citations</div>
                             <ul className="space-y-2 list-none">
                               {lastWorkspaceCitations.map((c) => (
-                                <li key={`${c.index}-${c.source_id}`} className="text-[11px]" style={{ color: "var(--text-2)" }}>
-                                  <span className="font-mono text-[10px]" style={{ color: "var(--blue)" }}>[{c.index}]</span> {c.title}
-                                  {c.url ? (
-                                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="ml-1 text-[10px] underline" style={{ color: "var(--teal)" }}>
-                                      Source
-                                    </a>
-                                  ) : null}
+                                <li key={`${c.index}-${c.source_id}`} className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                  <div className="flex items-start gap-2">
+                                    <span
+                                      className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold"
+                                      style={{ background: "var(--blue-dim)", color: "var(--blue)" }}
+                                    >
+                                      [{c.index}]
+                                    </span>
+                                    <div className="min-w-0">
+                                      <div className="text-[11px] font-medium truncate" style={{ color: "var(--text-1)" }}>{c.title}</div>
+                                      {c.excerpt && (
+                                        <div className="text-[10px] mt-0.5 italic line-clamp-2" style={{ color: "var(--text-3)" }}>
+                                          &ldquo;{c.excerpt.slice(0, 200)}{c.excerpt.length > 200 ? "…" : ""}&rdquo;
+                                        </div>
+                                      )}
+                                      {c.url ? (
+                                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] underline mt-0.5 inline-block" style={{ color: "var(--teal)" }}>
+                                          Open source ↗
+                                        </a>
+                                      ) : null}
+                                    </div>
+                                  </div>
                                 </li>
                               ))}
                             </ul>
@@ -2959,7 +2992,21 @@ function DashboardPage() {
                                   </button>
                                 </div>
                               </div>
-                              <p className="mt-2 text-[11px] line-clamp-2 whitespace-pre-wrap" style={{ color: "var(--text-3)" }}>{artifact.content}</p>
+                              <p className="mt-2 text-[11px] line-clamp-2" style={{ color: "var(--text-3)" }}>
+                                {artifact.format === "json"
+                                  ? (() => {
+                                      try {
+                                        const d = JSON.parse(artifact.content ?? "");
+                                        if (Array.isArray(d)) return `${d.length} items`;
+                                        if (d?.slides) return `${d.slides.length} slides`;
+                                        if (d?.scenes) return `${d.scenes.length} scenes`;
+                                        if (d?.sections) return `${d.sections.length} sections`;
+                                        if (d?.children) return d.title ?? "Mind map";
+                                        return "Ready to view";
+                                      } catch { return "Ready to view"; }
+                                    })()
+                                  : (artifact.content ?? "").slice(0, 120).replace(/^#+\s+/m, "")}
+                              </p>
                             </div>
                           ))
                           )}
@@ -3012,9 +3059,9 @@ function DashboardPage() {
                           <X size={18} />
                         </button>
                       </div>
-                      <pre className="flex-1 overflow-y-auto studio-scroll p-4 text-[12px] whitespace-pre-wrap leading-relaxed min-h-0" style={{ color: "var(--text-2)" }}>
-                        {art?.content ?? ""}
-                      </pre>
+                      <div className="flex-1 overflow-y-auto studio-scroll p-4 min-h-0">
+                        {art ? <ArtifactViewer artifact={art} /> : null}
+                      </div>
                       <div className="flex flex-wrap gap-2 p-3 border-t shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
                         <button
                           type="button"

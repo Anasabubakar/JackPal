@@ -4,12 +4,31 @@ const client = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
-export async function synthesizeSpeech(text: string, voiceId: string = 'JBFqnCBsd6RMkjVDRZzb') {
+// Nigerian English default voice ID — resolved from env, falls back to female then male
+const DEFAULT_NIGERIAN_VOICE_ID =
+  process.env.ELEVENLABS_VOICE_CHINENYE_ID ||
+  process.env.ELEVENLABS_NIGERIAN_FEMALE_VOICE_ID ||
+  process.env.ELEVENLABS_VOICE_JUDE_ID ||
+  process.env.ELEVENLABS_NIGERIAN_MALE_VOICE_ID ||
+  '';
+
+export async function synthesizeSpeech(text: string, voiceId?: string) {
+  const resolvedVoiceId = voiceId || DEFAULT_NIGERIAN_VOICE_ID;
+  if (!resolvedVoiceId) {
+    throw new Error('No ElevenLabs Nigerian English voice ID configured. Set ELEVENLABS_VOICE_CHINENYE_ID in your environment.');
+  }
   try {
-    const audio = await client.textToSpeech.convert(voiceId, {
+    const audio = await client.textToSpeech.convert(resolvedVoiceId, {
       text,
-      modelId: 'eleven_multilingual_v2',
+      // eleven_turbo_v2_5: faster, cheaper, maintains Nigerian English accent stability
+      modelId: 'eleven_turbo_v2_5',
       outputFormat: 'mp3_44100_128',
+      voiceSettings: {
+        stability: 0.75,
+        similarityBoost: 0.95,
+        style: 0.20,
+        useSpeakerBoost: true,
+      },
     });
 
     // In a server environment, we return the stream or buffer.
