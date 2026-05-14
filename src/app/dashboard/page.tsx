@@ -3920,8 +3920,10 @@ function DashboardPage() {
         </div>
       </Modal>
 
-      <Dock 
-        onCenterAction={() => setIsAddModalOpen(true)} 
+      <Dock
+        onCenterAction={() => setIsAddModalOpen(true)}
+        onCenterClose={() => setIsAddModalOpen(false)}
+        fabIsOpen={isAddModalOpen}
         onNavigate={(id) => {
           setActiveSidebarItem(id as any);
           setActiveTab(id === "workspaces" ? "workspace" : "home");
