@@ -1893,45 +1893,34 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto studio-scroll">
+        {/* Dashboard Grid Content */}
+        <div className="flex-1 overflow-y-auto studio-scroll p-6">
           {docsLoading ? (
-            <div className="px-4 pt-4 space-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {[0, 1, 2, 3].map(i => (
-                <div key={i} className="flex items-center gap-3 px-3 py-3 rounded-xl animate-pulse">
-                  <div className="w-9 h-9 rounded-lg flex-shrink-0" style={{ background: "var(--surface-2)" }} />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 rounded-lg w-44" style={{ background: "var(--surface-2)" }} />
-                    <div className="h-2 rounded-lg w-20" style={{ background: "var(--surface-2)" }} />
+                <div key={i} className="aspect-[4/3] rounded-2xl bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-white/40">
+              <p>No documents found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredDocuments.map(doc => (
+                <div key={doc.id} className="p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group" onClick={() => handleGenerateAudio(doc)}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                      <FileText size={20} />
+                    </div>
                   </div>
-                  <div className="h-7 w-16 rounded-lg" style={{ background: "var(--surface-2)" }} />
-                  <div className="h-7 w-20 rounded-lg" style={{ background: "var(--surface-2)" }} />
+                  <h3 className="text-white font-medium truncate group-hover:text-blue-300 transition-colors">{doc.filename}</h3>
+                  <p className="text-xs text-white/40 mt-1">{doc.status}</p>
                 </div>
               ))}
             </div>
-          ) : isEmpty ? (
-            /* â”€â”€ Empty state â”€â”€ */
-            <div className="flex flex-col items-center justify-center h-full px-6" style={{ gap: "28px" }}>
-              {/* Upload zone */}
-              <label
-                className="w-full cursor-pointer transition-all"
-                style={{ maxWidth: 400 }}
-                onDragOver={e => {
-                  e.preventDefault();
-                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "border-color:var(--blue);background:var(--blue-dim)");
-                }}
-                onDragLeave={e => {
-                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
-                }}
-                onDrop={async e => {
-                  e.preventDefault();
-                  (e.currentTarget.querySelector(".upload-zone") as HTMLElement | null)?.setAttribute("style", "");
-                  const file = e.dataTransfer.files?.[0];
-                  if (!file) return;
-                  setUploading(true);
-                  setUploadError("");
-                  try {
-                    await uploadDocument(file);
+          )}
+        </div>
                     await fetchDocuments();
                   } catch (err: unknown) {
                     setUploadError(err instanceof Error ? err.message : "Upload failed.");
