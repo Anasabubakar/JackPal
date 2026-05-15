@@ -147,6 +147,7 @@ import {
 import { VoiceClonePanel } from "@/components/workspace/VoiceClonePanel";
 import { ArtifactViewer } from "@/components/workspace/ArtifactViewer";
 import { Dock } from "@/components/Dock";
+import { LeftSidebar } from "@/components/dashboard/LeftSidebar";
 
 // ... existing imports ...
 
@@ -1861,90 +1862,24 @@ function DashboardPage() {
         transition={{ duration: dur.smooth, ease: ease.out }}
         className="flex-1 flex flex-col overflow-hidden"
       >
-        {/* Top bar */}
-        <div
-          className="studio studio-glass-chrome flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0 border-b"
-          style={{ borderColor: "var(--glass-border)" }}
-        >
-          <div className="min-w-0 flex-1">
-            <div
-              className="text-[9px] font-bold uppercase tracking-[0.25em]"
-              style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}
-            >
-              Good day
-            </div>
-            <div
-              className="leading-none mt-0.5 truncate"
-              style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}
-            >
-              {firstName}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto sm:justify-end flex-wrap">
+        {/* Redesigned Compact Header */}
+        <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/20 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white tracking-tight">My Dashboard</h1>
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search library..."
-              className="rounded-lg px-3 py-2 text-[11px] outline-none flex-1 min-w-0 sm:w-36 sm:flex-none transition-all"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
-              onFocus={e => (e.currentTarget.style.borderColor = "var(--blue)")}
-              onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+              className="px-4 py-2 text-sm rounded-full bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 transition-all w-64"
             />
-            <div
-              className="inline-flex rounded-xl p-0.5 gap-0.5 flex-shrink-0"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid var(--glass-border)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-              }}
-              role="group"
-              aria-label="Listen audio engine"
-            >
-              {(["fast", "premium"] as const).map((eng) => {
-                const disabled = eng === "premium" && !ttsCaps?.premium_available;
-                const active = listenEngine === eng;
-                return (
-                  <button
-                    key={eng}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setListenEngine(eng)}
-                    className="px-2.5 py-1.5 rounded-[10px] text-[9px] font-bold uppercase tracking-widest transition-all min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{
-                      background: active ? "rgba(44, 123, 229, 0.35)" : "transparent",
-                      color: active ? "var(--text-1)" : "var(--text-3)",
-                      border: active ? "1px solid rgba(44,123,229,0.45)" : "1px solid transparent",
-                      boxShadow: active ? "0 0 20px rgba(44,123,229,0.15)" : undefined,
-                    }}
-                    title={eng === "premium" && !ttsCaps?.premium_available ? "Premium TTS not configured" : undefined}
-                  >
-                    {eng === "fast" ? "Fast" : "Premium"}
-                  </button>
-                );
-              })}
-            </div>
-            <label
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer transition-all"
-              style={{ background: "var(--blue)", color: "white" }}
-            >
-              {uploading
-                ? <Loader2 size={12} className="animate-spin" />
-                : <Plus size={12} strokeWidth={2} />}
-              <span className="text-[10px] font-bold uppercase tracking-widest">
-                {uploading ? "Uploading" : "Upload"}
-              </span>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx,.txt"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-              />
-            </label>
           </div>
-        </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-full bg-blue-600 hover:bg-blue-700 transition-colors">
+              <Plus size={16} />
+              Upload
+            </button>
+          </div>
+        </header>
 
         {uploadError && (
           <div
@@ -2203,6 +2138,7 @@ function DashboardPage() {
     const wsOwner = selectedWorkspace ? (selectedWorkspace.is_owner ?? (wsRole === "owner")) : false;
     const canEditNotebook = wsRole === "owner" || wsRole === "editor";
 
+    // kept for TS compat — unused after refactor
     const TabNav = () => (
       <nav
         className="sticky top-0 z-30 flex flex-wrap items-center gap-1 p-1.5 rounded-2xl mb-4"
@@ -2251,857 +2187,457 @@ function DashboardPage() {
         transition={{ duration: dur.smooth, ease: ease.out }}
         className="flex-1 flex flex-col overflow-hidden"
       >
-        {/* Workspace Toolbar */}
-        <div className="studio studio-glass-chrome flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 flex-shrink-0 border-b" style={{ borderColor: "var(--glass-border)" }}>
-          <div className="flex flex-wrap items-center gap-4 min-w-0">
-            <div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text-3)", fontFamily: "var(--font-syne)" }}>
-                Study Environment
-              </div>
-              <div className="leading-none mt-0.5 truncate flex items-center gap-3" style={{ color: "var(--text-1)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, fontStyle: "italic" }}>
-                Active Session
-                {selectedWorkspace && (
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md shrink-0"
-                    style={{
-                      background: wsOwner ? "var(--blue-dim)" : "var(--surface-2)",
-                      color: wsOwner ? "var(--blue)" : "var(--teal)",
-                      border: "1px solid var(--border)",
-                      fontStyle: "normal",
-                      fontFamily: "var(--font-syne)",
-                    }}
-                  >
-                    {wsRole}
-                  </span>
-                )}
-              </div>
-            </div>
-            {selectedWorkspaceId && (
-              <div className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-4">
-                <button
-                  type="button"
-                  onClick={() => void handleDownloadWorkspaceBundle()}
-                  disabled={workspaceExporting || workspaceArtifactsExporting}
-                  className="p-2 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-40"
-                  style={{ color: "var(--text-2)" }}
-                  title="Export Notebook (.zip)"
-                >
-                  {workspaceExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDownloadWorkspaceArtifactsBundle()}
-                  disabled={workspaceExporting || workspaceArtifactsExporting}
-                  className="p-2 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-40"
-                  style={{ color: "var(--text-2)" }}
-                  title="Export Artifacts only"
-                >
-                  {workspaceArtifactsExporting ? <Loader2 size={16} className="animate-spin" /> : <Layers size={16} />}
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <div className="relative group">
-              <input
-                value={workspaceTitle}
-                onChange={(e) => setWorkspaceTitle(e.target.value)}
-                placeholder="Name your notebook"
-                className="rounded-xl px-4 py-2 text-[12px] outline-none w-48 transition-all focus:w-64"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
-              />
-            </div>
-            <button
-              onClick={handleCreateWorkspace}
-              disabled={!!workspaceBusy || !workspaceTitle.trim()}
-              className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50 transition-all hover:scale-105 active:scale-95 shadow-lg"
-              style={{ background: "var(--blue)" }}
-            >
-              {workspaceBusy === "Creating notebook..." ? "Working" : "Create"}
-            </button>
-          </div>
-        </div>
-
+        {/* Status/error banner */}
         {(workspaceError || workspaceBusy) && (
           <div
-            className="mx-5 mt-3 px-4 py-2.5 rounded-xl text-[11px] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2"
+            className="mx-4 mt-2 px-4 py-2 rounded-xl text-[11px] flex items-center justify-between gap-3 flex-shrink-0 animate-in fade-in slide-in-from-top-2"
             style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border)" }}
             role={workspaceError ? "alert" : "status"}
-            aria-live={workspaceError ? "assertive" : "polite"}
           >
             <div className="flex items-center gap-2">
               {workspaceBusy && <Loader2 size={12} className="animate-spin" />}
               <span>{workspaceError || workspaceBusy}</span>
             </div>
             {workspaceError && (
-              <button onClick={() => setWorkspaceError("")} style={{ color: "var(--text-3)" }}>
-                <X size={12} />
-              </button>
+              <button onClick={() => setWorkspaceError("")} style={{ color: "var(--text-3)" }}><X size={12} /></button>
             )}
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden grid lg:grid-cols-[280px_1fr]">
-          {/* Sidebar: Notebooks List */}
-          <aside className="studio studio-glass-chrome border-r flex flex-col min-h-0" style={{ borderColor: "var(--glass-border)" }}>
-            <div className="p-4 border-b border-white/5">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-3)] mb-1">Your Shelves</div>
-              <div className="text-[11px] text-[var(--text-2)]">Switch between study courses.</div>
+        {!selectedWorkspace ? (
+          /* ── NOTEBOOKS HOME VIEW ── */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+              <h2 className="text-[15px] font-bold text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>Your Notebooks</h2>
+              <div className="flex-1" />
+              <input
+                value={workspaceTitle}
+                onChange={(e) => setWorkspaceTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
+                placeholder="New notebook name"
+                className="rounded-full px-4 py-2 text-[12px] outline-none w-44 transition-all focus:w-60"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-1)" }}
+              />
+              <button
+                onClick={handleCreateWorkspace}
+                disabled={!!workspaceBusy || !workspaceTitle.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 active:scale-95"
+                style={{ background: "var(--brand-blue)" }}
+              >
+                <Plus size={14} /> Create
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto studio-scroll p-3 space-y-2">
+
+            <div className="flex-1 overflow-y-auto studio-scroll p-6">
               {workspaceLoading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="h-20 rounded-2xl animate-pulse bg-white/5" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-2xl animate-pulse" style={{ background: "var(--surface-2)" }} />
                   ))}
                 </div>
               ) : workspaces.length === 0 ? (
-                <div className="rounded-2xl p-6 text-center border border-dashed border-white/10 mt-4">
-                  <BookOpen size={24} className="mx-auto mb-3 opacity-20" />
-                  <p className="text-[11px] text-[var(--text-3)]">No notebooks yet. Start by naming one above.</p>
+                <div className="flex flex-col items-center justify-center h-full text-center opacity-30">
+                  <BookOpen size={48} strokeWidth={1} className="mb-4" />
+                  <p className="text-[16px] font-bold">No notebooks yet</p>
+                  <p className="text-[13px] mt-2">Name one above and hit Create</p>
                 </div>
               ) : (
-                  workspaces.map((workspace) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {workspaces.map((workspace) => {
                     const rowOwner = workspace.is_owner ?? workspace.role === "owner";
-                    const active = selectedWorkspaceId === workspace.id;
                     return (
                       <div
                         key={workspace.id}
                         onClick={() => setSelectedWorkspaceId(workspace.id)}
-                        className="w-full text-left rounded-2xl p-4 transition-all group relative overflow-hidden cursor-pointer"
-                        style={{
-                          background: active ? "rgba(255,255,255,0.04)" : "transparent",
-                          border: active ? "1px solid var(--border)" : "1px solid transparent",
-                        }}
+                        className="group relative flex flex-col rounded-2xl p-4 cursor-pointer transition-all hover:-translate-y-0.5"
+                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
                       >
-                        {active && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--blue)]" />}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className={`text-[13px] font-bold truncate transition-colors ${active ? "text-[var(--text-1)]" : "text-[var(--text-2)] group-hover:text-[var(--text-1)]"}`}>
-                              {workspace.title}
-                            </div>
-                            <div className="text-[10px] mt-1 flex flex-wrap gap-x-2 gap-y-1" style={{ color: "var(--text-3)" }}>
-                              <span className="flex items-center gap-1"><Layers size={10} />{workspace.source_count ?? 0}</span>
-                              <span className="flex items-center gap-1"><FileText size={10} />{workspace.note_count ?? 0}</span>
-                              <span className="flex items-center gap-1"><Sparkles size={10} />{workspace.artifact_count ?? 0}</span>
-                            </div>
-                          </div>
-                          {rowOwner && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleRenameWorkspace(workspace.id); }}
-                                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                                style={{ color: "var(--text-3)" }}
-                                title="Rename"
-                              >
-                                <RotateCcw size={12} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(workspace.id); }}
-                                className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
-                                style={{ color: "#f87171" }}
-                                title="Delete"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          )}
+                        <div className="text-3xl mb-3 select-none">📖</div>
+                        <h3 className="text-[13px] font-bold text-[var(--text-1)] line-clamp-2 leading-snug mb-3">{workspace.title}</h3>
+                        <div className="text-[10px] flex items-center gap-3 mt-auto" style={{ color: "var(--text-3)" }}>
+                          <span className="flex items-center gap-1"><Layers size={10} />{workspace.source_count ?? 0}</span>
+                          <span className="flex items-center gap-1"><FileText size={10} />{workspace.note_count ?? 0}</span>
+                          <span className="flex items-center gap-1"><Sparkles size={10} />{workspace.artifact_count ?? 0}</span>
                         </div>
+                        {rowOwner && (
+                          <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleRenameWorkspace(workspace.id); }} className="p-1 rounded-lg hover:bg-white/10 text-[var(--text-3)]" title="Rename"><MoreVertical size={12} /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(workspace.id); }} className="p-1 rounded-lg hover:bg-red-500/10 text-[var(--text-3)] hover:text-red-400" title="Delete"><Trash2 size={12} /></button>
+                          </div>
+                        )}
                       </div>
                     );
-                  })
+                  })}
+                </div>
               )}
             </div>
-          </aside>
-
-          {/* Main Area: Detailed Workspace */}
-          <div className="h-full overflow-hidden flex flex-col min-w-0">
-            {!selectedWorkspace ? (
-              <div className="flex-1 flex items-center justify-center px-6">
-                <div className="max-w-md text-center space-y-4 animate-in zoom-in-95 duration-500">
-                  <div className="w-16 h-16 rounded-3xl bg-[var(--blue-dim)] flex items-center justify-center mx-auto text-[var(--blue)]">
-                    <Library size={32} />
-                  </div>
-                  <h2 className="text-[24px] font-bold text-[var(--text-1)] tracking-tight">Open a Course</h2>
-                  <p className="text-[14px] text-[var(--text-3)] leading-relaxed">
-                    Select a notebook from the sidebar to manage your corpus, chat with your AI tutor, and generate high-retention study artifacts.
-                  </p>
-                </div>
+          </div>
+        ) : (
+          /* ── 3-PANEL NOTEBOOK VIEW ── */
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {/* Compact notebook header */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)", background: "var(--surface)" }}>
+              <button onClick={() => setSelectedWorkspaceId(null)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors flex-shrink-0" style={{ color: "var(--text-3)" }} title="Back to notebooks">
+                <ChevronRight size={16} className="rotate-180" />
+              </button>
+              <h1 className="text-[15px] font-bold text-[var(--text-1)] truncate flex-1" style={{ fontFamily: "var(--font-syne)" }}>{selectedWorkspace.title}</h1>
+              <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 rounded-full px-2.5 py-1 flex-shrink-0">
+                <ShieldCheck size={11} className={wsRole === "owner" ? "text-[var(--teal)]" : "text-[var(--blue)]"} />
+                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-2)]">{wsRole}</span>
               </div>
-            ) : (
-              <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 py-4">
-                {/* Header within Workspace */}
-                <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h1 className="text-[20px] font-bold truncate text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>
-                        {selectedWorkspace.title}
-                      </h1>
-                      <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 rounded-full px-3 py-1">
-                        <ShieldCheck size={12} className={wsRole === "owner" ? "text-[var(--teal)]" : "text-[var(--blue)]"} />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-2)]">{wsRole}</span>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {wsOwner && (
+                  <>
+                    <button onClick={() => handleSetSharing(!(workspaceSharing?.public ?? false), workspaceSharing?.role ?? "viewer")} className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${workspaceSharing?.public ? "bg-[var(--teal)] text-white" : "text-[var(--text-3)] hover:text-[var(--text-1)] border border-white/5"}`}>
+                      {workspaceSharing?.public ? "Public" : "Private"}
+                    </button>
+                    <button onClick={() => handleSetSharing(workspaceSharing?.public ?? false, (workspaceSharing?.role === "viewer" ? "editor" : "viewer"))} className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--text-1)] border border-white/5">
+                      {workspaceSharing?.role ?? "viewer"}
+                    </button>
+                  </>
+                )}
+                <button onClick={() => void handleDownloadWorkspaceBundle()} disabled={workspaceExporting} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-40" style={{ color: "var(--text-2)" }} title="Export Notebook">
+                  {workspaceExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                </button>
+                <NotebookCollaborationPanel notebookId={selectedWorkspaceId!} onRefresh={async () => { await fetchWorkspaces(); await loadWorkspaceDetails(selectedWorkspaceId!); }} />
+              </div>
+            </div>
+
+            {!canEditNotebook && (
+              <div className="mx-4 mt-2 px-3 py-2 rounded-xl text-[11px] flex items-center gap-2 flex-shrink-0" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", color: "var(--text-2)" }}>
+                <Info size={14} className="text-[var(--blue)]" />
+                Read-only — Editor permissions required to modify content.
+              </div>
+            )}
+
+            {/* ── 3-PANEL GRID ── */}
+            <div className="flex-1 overflow-hidden flex min-h-0">
+
+              {/* LEFT: Sources */}
+              <aside className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 260, borderRight: "1px solid var(--glass-border)" }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+                  <span className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-3)]">
+                    Sources <span className="text-[var(--text-2)] normal-case font-bold">({workspaceSources.length})</span>
+                  </span>
+                  <button
+                    onClick={() => setWorkspaceSubTab(workspaceSubTab === "sources" ? "chat" : "sources")}
+                    disabled={!canEditNotebook}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                    style={{ background: "var(--brand-blue)" }}
+                  >
+                    <Plus size={12} /> Add
+                  </button>
+                </div>
+
+                {/* Inline add-source form */}
+                <AnimatePresence>
+                  {workspaceSubTab === "sources" && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex-shrink-0 overflow-hidden border-b"
+                      style={{ borderColor: "var(--glass-border)" }}
+                    >
+                      <div className="p-3 space-y-2">
+                        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(0,0,0,0.3)" }}>
+                          {(["text", "url", "youtube", "drive", "file", "research"] as const).map((mode) => {
+                            const Icon = mode === "text" ? FileText : mode === "url" ? Globe : mode === "youtube" ? Youtube : mode === "drive" ? Cloud : mode === "file" ? Upload : Search;
+                            return (
+                              <button key={mode} type="button" disabled={!canEditNotebook} onClick={() => setSourceMode(mode)} className={`flex-1 flex items-center justify-center h-7 rounded-lg transition-all ${sourceMode === mode ? "bg-[var(--blue)] text-white shadow-lg" : "text-[var(--text-3)] hover:bg-white/5"}`} title={mode}>
+                                <Icon size={13} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {(sourceMode === "text" || sourceMode === "url" || sourceMode === "youtube" || sourceMode === "drive") && (
+                          <input value={sourceTitle} onChange={(e) => setSourceTitle(e.target.value)} placeholder={sourceMode === "text" ? "Note title" : "Title (optional)"} className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--blue)] transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                        )}
+                        {(sourceMode === "url" || sourceMode === "youtube" || sourceMode === "drive") && (
+                          <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder={sourceMode === "youtube" ? "YouTube URL..." : sourceMode === "drive" ? "Google Drive link..." : "https://..."} className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--blue)] transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                        )}
+                        {sourceMode === "text" && (
+                          <textarea value={sourceContent} onChange={(e) => setSourceContent(e.target.value)} placeholder="Paste study notes here..." rows={4} className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--blue)] resize-none transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                        )}
+                        {sourceMode === "research" && (
+                          <div className="space-y-2">
+                            <textarea value={researchQuery} onChange={(e) => setResearchQuery(e.target.value)} placeholder="What do you want to learn?" rows={3} className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--blue)] resize-none transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                            <div className="flex items-center gap-1.5 p-1 rounded-lg" style={{ background: "rgba(0,0,0,0.3)" }}>
+                              {(["fast", "deep"] as const).map((m) => (
+                                <button key={m} type="button" onClick={() => setResearchMode(m)} className={`flex-1 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${researchMode === m ? "bg-[var(--blue)] text-white" : "text-[var(--text-3)]"}`}>{m}</button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {sourceMode === "file" && (
+                          <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:border-[var(--blue)] transition-all" onClick={() => workspaceFileInputRef.current?.click()}>
+                            <input ref={workspaceFileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setWorkspaceFileName(e.target.files?.[0]?.name || "")} className="hidden" />
+                            <Upload size={20} className="mb-1 text-[var(--text-3)]" />
+                            <span className="text-[11px] text-[var(--text-2)]">{workspaceFileName || "Click to upload"}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <button onClick={handleCleanupDuplicates} disabled={!!workspaceBusy || !canEditNotebook} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-[var(--text-2)] border border-white/10 hover:bg-white/5 transition-all">Dedup</button>
+                          <button onClick={() => { handleAddWorkspaceSource(); setWorkspaceSubTab("chat"); }} disabled={!!workspaceBusy || !canEditNotebook} className="flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50" style={{ background: "var(--blue)" }}>
+                            {workspaceBusy ? "Working..." : "Add Source"}
+                          </button>
+                        </div>
                       </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Search */}
+                <div className="px-3 py-2 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+                  <WorkspaceNotebookSearch workspaceId={selectedWorkspaceId!} />
+                </div>
+
+                {/* Source list */}
+                <div className="flex-1 overflow-y-auto studio-scroll p-2 space-y-1">
+                  {workspaceSources.length === 0 ? (
+                    <div className="py-8 text-center opacity-30">
+                      <Layers size={24} className="mx-auto mb-2 stroke-1" />
+                      <p className="text-[11px]">No sources yet. Use Add above.</p>
                     </div>
-                    <p className="text-[12px] mt-1 text-[var(--text-3)] max-w-2xl line-clamp-1">{selectedWorkspace.description || "Notebook is active and synced."}</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {wsOwner && (
-                      <div className="flex items-center gap-1.5 bg-white/[0.03] p-1 rounded-xl border border-white/5 shadow-inner">
-                        <button
-                          onClick={() => handleSetSharing(!(workspaceSharing?.public ?? false), workspaceSharing?.role ?? "viewer")}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${workspaceSharing?.public ? "bg-[var(--teal)] text-white" : "text-[var(--text-3)] hover:text-[var(--text-1)]"}`}
-                        >
-                          {workspaceSharing?.public ? "Public" : "Private"}
-                        </button>
-                        <button
-                          onClick={() => handleSetSharing(workspaceSharing?.public ?? false, (workspaceSharing?.role === "viewer" ? "editor" : "viewer"))}
-                          className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] hover:text-[var(--text-1)] border border-white/5"
-                        >
-                          Access: {workspaceSharing?.role ?? "viewer"}
-                        </button>
+                  ) : (
+                    workspaceSources.map((source) => (
+                      <div key={source.id} className="group flex items-start gap-2 p-2.5 rounded-xl hover:bg-white/5 transition-colors">
+                        <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg" style={{ background: "var(--surface-2)" }}>
+                          {source.type === "youtube" ? <Youtube size={13} className="text-red-500" /> : source.type === "drive" ? <Cloud size={13} className="text-blue-400" /> : source.type === "url" ? <Globe size={13} className="text-[var(--teal)]" /> : <FileText size={13} className="text-white/40" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] font-bold text-[var(--text-1)] line-clamp-1 leading-snug">{source.title}</div>
+                          <div className="text-[9px] text-[var(--text-3)] uppercase font-bold tracking-widest mt-0.5">{source.type} · {source.refresh_state || "ready"}</div>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          {["url", "youtube", "drive"].includes(source.type) && (
+                            <button disabled={!canEditNotebook || refreshingSourceId === source.id} onClick={() => void handleRefreshWorkspaceSource(source.id)} className="p-1 rounded-lg hover:bg-white/10 text-[var(--text-3)]" title="Refresh">
+                              <RefreshCw size={11} className={refreshingSourceId === source.id ? "animate-spin" : ""} />
+                            </button>
+                          )}
+                          <button disabled={!canEditNotebook} onClick={async () => { if (!selectedWorkspaceId || !confirm("Delete source?")) return; await deleteWorkspaceSource(selectedWorkspaceId, source.id); await loadWorkspaceDetails(selectedWorkspaceId); }} className="p-1 rounded-lg hover:bg-red-500/10 text-[#f87171]" title="Delete">
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    <NotebookCollaborationPanel
-                      notebookId={selectedWorkspaceId!}
-                      onRefresh={async () => {
-                        await fetchWorkspaces();
-                        await loadWorkspaceDetails(selectedWorkspaceId!);
-                      }}
-                    />
+                    ))
+                  )}
+                </div>
+              </aside>
+
+              {/* CENTER: Chat */}
+              <div className="flex-1 flex flex-col overflow-hidden border-r min-w-0" style={{ borderColor: "var(--glass-border)" }}>
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)", background: "var(--surface)" }}>
+                  <MessageSquare size={14} className="text-[var(--text-3)] flex-shrink-0" />
+                  {workspaceChats.length > 0 && (
+                    <select value={activeChatId || ""} onChange={(e) => { const id = e.target.value; setActiveChatId(id); if (id && selectedWorkspaceId) { getWorkspaceChat(selectedWorkspaceId, id).then(t => setActiveChatTurns(t?.turns || [])); } else { setActiveChatTurns([]); } }} className="bg-transparent text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)] outline-none rounded-lg border border-white/10 px-2 py-1 max-w-[130px]">
+                      <option value="" className="bg-[var(--ink)]">Session</option>
+                      {workspaceChats.map(c => <option key={c.id} value={c.id} className="bg-[var(--ink)]">{c.title}</option>)}
+                    </select>
+                  )}
+                  <button onClick={handleCreateSavedChat} disabled={!canEditNotebook} className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-[var(--text-2)] border border-white/10 hover:bg-white/5 transition-all">+ Thread</button>
+                  <div className="flex-1" />
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg" style={{ background: "rgba(0,0,0,0.3)" }}>
+                    {(["all", "pick"] as const).map((scope) => (
+                      <button key={scope} type="button" onClick={() => { setChatCorpusScope(scope); if (scope === "all") setChatPickSourceIds([]); }} className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${chatCorpusScope === scope ? "bg-white/10 text-white" : "text-[var(--text-3)]"}`}>
+                        {scope === "all" ? "All" : "Pick"}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {!canEditNotebook && (
-                  <div className="mb-4 rounded-2xl px-4 py-3 text-[12px] flex items-center gap-3 shadow-inner" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", color: "var(--text-2)" }}>
-                    <Info size={16} className="text-[var(--blue)]" />
-                    Read-only access. Full interaction requires Editor permissions.
+                {chatCorpusScope === "pick" && (
+                  <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+                    {workspaceSources.length === 0 ? <span className="text-[10px] text-[var(--text-3)]">No sources to pick.</span> : workspaceSources.map((s) => {
+                      const on = chatPickSourceIds.includes(s.id);
+                      return <button key={s.id} onClick={() => setChatPickSourceIds(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${on ? "bg-[var(--teal-dim)] border-[var(--teal)] text-[var(--teal)]" : "bg-white/5 border-white/5 text-[var(--text-3)]"}`}>{s.title}</button>;
+                    })}
                   </div>
                 )}
 
-                <TabNav />
-
-                {/* Sub-Views Content */}
-                <div className="flex-1 overflow-y-auto studio-scroll pr-1 pb-10">
-                  <AnimatePresence mode="wait">
-                    {workspaceSubTab === "sources" && (
-                      <motion.div
-                        key="sources"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="space-y-6"
-                      >
-                        <WorkspaceNotebookSearch workspaceId={selectedWorkspaceId!} />
-                        
-                        <section className="studio studio-glass-card rounded-3xl p-5 border border-white/5 shadow-2xl relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                            <Layers size={120} />
-                          </div>
-                          
-                          <div className="flex items-center justify-between mb-5">
-                            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-3)]">Ingestion Hub</div>
-                            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black/20">
-                              {(["text", "url", "youtube", "drive", "file", "research"] as const).map((mode) => {
-                                const Icon = mode === "text" ? FileText : mode === "url" ? Globe : mode === "youtube" ? Youtube : mode === "drive" ? Cloud : mode === "file" ? Upload : Search;
-                                const active = sourceMode === mode;
-                                return (
-                                  <button
-                                    key={mode}
-                                    type="button"
-                                    disabled={!canEditNotebook}
-                                    onClick={() => setSourceMode(mode)}
-                                    className={`inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all ${active ? "bg-[var(--blue)] text-white shadow-lg" : "text-[var(--text-3)] hover:bg-white/5"}`}
-                                    title={mode.charAt(0).toUpperCase() + mode.slice(1)}
-                                  >
-                                    <Icon size={18} />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="grid gap-4 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                            {(sourceMode === "text" || sourceMode === "url" || sourceMode === "youtube" || sourceMode === "drive") && (
-                              <input
-                                value={sourceTitle}
-                                onChange={(e) => setSourceTitle(e.target.value)}
-                                placeholder={sourceMode === "text" ? "Note title" : "Source title (optional)"}
-                                className="rounded-xl px-4 py-3 text-[13px] outline-none border border-white/10 bg-black/20 focus:border-[var(--blue)] transition-all"
-                                style={{ color: "var(--text-1)" }}
-                              />
-                            )}
-                            
-                            {(sourceMode === "url" || sourceMode === "youtube" || sourceMode === "drive") && (
-                              <input
-                                value={sourceUrl}
-                                onChange={(e) => setSourceUrl(e.target.value)}
-                                placeholder={
-                                  sourceMode === "youtube" 
-                                    ? "Paste YouTube URL (watch, shorts, live)..." 
-                                    : sourceMode === "drive" 
-                                      ? "Paste Google Drive / Docs share link..." 
-                                      : "https://example.com/article"
-                                }
-                                className="rounded-xl px-4 py-3 text-[13px] outline-none border border-white/10 bg-black/20 focus:border-[var(--blue)] transition-all"
-                                style={{ color: "var(--text-1)" }}
-                              />
-                            )}
-
-                            {sourceMode === "text" && (
-                              <textarea
-                                value={sourceContent}
-                                onChange={(e) => setSourceContent(e.target.value)}
-                                placeholder="Paste your study notes or reference text here..."
-                                rows={6}
-                                className="rounded-xl px-4 py-3 text-[13px] outline-none border border-white/10 bg-black/20 focus:border-[var(--blue)] resize-none transition-all"
-                                style={{ color: "var(--text-1)" }}
-                              />
-                            )}
-
-                            {sourceMode === "research" && (
-                              <div className="space-y-4">
-                                <textarea
-                                  value={researchQuery}
-                                  onChange={(e) => setResearchQuery(e.target.value)}
-                                  placeholder="What do you want to learn? (e.g., 'Causes of the Nigerian Civil War')"
-                                  rows={4}
-                                  className="w-full rounded-xl px-4 py-3 text-[13px] outline-none border border-white/10 bg-black/20 focus:border-[var(--blue)] resize-none transition-all"
-                                  style={{ color: "var(--text-1)" }}
-                                />
-                                <div className="flex flex-wrap items-center gap-4">
-                                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/20 border border-white/5">
-                                    {(["fast", "deep"] as const).map((m) => (
-                                      <button
-                                        key={m}
-                                        type="button"
-                                        onClick={() => setResearchMode(m)}
-                                        className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${researchMode === m ? "bg-[var(--blue)] text-white" : "text-[var(--text-3)]"}`}
-                                      >
-                                        {m}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <div className="text-[10px] text-[var(--text-3)] max-w-xs leading-snug">
-                                    {researchMode === "fast" ? "Quick web crawl for immediate context." : "Exhaustive multi-query research with auto-curated bibliography."}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {sourceMode === "file" && (
-                              <div className="group relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-white/10 rounded-2xl bg-black/20 hover:border-[var(--blue)] transition-all cursor-pointer" onClick={() => workspaceFileInputRef.current?.click()}>
-                                <input
-                                  ref={workspaceFileInputRef}
-                                  type="file"
-                                  accept=".pdf,.doc,.docx,.txt"
-                                  onChange={(e) => setWorkspaceFileName(e.target.files?.[0]?.name || "")}
-                                  className="hidden"
-                                />
-                                <div className="p-4 rounded-2xl bg-white/5 mb-3 group-hover:scale-110 transition-transform">
-                                  <Upload size={32} className="text-[var(--text-3)] group-hover:text-[var(--blue)]" />
-                                </div>
-                                <div className="text-[13px] font-bold text-[var(--text-1)]">{workspaceFileName || "Click to upload file"}</div>
-                                <div className="text-[11px] text-[var(--text-3)] mt-1">PDF, DOCX, or TXT up to 20MB</div>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-end gap-3 mt-2">
-                              <button
-                                onClick={handleCleanupDuplicates}
-                                disabled={!!workspaceBusy || !canEditNotebook}
-                                className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--text-2)] border border-white/10 hover:bg-white/5 transition-all"
-                              >
-                                Deduplicate
-                              </button>
-                              <button
-                                onClick={handleAddWorkspaceSource}
-                                disabled={!!workspaceBusy || !canEditNotebook}
-                                className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                                style={{ background: "var(--blue)" }}
-                              >
-                                {workspaceBusy ? "Processing..." : "Sync Source"}
-                              </button>
-                            </div>
-                          </div>
-                        </section>
-
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {workspaceSources.length === 0 ? (
-                            <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-3xl opacity-40">
-                              <Layers size={32} className="mx-auto mb-3" />
-                              <p className="text-[13px]">Course bibliography is empty.</p>
-                            </div>
-                          ) : (
-                            workspaceSources.map((source) => (
-                              <div
-                                key={source.id}
-                                className="group studio studio-glass-card rounded-2xl p-4 transition-all hover:translate-y-[-2px] border border-white/5"
-                              >
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="p-2 rounded-xl bg-white/5 group-hover:bg-[var(--blue-dim)] transition-colors">
-                                    {source.type === "youtube" ? <Youtube size={16} className="text-red-500" /> : source.type === "drive" ? <Cloud size={16} className="text-blue-400" /> : source.type === "url" ? <Globe size={16} className="text-[var(--teal)]" /> : <FileText size={16} className="text-white/40" />}
-                                  </div>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {["url", "youtube", "drive"].includes(source.type) && (
-                                      <button
-                                        disabled={!canEditNotebook || refreshingSourceId === source.id}
-                                        onClick={() => void handleRefreshWorkspaceSource(source.id)}
-                                        className="p-1.5 rounded-lg hover:bg-white/10 text-[var(--text-3)]"
-                                        title="Refresh"
-                                      >
-                                        <RefreshCw size={12} className={refreshingSourceId === source.id ? "animate-spin" : ""} />
-                                      </button>
-                                    )}
-                                    <button
-                                      disabled={!canEditNotebook}
-                                      onClick={async () => {
-                                        if (!selectedWorkspaceId || !confirm("Delete source?")) return;
-                                        await deleteWorkspaceSource(selectedWorkspaceId, source.id);
-                                        await loadWorkspaceDetails(selectedWorkspaceId);
-                                      }}
-                                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#f87171]"
-                                      title="Delete"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-                                <h4 className="text-[13px] font-bold text-[var(--text-1)] line-clamp-1 mb-1">{source.title}</h4>
-                                <div className="text-[10px] text-[var(--text-3)] uppercase font-black tracking-widest flex items-center gap-2">
-                                  {source.type} • {source.refresh_state || "ready"}
-                                </div>
-                                <button
-                                  onClick={() => inspectWorkspaceSource(source)}
-                                  className="w-full mt-4 py-2 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-[var(--text-2)] hover:bg-white/10 transition-all"
-                                >
-                                  Inspect Data
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {(activeWorkspaceSourceText || activeWorkspaceSourceGuide) && (
-                          <div className="mt-8 rounded-3xl p-6 shadow-2xl border border-white/5 animate-in slide-in-from-bottom-4 duration-500" style={{ background: "var(--surface-2)" }}>
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-3)]">Source Intelligence</div>
-                              <button onClick={() => { setActiveWorkspaceSourceText(""); setActiveWorkspaceSourceGuide(""); }} className="p-2 rounded-xl hover:bg-white/10 text-[var(--text-3)]"><X size={16} /></button>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-6">
-                              {activeWorkspaceSourceGuide && (
-                                <div className="space-y-3">
-                                  <div className="text-[10px] font-black uppercase tracking-widest text-[var(--blue)]">Context Analysis</div>
-                                  <div className="rounded-2xl p-4 bg-black/40 border border-white/5 leading-relaxed text-[13px] text-[var(--text-2)]">
-                                    {activeWorkspaceSourceGuide}
-                                  </div>
-                                </div>
-                              )}
-                              {activeWorkspaceSourceText && (
-                                <div className="space-y-3">
-                                  <div className="text-[10px] font-black uppercase tracking-widest text-[var(--teal)]">Raw Extraction</div>
-                                  <div className="rounded-2xl p-4 bg-black/40 border border-white/5 max-h-[400px] overflow-y-auto studio-scroll leading-relaxed text-[13px] text-[var(--text-2)]">
-                                    {activeWorkspaceSourceText}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {workspaceSubTab === "notes" && (
-                      <motion.div
-                        key="notes"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="space-y-6"
-                      >
-                        <section className="studio studio-glass-card rounded-3xl p-6 border border-white/5 relative overflow-hidden">
-                          <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-3)] mb-4">Manual Revision</div>
-                          <div className="grid gap-3">
-                            <input 
-                              value={noteTitle} 
-                              onChange={(e) => setNoteTitle(e.target.value)} 
-                              readOnly={!canEditNotebook} 
-                              placeholder="Key Concept Name" 
-                              className="rounded-xl px-4 py-3 text-[14px] font-bold outline-none border border-white/10 bg-black/20 focus:border-[var(--teal)] transition-all" 
-                              style={{ color: "var(--text-1)" }} 
-                            />
-                            <textarea 
-                              value={noteContent} 
-                              onChange={(e) => setNoteContent(e.target.value)} 
-                              readOnly={!canEditNotebook} 
-                              placeholder="Break down this concept in your own words..." 
-                              rows={5} 
-                              className="rounded-xl px-4 py-3 text-[13px] outline-none border border-white/10 bg-black/20 focus:border-[var(--teal)] resize-none transition-all" 
-                              style={{ color: "var(--text-1)" }} 
-                            />
-                            <div className="flex justify-end">
-                              <button 
-                                onClick={handleWorkspaceNoteSave} 
-                                disabled={!!workspaceBusy || !canEditNotebook || !noteContent.trim()} 
-                                className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-xl hover:scale-105 active:scale-95 disabled:opacity-50" 
-                                style={{ background: "var(--teal)" }}
-                              >
-                                Save Note
-                              </button>
-                            </div>
-                          </div>
-                        </section>
-
-                        <div className="space-y-4">
-                          {workspaceNotes.length === 0 ? (
-                            <div className="py-20 text-center opacity-40">
-                              <FileText size={48} className="mx-auto mb-4 stroke-1" />
-                              <p className="text-[14px]">No notes found for this course.</p>
-                            </div>
-                          ) : (
-                            workspaceNotes.map((note) => (
-                              <div key={note.id} className="rounded-3xl p-5 studio-glass-card border border-white/5 transition-all hover:bg-white/[0.03]">
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <h3 className="text-[16px] font-bold text-[var(--text-1)]">{note.title}</h3>
-                                    <div className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--text-3)] mt-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)]" />
-                                      {note.kind || "Revision"}
-                                    </div>
-                                  </div>
-                                  <button 
-                                    disabled={!canEditNotebook} 
-                                    onClick={async () => {
-                                      if (!selectedWorkspaceId || !confirm("Permanently delete this note?")) return;
-                                      await deleteWorkspaceNote(selectedWorkspaceId, note.id);
-                                      await loadWorkspaceDetails(selectedWorkspaceId);
-                                    }} 
-                                    className="p-2 rounded-xl hover:bg-red-500/10 text-[#f87171] opacity-60 hover:opacity-100 transition-all"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                                <div className="text-[13px] leading-relaxed text-[var(--text-2)] whitespace-pre-wrap">
-                                  {note.content}
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {workspaceSubTab === "chat" && (
-                      <motion.div
-                        key="chat"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="flex flex-col h-full min-h-[600px] space-y-4"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3 p-1 rounded-2xl bg-black/20 border border-white/5">
-                          <div className="flex items-center gap-1">
-                            {workspaceChats.length > 0 && (
-                              <select 
-                                value={activeChatId || ""} 
-                                onChange={(e) => {
-                                  const id = e.target.value;
-                                  setActiveChatId(id);
-                                  if (id && selectedWorkspaceId) {
-                                    getWorkspaceChat(selectedWorkspaceId, id).then(t => setActiveChatTurns(t?.turns || []));
-                                  } else {
-                                    setActiveChatTurns([]);
-                                  }
-                                }}
-                                className="bg-transparent text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)] outline-none px-4 py-2 rounded-xl border border-white/10"
-                              >
-                                <option value="" className="bg-[var(--ink)]">Select Session</option>
-                                {workspaceChats.map(c => <option key={c.id} value={c.id} className="bg-[var(--ink)]">{c.title}</option>)}
-                              </select>
-                            )}
-                            <button onClick={handleCreateSavedChat} disabled={!canEditNotebook} className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--text-1)] border border-white/10 hover:bg-white/5 transition-all">
-                              New Thread
-                            </button>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 p-1">
-                            {(["all", "pick"] as const).map((scope) => (
-                              <button
-                                key={scope}
-                                type="button"
-                                onClick={() => {
-                                  setChatCorpusScope(scope);
-                                  if (scope === "all") setChatPickSourceIds([]);
-                                }}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${chatCorpusScope === scope ? "bg-white/10 text-white" : "text-[var(--text-3)]"}`}
-                              >
-                                {scope === "all" ? "Whole Course" : "Specific Data"}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {chatCorpusScope === "pick" && (
-                          <div className="flex flex-wrap gap-2 p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                            {workspaceSources.length === 0 ? (
-                              <span className="text-[11px] text-[var(--text-3)]">No sources available to pick.</span>
-                            ) : (
-                              workspaceSources.map((s) => {
-                                const on = chatPickSourceIds.includes(s.id);
-                                return (
-                                  <button
-                                    key={s.id}
-                                    onClick={() => setChatPickSourceIds(prev => prev.includes(s.id) ? prev.filter(x => x !== s.id) : [...prev, s.id])}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${on ? "bg-[var(--teal-dim)] border-[var(--teal)] text-[var(--teal)] shadow-lg" : "bg-white/5 border-white/5 text-[var(--text-3)]"}`}
-                                  >
-                                    {s.title}
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex-1 flex flex-col min-h-0 bg-white/[0.01] rounded-3xl border border-white/5 overflow-hidden">
-                          <div className="flex-1 overflow-y-auto studio-scroll p-6 space-y-6">
-                            {activeChatTurns.length === 0 && !workspaceAnswer ? (
-                              <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
-                                <MessageSquare size={48} className="mb-4 stroke-1" />
-                                <p className="text-[14px]">Ask your Course Corpus anything.</p>
-                                <p className="text-[11px] mt-2">The AI will cite specific passages from your sources.</p>
-                              </div>
+                <div className="flex-1 overflow-y-auto studio-scroll p-4 space-y-4 min-h-0">
+                  {activeChatTurns.length === 0 && !workspaceAnswer ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-25 pointer-events-none">
+                      <MessageSquare size={40} strokeWidth={1} className="mb-3" />
+                      <p className="text-[14px] font-bold">Ask your notebook</p>
+                      <p className="text-[11px] mt-1.5" style={{ color: "var(--text-3)" }}>AI cites passages from your sources.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {activeChatTurns.map((turn) => (
+                        <div key={turn.id} className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${turn.role === "user" ? "bg-[var(--brand-blue)] text-white" : "bg-white/[0.04] border border-white/10 text-[var(--text-1)]"}`}>
+                            {turn.role === "user" ? (
+                              <p>{turn.content}</p>
                             ) : (
                               <>
-                                {activeChatTurns.map((turn) => (
-                                  <div key={turn.id} className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}>
-                                    <div className={`max-w-[85%] rounded-3xl p-5 ${turn.role === "user" ? "bg-[var(--blue-dim)] border border-[var(--blue)] text-[var(--text-1)]" : "bg-white/[0.04] border border-white/5"}`}>
-                                      <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 opacity-50">{turn.role}</div>
-                                      <Markdown content={turn.content} onCitationClick={(idx) => {
-                                        document.getElementById(`cit-${turn.id}-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                      }} />
-                                      {turn.role === "assistant" && turn.citations && (
-                                        <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
-                                          {turn.citations.map(c => (
-                                            <div key={c.index} id={`cit-${turn.id}-${c.index}`} className="text-[10px] text-[var(--text-3)] bg-black/20 p-2 rounded-xl border border-white/5">
-                                              <span className="font-bold text-[var(--blue)] mr-1">[{c.index}]</span> {c.title}
-                                              {c.excerpt && <p className="mt-1 opacity-70 italic line-clamp-2">&ldquo;{c.excerpt}&rdquo;</p>}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                      {turn.role === "assistant" && canEditNotebook && (
-                                        <div className="mt-4 flex gap-2">
-                                          <button onClick={() => void handlePinChatTurn(turn.id, !turn.pinned)} className={`p-2 rounded-xl transition-all ${turn.pinned ? "bg-[var(--teal)] text-white shadow-lg" : "bg-white/5 text-[var(--text-3)]"}`} title="Pin Answer">
-                                            <Bookmark size={14} />
-                                          </button>
-                                          <button onClick={() => void handleSaveChatTurnAsNote(turn.id)} className="p-2 rounded-xl bg-white/5 text-[var(--text-3)] hover:bg-white/10" title="Save as Note">
-                                            <FileText size={14} />
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                                {workspaceAnswer && (
-                                  <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
-                                    <div className="max-w-[85%] rounded-3xl p-5 bg-white/[0.04] border border-white/10 shadow-2xl">
-                                      <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-[var(--teal)]">Thinking...</div>
-                                      <Markdown content={workspaceAnswer} />
-                                    </div>
+                                <Markdown content={turn.content} />
+                                {turn.citations && turn.citations.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-white/10 space-y-1">
+                                    {turn.citations.map((c: WorkspaceCitation, i: number) => (
+                                      <div key={i} className="text-[10px] text-[var(--text-3)] flex items-start gap-1.5">
+                                        <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold text-[9px]" style={{ background: "var(--blue-dim)", color: "var(--blue)" }}>{i + 1}</span>
+                                        <span className="line-clamp-1">{c.title}</span>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
+                                <div className="mt-2 flex items-center gap-1 opacity-60">
+                                  <button disabled={!activeChatId} onClick={() => activeChatId && void handlePinChatTurn(turn.id, !turn.pinned)} className="p-1.5 rounded-lg hover:bg-white/10 text-[var(--text-3)]" title={turn.pinned ? "Unpin" : "Pin"}>
+                                    <Bookmark size={12} className={turn.pinned ? "fill-current text-yellow-400" : ""} />
+                                  </button>
+                                  <button onClick={() => void handleSaveChatTurnAsNote(turn.id)} className="p-1.5 rounded-lg hover:bg-white/10 text-[var(--text-3)]" title="Save as Note">
+                                    <FileText size={12} />
+                                  </button>
+                                </div>
                               </>
                             )}
                           </div>
-
-                          <div className="p-4 bg-black/40 border-t border-white/5">
-                            <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-2 border border-white/10 focus-within:border-[var(--blue)] transition-all">
-                              <input
-                                value={chatQuestion}
-                                onChange={(e) => setChatQuestionWorkspace(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleWorkspaceAsk())}
-                                placeholder="Ask the notebook..."
-                                className="flex-1 bg-transparent px-4 py-3 text-[14px] outline-none"
-                                style={{ color: "var(--text-1)" }}
-                              />
-                              <div className="flex items-center gap-2 pr-2">
-                                <label className="flex items-center gap-2 cursor-pointer group" title="Auto-save answer as note">
-                                  <input type="checkbox" checked={saveChatAsNote} onChange={(e) => setSaveChatAsNote(e.target.checked)} className="hidden" />
-                                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${saveChatAsNote ? "bg-[var(--teal)] border-[var(--teal)]" : "border-white/20 group-hover:border-white/40"}`}>
-                                    {saveChatAsNote && <Check size={12} className="text-white" />}
-                                  </div>
-                                  <span className="text-[10px] font-bold text-[var(--text-3)] group-hover:text-[var(--text-2)] uppercase">Save</span>
-                                </label>
-                                <button
-                                  onClick={handleWorkspaceAsk}
-                                  disabled={!!workspaceBusy || !chatQuestion.trim() || !canEditNotebook}
-                                  className="w-10 h-10 rounded-xl bg-[var(--blue)] text-white flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                                >
-                                  {workspaceBusy ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
-                                </button>
-                              </div>
-                            </div>
+                        </div>
+                      ))}
+                      {workspaceAnswer && (
+                        <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
+                          <div className="max-w-[85%] rounded-2xl p-4 bg-white/[0.04] border border-white/10">
+                            <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-[var(--teal)]">Thinking...</div>
+                            <Markdown content={workspaceAnswer} />
                           </div>
                         </div>
-                      </motion.div>
-                    )}
-
-                    {workspaceSubTab === "artifacts" && (
-                      <motion.div
-                        key="artifacts"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="space-y-8"
-                      >
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {ARTIFACT_DEFS.map(({ type, label, blurb, Icon: ArtIcon }) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => handleWorkspaceGenerate(type)}
-                              disabled={!canEditNotebook || !!workspaceBusy}
-                              className="group text-left rounded-3xl p-5 transition-all hover:bg-white/[0.04] border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[140px]"
-                              style={{ background: "var(--surface-2)" }}
-                            >
-                              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all">
-                                <ArtIcon size={48} />
-                              </div>
-                              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--blue-dim)] text-[var(--blue)] mb-3 group-hover:shadow-lg transition-all">
-                                <ArtIcon size={20} />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-[14px] font-bold text-[var(--text-1)]">{label}</div>
-                                <div className="text-[10px] mt-1 text-[var(--text-3)] leading-snug line-clamp-2">{blurb}</div>
-                              </div>
-                              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)]">Generate</span>
-                                <Plus size={14} className="text-[var(--blue)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-white/10">
-                          <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-3)]">Generated Studio Files</div>
-                          {workspaceArtifacts.length === 0 ? (
-                            <div className="py-16 text-center border border-dashed border-white/10 rounded-3xl opacity-40">
-                              <Sparkles size={32} className="mx-auto mb-3" />
-                              <p className="text-[13px]">Pick a tool above to start generating revision artifacts.</p>
-                            </div>
-                          ) : (
-                            <div className="grid md:grid-cols-2 gap-4">
-                              {workspaceArtifacts.map((artifact) => (
-                                <div key={artifact.id} className="rounded-3xl p-5 studio-glass-card border border-white/10 flex flex-col justify-between group">
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <h4 className="text-[15px] font-bold text-[var(--text-1)] truncate">{artifact.title}</h4>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--blue)] bg-[var(--blue-dim)] px-2 py-0.5 rounded-lg">{artifact.type}</span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)]">{artifact.format}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <button onClick={() => setArtifactViewerId(artifact.id)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--blue)] text-white shadow-lg hover:scale-110 transition-all" title="View">
-                                        <Eye size={18} />
-                                      </button>
-                                      <button onClick={() => void handleDownloadWorkspaceArtifact(artifact.id)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[var(--text-3)] hover:text-white transition-all" title="Download">
-                                        <Download size={18} />
-                                      </button>
-                                      <button disabled={!canEditNotebook} onClick={async () => {
-                                        if (!selectedWorkspaceId || !confirm("Permanently remove this artifact?")) return;
-                                        await deleteWorkspaceArtifact(selectedWorkspaceId, artifact.id);
-                                        await loadWorkspaceDetails(selectedWorkspaceId);
-                                      }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-[#f87171] opacity-60 hover:opacity-100 transition-all" title="Delete">
-                                        <Trash2 size={18} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="mt-4 text-[12px] text-[var(--text-3)] bg-black/20 p-3 rounded-2xl line-clamp-2 italic">
-                                    {artifact.format === "json" ? "Click view to interact with this data structure." : (artifact.content || "").slice(0, 150).replace(/#+\s+/g, "")}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {workspaceSubTab === "studio" && (
-                      <motion.div
-                        key="studio"
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.02 }}
-                      >
-                        <VoiceClonePanel />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      )}
+                    </>
+                  )}
                 </div>
 
-                {/* Artifact View Modal */}
-                <AnimatePresence>
-                  {artifactViewerId && (
-                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true">
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-                        onClick={() => setArtifactViewerId(null)}
-                      />
-                      {(() => {
-                        const art = workspaceArtifacts.find((a) => a.id === artifactViewerId);
-                        return (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative z-10 w-full max-w-5xl max-h-[90vh] flex flex-col rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10"
-                            style={{ background: "rgba(12, 12, 18, 0.95)" }}
-                          >
-                            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0 bg-white/[0.02]">
-                              <div className="min-w-0">
-                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--blue)] mb-1">Generated Output</div>
-                                <h2 className="text-[20px] font-bold truncate text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>
-                                  {art?.title ?? "Artifact Preview"}
-                                </h2>
+                <div className="p-3 border-t flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+                  <div className="flex items-center gap-2 rounded-2xl p-2 transition-all focus-within:border-[var(--blue)]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--glass-border)" }}>
+                    <input value={chatQuestion} onChange={(e) => setChatQuestionWorkspace(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleWorkspaceAsk())} placeholder="Ask the notebook..." className="flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" style={{ color: "var(--text-1)" }} />
+                    <div className="flex items-center gap-2 pr-1">
+                      <label className="flex items-center gap-1.5 cursor-pointer group" title="Auto-save answer as note">
+                        <input type="checkbox" checked={saveChatAsNote} onChange={(e) => setSaveChatAsNote(e.target.checked)} className="hidden" />
+                        <div className={`w-4 h-4 rounded flex items-center justify-center transition-all ${saveChatAsNote ? "bg-[var(--teal)]" : "border border-white/20 group-hover:border-white/40"}`}>
+                          {saveChatAsNote && <Check size={10} className="text-white" />}
+                        </div>
+                        <span className="text-[9px] font-bold text-[var(--text-3)] uppercase">Save</span>
+                      </label>
+                      <button onClick={handleWorkspaceAsk} disabled={!!workspaceBusy || !chatQuestion.trim() || !canEditNotebook} className="w-9 h-9 rounded-xl bg-[var(--brand-blue)] text-white flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
+                        {workspaceBusy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT: Studio */}
+              <aside className="flex-shrink-0 flex flex-col overflow-hidden" style={{ width: 284 }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "var(--glass-border)" }}>
+                  <span className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--text-3)]">Studio</span>
+                  {workspaceBusy && <Loader2 size={12} className="animate-spin text-[var(--text-3)]" />}
+                </div>
+
+                <div className="flex-1 overflow-y-auto studio-scroll p-3 space-y-4">
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] mb-2 px-1">Generate</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ARTIFACT_DEFS.map(({ type, label, Icon: ArtIcon }) => (
+                        <button key={type} type="button" onClick={() => handleWorkspaceGenerate(type)} disabled={!canEditNotebook || !!workspaceBusy} className="group flex flex-col gap-1.5 p-3 rounded-xl text-left transition-all hover:bg-white/[0.06] border border-white/5 hover:border-white/10 disabled:opacity-50" style={{ background: "var(--surface-2)" }}>
+                          <ArtIcon size={16} className="text-[var(--blue)] group-hover:scale-110 transition-transform" />
+                          <span className="text-[11px] font-bold text-[var(--text-1)] leading-tight">{label}</span>
+                          <ArrowRight size={10} className="text-[var(--text-3)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t" style={{ borderColor: "var(--glass-border)" }}>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] mb-2 px-1">Add Note</div>
+                    <div className="space-y-2">
+                      <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} readOnly={!canEditNotebook} placeholder="Concept title" className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--teal)] transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                      <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} readOnly={!canEditNotebook} placeholder="Break it down..." rows={3} className="w-full rounded-xl px-3 py-2 text-[12px] outline-none border border-white/10 focus:border-[var(--teal)] resize-none transition-all" style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-1)" }} />
+                      <button onClick={handleWorkspaceNoteSave} disabled={!!workspaceBusy || !canEditNotebook || !noteContent.trim()} className="w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50" style={{ background: "var(--teal)" }}>Save Note</button>
+                    </div>
+                  </div>
+
+                  {workspaceArtifacts.length > 0 && (
+                    <div className="pt-3 border-t" style={{ borderColor: "var(--glass-border)" }}>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] mb-2 px-1">Generated ({workspaceArtifacts.length})</div>
+                      <div className="space-y-2">
+                        {workspaceArtifacts.map((artifact) => {
+                          const ArtDef = ARTIFACT_DEFS.find(d => d.type === artifact.type);
+                          return (
+                            <div key={artifact.id} className="flex items-center gap-2 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-all group" style={{ background: "var(--surface-2)" }}>
+                              {ArtDef ? <ArtDef.Icon size={14} className="text-[var(--blue)] flex-shrink-0" /> : <Sparkles size={14} className="text-[var(--blue)] flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-bold text-[var(--text-1)] line-clamp-1">{artifact.title}</div>
+                                <div className="text-[9px] text-[var(--text-3)] uppercase font-bold tracking-widest">{artifact.type}</div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => art && void handleDownloadWorkspaceArtifact(art.id)}
-                                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-[11px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
-                                >
-                                  <Download size={16} /> <span className="max-sm:hidden">Download</span>
-                                </button>
-                                <button
-                                  onClick={() => setArtifactViewerId(null)}
-                                  className="p-3 rounded-2xl bg-white/5 text-[var(--text-3)] hover:text-white transition-all"
-                                >
-                                  <X size={20} />
-                                </button>
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <button onClick={() => setArtifactViewerId(artifact.id)} className="p-1 rounded-lg hover:bg-white/10 text-[var(--text-2)]" title="View"><Eye size={12} /></button>
+                                <button onClick={() => void handleDownloadWorkspaceArtifact(artifact.id)} className="p-1 rounded-lg hover:bg-white/10 text-[var(--text-2)]" title="Download"><Download size={12} /></button>
+                                <button onClick={async () => { if (!selectedWorkspaceId || !confirm("Delete artifact?")) return; await deleteWorkspaceArtifact(selectedWorkspaceId, artifact.id); await loadWorkspaceDetails(selectedWorkspaceId); }} className="p-1 rounded-lg hover:bg-red-500/10 text-[#f87171]" title="Delete"><Trash2 size={12} /></button>
                               </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto studio-scroll p-6 sm:p-10 min-h-0 bg-[var(--surface-1)]">
-                              {art ? <ArtifactViewer artifact={art} /> : <div className="flex h-full items-center justify-center opacity-20"><Loader2 className="animate-spin" size={40} /></div>}
-                            </div>
-                            <div className="p-4 border-t border-white/5 bg-white/[0.02] flex justify-center">
-                              <p className="text-[10px] text-[var(--text-3)] font-bold uppercase tracking-widest">JackPal AI • {art?.type} • Final Render</p>
-                            </div>
-                          </motion.div>
-                        );
-                      })()}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
-                </AnimatePresence>
-              </div>
-            )}
+
+                  {workspaceNotes.length > 0 && (
+                    <div className="pt-3 border-t" style={{ borderColor: "var(--glass-border)" }}>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-3)] mb-2 px-1">Notes ({workspaceNotes.length})</div>
+                      <div className="space-y-2">
+                        {workspaceNotes.map((note) => (
+                          <div key={note.id} className="p-3 rounded-xl border border-white/5 group" style={{ background: "var(--surface-2)" }}>
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="text-[12px] font-bold text-[var(--text-1)] line-clamp-1">{note.title}</span>
+                              <button disabled={!canEditNotebook} onClick={async () => { if (!selectedWorkspaceId || !confirm("Delete note?")) return; await deleteWorkspaceNote(selectedWorkspaceId, note.id); await loadWorkspaceDetails(selectedWorkspaceId); }} className="p-1 rounded-lg hover:bg-red-500/10 text-[#f87171] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"><Trash2 size={11} /></button>
+                            </div>
+                            <p className="text-[11px] text-[var(--text-2)] line-clamp-3 leading-relaxed">{note.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Artifact View Modal */}
+        <AnimatePresence>
+          {artifactViewerId && (
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setArtifactViewerId(null)} />
+              {(() => {
+                const art = workspaceArtifacts.find((a) => a.id === artifactViewerId);
+                return (
+                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative z-10 w-full max-w-5xl max-h-[90vh] flex flex-col rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10" style={{ background: "rgba(12, 12, 18, 0.95)" }}>
+                    <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0 bg-white/[0.02]">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--blue)] mb-1">Generated Output</div>
+                        <h2 className="text-[20px] font-bold truncate text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>{art?.title ?? "Artifact Preview"}</h2>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => art && void handleDownloadWorkspaceArtifact(art.id)} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-[11px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"><Download size={16} /> <span className="max-sm:hidden">Download</span></button>
+                        <button onClick={() => setArtifactViewerId(null)} className="p-3 rounded-2xl bg-white/5 text-[var(--text-3)] hover:text-white transition-all"><X size={20} /></button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto studio-scroll p-6 sm:p-10 min-h-0">
+                      {art ? <ArtifactViewer artifact={art} /> : <div className="flex h-full items-center justify-center opacity-20"><Loader2 className="animate-spin" size={40} /></div>}
+                    </div>
+                    <div className="p-4 border-t border-white/5 bg-white/[0.02] flex justify-center">
+                      <p className="text-[10px] text-[var(--text-3)] font-bold uppercase tracking-widest">JackPal AI · {art?.type} · Final Render</p>
+                    </div>
+                  </motion.div>
+                );
+              })()}
+            </div>
+          )}
+        </AnimatePresence>
+
       </motion.div>
     );
   };
@@ -3313,7 +2849,7 @@ function DashboardPage() {
     </AnimatePresence>
   );
 
-  const PlayerBar = () => {
+  const PlayerBar = ({ detailRight = "0px" }: { detailRight?: string }) => {
     if (!currentDocId && !podcastPlayingDocId && !isAudioLoading) return null;
     const isPodcast = !!podcastPlayingDocId;
     const isPlaying = isPodcast ? !!podcastPlayingDocId : !!playingDocId;
@@ -3328,8 +2864,8 @@ function DashboardPage() {
       <div
         className="studio studio-glass-chrome fixed bottom-0 z-50 flex flex-col border-t bg-[var(--ink)]"
         style={{
-          left: 240,
-          right: 0,
+          left: "var(--sidebar-width)",
+          right: detailRight,
           paddingBottom: "max(0px, env(safe-area-inset-bottom))",
           borderColor: "var(--border)",
         }}
@@ -3461,57 +2997,58 @@ function DashboardPage() {
 
   // ── Layout Sub-Components ───────────────────────────────────────────────────
 
-  const TopNav = () => (
-    <header className="fixed top-0 left-0 right-0 h-[80px] flex items-center justify-center px-8 z-[250] bg-transparent pointer-events-none">
-      {/* Fixed Logo (Top Left) */}
-      <div className="absolute left-8">
-        <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
-          <JackpalsLogo variant="wordmark" className="h-8 w-auto" />
-        </Link>
-      </div>
+const TopNav = () => (
+     <header className="flex-shrink-0 flex items-center justify-between px-6 pointer-events-none" style={{ height: 'var(--header-height)', background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--glass-border)' }}>
+       {/* Logo (Left) */}
+       <div>
+         <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+           <JackpalsLogo variant="wordmark" className="h-8 w-auto" />
+         </Link>
+       </div>
 
-      {/* Centered Page Title */}
-      <h1 className="text-[16px] font-bold text-white tracking-widest uppercase pointer-events-auto" style={{ fontFamily: "var(--font-syne)" }}>
-        {activeSidebarItem === "imported" ? "Library" : activeSidebarItem.charAt(0).toUpperCase() + activeSidebarItem.slice(1)}
-      </h1>
+       {/* Centered Page Title */}
+       <h1 className="text-[16px] font-bold text-white tracking-widest uppercase pointer-events-auto" style={{ fontFamily: "var(--font-syne)" }}>
+         {activeSidebarItem === "imported" ? "Library" : activeSidebarItem.charAt(0).toUpperCase() + activeSidebarItem.slice(1)}
+       </h1>
 
-      <div className="absolute right-8 flex items-center gap-6 pointer-events-auto">
-        <div className="relative">
-          <button 
-            onClick={() => setSearchExpanded(!searchExpanded)}
-            className="p-2 rounded-full hover:bg-white/5 transition-colors text-[var(--text-2)]"
-          >
-            <Search size={20} />
-          </button>
-          {searchExpanded && (
-            <motion.div 
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 240, opacity: 1 }}
-              className="absolute right-full top-1/2 -translate-y-1/2 mr-2"
-            >
-              <input
-                autoFocus
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full bg-[var(--surface-2)] border border-white/10 rounded-full px-4 py-2 text-[12px] text-white outline-none focus:border-[var(--brand-blue)]"
-              />
-            </motion.div>
-          )}
-        </div>
-        <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center cursor-pointer hover:border-white/20 transition-all">
-          {(user as any)?.user_metadata?.avatar_url ? (
-            <img src={(user as any).user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            <User size={16} className="text-white/40" />
-          )}
-        </div>
-      </div>
-    </header>
-  );
+       {/* Search + User (Right) */}
+       <div className="flex items-center gap-6 pointer-events-auto">
+         <div className="relative">
+           <button
+             onClick={() => setSearchExpanded(!searchExpanded)}
+             className="p-2 rounded-full hover:bg-white/5 transition-colors text-[var(--text-2)]"
+           >
+             <Search size={20} />
+           </button>
+           {searchExpanded && (
+             <motion.div
+               initial={{ width: 0, opacity: 0 }}
+               animate={{ width: 240, opacity: 1 }}
+               className="absolute right-full top-1/2 -translate-y-1/2 mr-2"
+             >
+               <input
+                 autoFocus
+                 value={searchQuery}
+                 onChange={e => setSearchQuery(e.target.value)}
+                 placeholder="Search..."
+                 className="w-full bg-[var(--surface-2)] border border-white/10 rounded-full px-4 py-2 text-[12px] text-white outline-none focus:border-[var(--brand-blue)]"
+               />
+             </motion.div>
+           )}
+         </div>
+         <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden border border-white/10 flex items-center justify-center cursor-pointer hover:border-white/20 transition-all">
+           {(user as any)?.user_metadata?.avatar_url ? (
+             <img src={(user as any).user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+           ) : (
+             <User size={16} className="text-white/40" />
+           )}
+         </div>
+       </div>
+     </header>
+   );
 
-  const ActionBar = () => (
-    <div className="flex items-center justify-between px-8 py-4 bg-[var(--ink)] mt-16">
+const ActionBar = () => (
+     <div className="flex items-center justify-between px-6 py-3 flex-shrink-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
       <div className="flex items-center gap-3">
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -3579,45 +3116,36 @@ function DashboardPage() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <TopNav />
-        <ActionBar />
+        {activeSidebarItem !== "workspaces" && <ActionBar />}
 
+        {activeSidebarItem === "workspaces" ? (
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            <AnimatePresence mode="wait">
+              {WorkspaceView()}
+            </AnimatePresence>
+          </div>
+        ) : (
         <main className="flex-1 overflow-y-auto studio-scroll px-8 pb-32">
           <AnimatePresence mode="wait">
             {activeSidebarItem === "imported" && (
-              <motion.div 
+              <motion.div
                 key="library-view"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="space-y-8 pt-4"
+                className="space-y-6 pt-4"
               >
-                {showBanner && (
-                  <div className="relative rounded-[2rem] p-8 flex items-center justify-between overflow-hidden bg-gradient-to-r from-[var(--brand-blue)] to-[#61E3F0]/80 shadow-2xl shadow-blue-900/20 group">
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    <div className="flex items-center gap-8 z-10">
-                      <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center border border-white/30 shadow-inner">
-                        <Mic2 size={40} className="text-white" />
-                      </div>
-                      <h2 className="text-[28px] font-black text-white leading-tight tracking-tight uppercase italic" style={{ fontFamily: "var(--font-syne)" }}>
-                        Turn Anything into a <br/> Study Podcast
-                      </h2>
-                    </div>
-                    <div className="flex items-center gap-4 z-10">
-                      <button 
-                        onClick={() => setIsPodcastModalOpen(true)}
-                        className="bg-white text-[var(--brand-blue)] px-8 py-3 rounded-full text-[14px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
-                      >
-                        Create Podcast
-                      </button>
-                      <button 
-                        onClick={() => setShowBanner(false)}
-                        className="p-2 text-white/60 hover:text-white transition-colors"
-                      >
-                        <X size={24} />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {/* compact action strip instead of big banner */}
+                <div className="flex items-center gap-3 pb-2 border-b" style={{ borderColor: "var(--border)" }}>
+                  <h2 className="text-[15px] font-bold text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>Documents</h2>
+                  <div className="flex-1" />
+                  <button onClick={() => setIsPodcastModalOpen(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold transition-all hover:opacity-90 active:scale-95 border" style={{ background: "var(--surface-2)", color: "var(--text-1)", borderColor: "var(--border-strong)" }}>
+                    <Mic2 size={14} /> Podcast
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold text-white transition-all hover:opacity-90 active:scale-95" style={{ background: "var(--brand-blue)" }}>
+                    <CloudUpload size={14} /> Upload
+                  </button>
+                </div>
 
                 <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "grid-cols-1"}`}>
                   {docsLoading ? (
@@ -3698,7 +3226,6 @@ function DashboardPage() {
               </motion.div>
             )}
 
-            {activeSidebarItem === "workspaces" && WorkspaceView()}
             {activeSidebarItem === "studio" && (
               <div className="pt-8 max-w-4xl mx-auto">
                 <VoiceClonePanel />
@@ -3713,6 +3240,7 @@ function DashboardPage() {
             )}
           </AnimatePresence>
         </main>
+        )}
       </div>
 
       {/* ── Action Modals ───────────────────────────────────────────────────────── */}
@@ -3930,7 +3458,7 @@ function DashboardPage() {
         }}
         activeItem={activeSidebarItem}
       />
-      {PlayerBar()}
+      {PlayerBar({ detailRight: "var(--detail-pane-width)" })}
     </div>
   );
 }
