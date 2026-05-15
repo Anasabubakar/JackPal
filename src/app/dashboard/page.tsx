@@ -77,7 +77,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ease, dur } from "@/lib/motion";
 import { FadeUp, SlideIn, SpringScale } from "@/components/ui/MotionPrimitives";
 import { NotebookCollaborationPanel } from "@/components/workspace/NotebookCollaborationPanel";
-import { WorkspaceNotebookSearch } from "@/components/workspace/WorkspaceNotebookSearch";
 import {
   getUser,
   logout,
@@ -2173,30 +2172,31 @@ function DashboardPage() {
         {!selectedWorkspace ? (
           /* ── NOTEBOOKS HOME VIEW ── */
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[#373a40]/80 px-8 py-6">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-[#373a40]/80 px-4 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-6">
               <h2 className="text-[22px] font-semibold text-white" style={{ fontFamily: "var(--font-inter)" }}>
                 Your workspaces
               </h2>
-              <div className="flex-1" />
-              <input
-                value={workspaceTitle}
-                onChange={(e) => setWorkspaceTitle(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
-                placeholder="New workspace name"
-                className="w-44 rounded-full border border-[#373a40] bg-[#1a1b1e] px-4 py-2 text-[12px] text-white outline-none transition-all placeholder:text-[#909296] focus:w-60 focus:border-[#0f8ce9]"
-              />
-              <button
-                onClick={handleCreateWorkspace}
-                disabled={!!workspaceBusy || !workspaceTitle.trim()}
-                className="flex items-center gap-1.5 rounded-full bg-[#0f8ce9] px-5 py-2 text-[12px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Plus size={14} /> Create
-              </button>
+              <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <input
+                  value={workspaceTitle}
+                  onChange={(e) => setWorkspaceTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
+                  placeholder="New workspace name"
+                  className="w-full min-w-0 rounded-full border border-[#373a40] bg-[#1a1b1e] px-4 py-2 text-[12px] text-white outline-none transition-colors placeholder:text-[#909296] focus:border-[#0f8ce9] sm:w-52 md:w-60"
+                />
+                <button
+                  onClick={handleCreateWorkspace}
+                  disabled={!!workspaceBusy || !workspaceTitle.trim()}
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-[#0f8ce9] px-5 py-2 text-[12px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Plus size={14} /> Create
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto studio-scroll p-6">
+            <div className="flex-1 overflow-y-auto studio-scroll p-4 sm:p-6">
               {workspaceLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="aspect-square rounded-2xl animate-pulse" style={{ background: "var(--surface-2)" }} />
                   ))}
@@ -2208,7 +2208,7 @@ function DashboardPage() {
                   <p className="text-[13px] mt-2">Name one above and hit Create</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {workspaces.map((workspace) => {
                     const rowOwner = workspace.is_owner ?? workspace.role === "owner";
                     return (
@@ -2238,6 +2238,7 @@ function DashboardPage() {
             </div>
           </div>
         ) : (
+          <div className="studio-scroll flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto lg:overflow-hidden">
           <WorkspaceNotebookFigma
             notebook={selectedWorkspace}
             workspaceId={selectedWorkspaceId!}
@@ -2311,6 +2312,7 @@ function DashboardPage() {
               if (scope === "all") setChatPickSourceIds([]);
             }}
             chatPickSourceIds={chatPickSourceIds}
+            onChatPickReplace={(ids) => setChatPickSourceIds(ids)}
             onTogglePickSource={(id) =>
               setChatPickSourceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
             }
@@ -2349,18 +2351,19 @@ function DashboardPage() {
               router.push("/login");
             }}
           />
+          </div>
         )}
 
         {/* Artifact View Modal */}
         <AnimatePresence>
           {artifactViewerId && (
-            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true">
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-8" role="dialog" aria-modal="true">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setArtifactViewerId(null)} />
               {(() => {
                 const art = workspaceArtifacts.find((a) => a.id === artifactViewerId);
                 return (
-                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative z-10 w-full max-w-5xl max-h-[90vh] flex flex-col rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10" style={{ background: "rgba(12, 12, 18, 0.95)" }}>
-                    <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0 bg-white/[0.02]">
+                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative z-10 flex max-h-[90vh] w-full min-w-0 max-w-5xl flex-col overflow-hidden rounded-[1.5rem] border border-white/10 shadow-2xl sm:rounded-[2.5rem]" style={{ background: "rgba(12, 12, 18, 0.95)" }}>
+                    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 bg-white/[0.02] p-4 sm:p-6">
                       <div className="min-w-0">
                         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--blue)] mb-1">Generated Output</div>
                         <h2 className="text-[20px] font-bold truncate text-[var(--text-1)]" style={{ fontFamily: "var(--font-syne)" }}>{art?.title ?? "Artifact Preview"}</h2>
@@ -2370,7 +2373,7 @@ function DashboardPage() {
                         <button onClick={() => setArtifactViewerId(null)} className="p-3 rounded-2xl bg-white/5 text-[var(--text-3)] hover:text-white transition-all"><X size={20} /></button>
                       </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto studio-scroll p-6 sm:p-10 min-h-0">
+                    <div className="studio-scroll min-h-0 flex-1 overflow-auto p-4 sm:p-10">
                       {art ? <ArtifactViewer artifact={art} /> : <div className="flex h-full items-center justify-center opacity-20"><Loader2 className="animate-spin" size={40} /></div>}
                     </div>
                     <div className="p-4 border-t border-white/5 bg-white/[0.02] flex justify-center">
@@ -2609,7 +2612,7 @@ function DashboardPage() {
       <div
         className="studio studio-glass-chrome fixed bottom-0 z-50 flex flex-col border-t bg-[var(--ink)]"
         style={{
-          left: "var(--sidebar-width)",
+          left: 0,
           right: detailRight,
           paddingBottom: "max(0px, env(safe-area-inset-bottom))",
           borderColor: "var(--border)",
@@ -2640,9 +2643,9 @@ function DashboardPage() {
         </div>
 
         {/* Main controls row */}
-        <div className="flex items-center gap-3 sm:gap-5 px-3 sm:px-6 py-2.5 sm:py-3">
+        <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 sm:flex-nowrap sm:gap-5 sm:px-6 sm:py-3">
           {/* Title + speaker */}
-          <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0 w-32 sm:w-56">
+          <div className="flex min-w-[150px] flex-1 items-center gap-2.5 sm:w-56 sm:flex-none">
             <div
               className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold"
               style={{ background: accent, color: accentInk }}
@@ -2658,7 +2661,7 @@ function DashboardPage() {
           </div>
 
           {/* Center transport controls */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-4">
             <motion.button
               whileTap={{ scale: 0.88 }}
               onClick={() => skipBy(-10)}
@@ -2697,7 +2700,7 @@ function DashboardPage() {
           </div>
 
           {/* Time */}
-          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4 min-w-0">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:gap-4">
             <div className="text-[11px] tabular-nums flex-shrink-0 max-sm:hidden" style={{ color: "var(--text-3)" }}>
               <span style={{ color: "var(--text-1)" }}>{formatTime(currentTime)}</span>
               <span className="mx-1.5">/</span>

@@ -403,7 +403,7 @@ function MindMapNode({ node, depth = 0 }: { node: MindNode; depth?: number }) {
   const fontWeight = depth === 0 ? 700 : depth === 1 ? 600 : 400;
 
   return (
-    <div className="select-none">
+    <div className="min-w-max select-none">
       <div
         className="flex items-start gap-2 py-1 cursor-pointer rounded-lg px-2 -mx-2 transition-colors hover:bg-white/[0.04]"
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
@@ -431,8 +431,10 @@ function MindMapNode({ node, depth = 0 }: { node: MindNode; depth?: number }) {
 
 function MindMapViewer({ data }: { data: MindNode }) {
   return (
-    <div className="p-2">
-      <MindMapNode node={data} depth={0} />
+    <div className="overflow-x-auto p-2">
+      <div className="min-w-max pr-4">
+        <MindMapNode node={data} depth={0} />
+      </div>
     </div>
   );
 }
@@ -622,7 +624,7 @@ function DataTableViewer({ csv }: { csv: string }) {
 
   return (
     <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border)' }}>
-      <table className="w-full text-[12px] border-collapse">
+      <table className="min-w-full text-[12px] border-collapse">
         <thead>
           <tr style={{ background: 'var(--surface-2)' }}>
             {headers.map((h, i) => (

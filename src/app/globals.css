@@ -345,7 +345,7 @@ h1, h2, h3, h4 {
   position: sticky;
   top: 0;
   z-index: 80;
-  height: 110px;
+  height: clamp(82px, 8vw, 110px);
   background: #fff;
   box-shadow: 0 4px 20px 5px rgba(0, 0, 0, 0.25);
 }
@@ -439,7 +439,7 @@ h1, h2, h3, h4 {
 .jp-hero {
   position: relative;
   min-height: min(720px, max(520px, 85dvh));
-  padding: clamp(64px, 10vw, 115px) 0 68px;
+  padding: clamp(56px, 9vw, 115px) 0 clamp(56px, 7vw, 68px);
   background: #000a28;
   overflow: hidden;
 }
@@ -2131,7 +2131,7 @@ button.jp-button {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: right center;
 }
 
@@ -2322,7 +2322,40 @@ button.jp-button {
   height: 16px;
 }
 
-/* ── Mid-range breakpoints (860px) ── */
+/* ── Tablet / mid-range breakpoints ── */
+@media (max-width: 980px) {
+  .jp-proof h2,
+  .jp-features h2,
+  .jp-centered h2 {
+    margin-bottom: 34px;
+    font-size: clamp(32px, 5vw, 40px);
+  }
+
+  .jp-testimonials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jp-step-grid,
+  .jp-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .jp-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(860px, 100%);
+  }
+
+  .jp-price-card {
+    min-height: 0;
+    padding: 34px 28px 38px;
+  }
+
+  .jp-final {
+    min-height: auto;
+  }
+}
+
 @media (max-width: 860px) {
   .jp-footer-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -2449,14 +2482,7 @@ button.jp-button {
   }
 }
 
-@media (max-width: 640px) {
-  .jp-container,
-  .jp-nav-inner {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
-  }
-
-  /* Mobile: hide 3-card grid, show single auto-rotating card + dots */
+@media (max-width: 720px) {
   .jp-testimonials {
     display: none;
   }
@@ -2467,6 +2493,14 @@ button.jp-button {
 
   .jp-testimonial-dots {
     display: flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .jp-container,
+  .jp-nav-inner {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
   }
 
   .jp-testimonial {
@@ -2687,11 +2721,10 @@ button.jp-button {
     line-height: 1.25;
   }
 
-  /* Hero CTAs: lock side-by-side, never wrap */
   .jp-hero .jp-actions {
     flex-direction: row;
     align-items: stretch;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 10px;
     width: 100%;
   }
@@ -2704,7 +2737,7 @@ button.jp-button {
     font-weight: 400;
     min-height: 46px;
     padding: 0 14px;
-    white-space: nowrap;
+    white-space: normal;
     line-height: 1;
     border-radius: 40px;
   }
@@ -2737,6 +2770,16 @@ button.jp-button {
 
   .jp-footer-grid {
     gap: 36px;
+  }
+}
+
+@media (max-width: 380px) {
+  .jp-hero .jp-actions {
+    flex-direction: column;
+  }
+
+  .jp-hero .jp-button {
+    width: 100%;
   }
 }
 
