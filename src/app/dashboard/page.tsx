@@ -144,6 +144,7 @@ import {
 } from "@/lib/api";
 import { ArtifactViewer } from "@/components/workspace/ArtifactViewer";
 import { WorkspaceNotebookFigma } from "@/components/dashboard/WorkspaceNotebookFigma";
+import { LibraryDashboard } from "@/components/dashboard/LibraryDashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const VOICE_OPTIONS = [
@@ -2743,13 +2744,46 @@ function DashboardPage() {
     );
   };
 
+  const playerIsPlaying = !!playingDocId;
+  const playerTogglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  };
+
   return (
     <div className="studio flex h-screen max-h-[100dvh] min-h-0 overflow-hidden bg-[#010a33] text-[var(--text-1)]">
       <audio ref={audioRef} />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <AnimatePresence mode="wait">{WorkspaceView()}</AnimatePresence>
+          {activeTab === 'home' ? (
+            <LibraryDashboard
+              user={user}
+              documents={documents}
+              filteredDocuments={filteredDocuments}
+              docsLoading={docsLoading}
+              subjects={subjects}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              currentDocId={currentDocId}
+              isPlaying={playerIsPlaying}
+              playerProgress={playerProgress}
+              currentTime={currentTime}
+              duration={duration}
+              isAudioLoading={isAudioLoading}
+              onPlayDoc={(docId) => handlePlayChunks(docId, 0)}
+              onUploadClick={() => fileInputRef.current?.click()}
+              onDeleteDoc={handleDeleteDoc}
+              onLogout={handleLogout}
+              onSwitchToWorkspace={() => setActiveTab('workspace')}
+              onTogglePlay={playerTogglePlay}
+              onSkipBy={skipBy}
+              formatTime={formatTime}
+            />
+          ) : (
+            <AnimatePresence mode="wait">{WorkspaceView()}</AnimatePresence>
+          )}
         </div>
       </div>
 

@@ -120,6 +120,10 @@ h1, h2, h3, h4 {
   0%, 100% { transform: scaleY(1); }
   50%       { transform: scaleY(1.8); }
 }
+@keyframes jp-bar-pulse {
+  0%, 100% { transform: scaleY(0.8); }
+  50%       { transform: scaleY(1.25); }
+}
 
 .animate-shimmer    { animation: shimmer 2s infinite linear; }
 .animate-fade-up    { animation: fade-up 0.3s ease both; }

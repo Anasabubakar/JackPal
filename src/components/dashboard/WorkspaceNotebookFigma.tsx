@@ -129,7 +129,7 @@ function HeaderBtn({
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className={`flex items-center justify-center rounded-[10px] bg-[#0f8ce9] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 ${wide ? "h-10 gap-2 px-4 min-w-[149px]" : "size-10"} ${className}`}
+      className={`flex items-center justify-center rounded-[10px] bg-[#0f8ce9] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 ${wide ? "h-8 gap-1.5 px-3 min-w-[110px]" : "size-8"} ${className}`}
     >
       {children}
     </button>
@@ -361,19 +361,19 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
       style={{ fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif" }}
     >
       {/* Header */}
-      <header className="flex shrink-0 flex-wrap items-start justify-between gap-4 px-4 pb-2 pt-6 sm:px-6 lg:pl-[53px] lg:pr-[39px] lg:pt-[38px]">
-        <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-3 sm:px-6 lg:pl-[36px] lg:pr-[26px] lg:pt-[16px]">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-xl p-2 text-white/80 hover:bg-white/10 hover:text-white"
+            className="rounded-xl p-1.5 text-white/80 hover:bg-white/10 hover:text-white"
             aria-label="Back to notebooks"
           >
-            <ArrowRight className="size-5 rotate-180" strokeWidth={2} />
+            <ArrowRight className="size-4 rotate-180" strokeWidth={2} />
           </button>
-          <JackpalsLogo variant="mark" priority className="h-12 w-12 shrink-0 object-contain sm:h-[68px] sm:w-[67px]" />
+          <JackpalsLogo variant="mark" priority className="h-8 w-8 shrink-0 object-contain sm:h-10 sm:w-10" />
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-medium leading-tight tracking-tight sm:text-[28px] sm:leading-none">{notebook.title}</h1>
+            <h1 className="truncate text-base font-medium leading-tight tracking-tight sm:text-[20px] sm:leading-none">{notebook.title}</h1>
           </div>
         </div>
 
@@ -385,20 +385,20 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
             title="Import PDFs, links, Drive files, and more"
             className="max-sm:flex-1"
           >
-            <FilePlus className="size-6 shrink-0 opacity-95" strokeWidth={1.75} />
-            <span className="text-[15px] sm:text-[18px]">Upload File</span>
+            <FilePlus className="size-4 shrink-0 opacity-95" strokeWidth={1.75} />
+            <span className="text-[13px]">Upload File</span>
           </HeaderBtn>
           <HeaderBtn wide disabled={busy} onClick={() => setShareOpen(true)} title="Share workspace" className="max-sm:flex-1">
-            <Share2 className="size-6 shrink-0 opacity-95" strokeWidth={1.75} />
-            <span className="text-[15px] sm:text-[18px]">Share</span>
+            <Share2 className="size-4 shrink-0 opacity-95" strokeWidth={1.75} />
+            <span className="text-[13px]">Share</span>
           </HeaderBtn>
           {wsOwner ? (
             <HeaderBtn disabled={busy} onClick={onCycleSharingRole} title="Cycle viewer/editor link role">
-              <Sliders className="size-6 opacity-95" strokeWidth={1.75} />
+              <Sliders className="size-4 opacity-95" strokeWidth={1.75} />
             </HeaderBtn>
           ) : null}
           <HeaderBtn onClick={() => void onLogout()} title="Sign out">
-            <User className="size-6 opacity-95" strokeWidth={1.75} />
+            <User className="size-4 opacity-95" strokeWidth={1.75} />
           </HeaderBtn>
         </div>
       </header>
@@ -483,7 +483,7 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
       )}
 
       {/* Columns — stack on phones, bridge to two columns on laptops, then three columns only when space allows. */}
-      <div className="mt-4 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-6 overflow-x-clip px-4 pb-8 pt-1 lg:flex-row lg:flex-wrap lg:items-stretch xl:mt-6 xl:gap-[28px] xl:px-[53px] xl:pb-10 xl:pr-[39px] min-[1420px]:flex-nowrap">
+      <div className="mt-2 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-4 overflow-x-clip px-4 pb-6 pt-1 lg:flex-row lg:flex-wrap lg:items-stretch xl:mt-4 xl:gap-[20px] xl:px-[36px] xl:pb-8 xl:pr-[26px] min-[1420px]:flex-nowrap">
         {/* Sources */}
         <aside
           className={`flex shrink-0 flex-col overflow-hidden rounded-t-[25px] bg-[rgba(45,107,255,0.19)] transition-[width] duration-200 xl:max-w-none ${
@@ -493,7 +493,7 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
           }`}
         >
           <div className="flex items-center justify-between border-b border-white/15 px-4 pb-3 pt-5">
-            {!sourcesCollapsed && <h2 className="text-[23px] font-medium">Sources</h2>}
+            {!sourcesCollapsed && <h2 className="text-[17px] font-medium">Sources</h2>}
             <button
               type="button"
               className="rounded-lg p-1 text-white/90 hover:bg-white/10"
@@ -505,14 +505,14 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
           </div>
 
           {!sourcesCollapsed && (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 pt-5 sm:px-8 sm:pb-8">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
               <button
                 type="button"
                 disabled={!canEditNotebook || busy}
                 onClick={onOpenAddSourcesModal}
-                className="flex min-h-[40px] w-full touch-manipulation items-center justify-center gap-3 rounded-[10px] bg-[#0f8ce9] text-[15px] font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 sm:text-[17px]"
+                className="flex min-h-[36px] w-full touch-manipulation items-center justify-center gap-2 rounded-[10px] bg-[#0f8ce9] text-[13px] font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                <PlusCircle className="size-6 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
+                <PlusCircle className="size-4 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
                 Add Sources
               </button>
 
@@ -649,8 +649,8 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
 
         {/* Chat — primary workspace column. */}
         <section className="flex min-h-0 min-w-[min(100%,360px)] flex-1 flex-col rounded-t-[25px] bg-[#091c5a] lg:flex-[1_1_52%] min-[1420px]:w-[530px] min-[1420px]:max-w-none min-[1420px]:flex-none min-[1420px]:overflow-hidden">
-          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 px-4 pb-3 pt-5 sm:px-8 sm:pt-6">
-            <h2 className="text-[23px] font-medium">Chat</h2>
+          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 px-4 pb-3 pt-4 sm:px-5 sm:pt-4">
+            <h2 className="text-[17px] font-medium">Chat</h2>
             <div className="flex flex-wrap items-center gap-2">
               {workspaceChats.length > 0 && (
                 <select
@@ -684,19 +684,19 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
           </div>
 
           {chatCorpusScope === "pick" && chatPickSourceIds.length === 0 && workspaceSources.length > 0 ? (
-            <div className="border-b border-amber-500/30 bg-amber-500/15 px-4 py-2 text-center text-[11px] text-amber-100/95 sm:px-8">
+            <div className="border-b border-amber-500/30 bg-amber-500/15 px-4 py-2 text-center text-[11px] text-amber-100/95 sm:px-5">
               Select at least one source (or choose Select all) before sending a message.
             </div>
           ) : null}
 
-          <div className="studio-scroll flex min-h-[min(240px,45svh)] flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-5 sm:min-h-[280px] sm:px-8 sm:pt-6 min-[1420px]:min-h-0">
+          <div className="studio-scroll flex min-h-[min(240px,45svh)] flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-4 sm:min-h-[280px] sm:px-5 sm:pt-5 min-[1420px]:min-h-0">
             {activeChatTurns.length === 0 && !workspaceAnswer ? (
               <>
-                <p className="max-w-[494px] text-3xl leading-none text-[#c1c2c5] sm:text-[36px] sm:leading-[40px]">👋</p>
-                <h3 className="max-w-[494px] text-3xl font-normal leading-tight tracking-tight sm:text-[36px] sm:leading-[40px]">
+                <p className="max-w-[494px] text-2xl leading-none text-[#c1c2c5] sm:text-[28px] sm:leading-[34px]">👋</p>
+                <h3 className="max-w-[494px] text-2xl font-normal leading-tight tracking-tight sm:text-[28px] sm:leading-[34px]">
                   Let&apos;s Cook!
                 </h3>
-                <p className="max-w-[494px] text-[15px] leading-relaxed text-[#c1c2c5] sm:text-[17px] sm:leading-7">
+                <p className="max-w-[494px] text-[13px] leading-relaxed text-[#c1c2c5] sm:text-[15px] sm:leading-6">
                   This page is for you to understand, create, or make progress on what you want to learn. Make the most out of it
                 </p>
               </>
@@ -760,7 +760,7 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
             )}
           </div>
 
-          <div className="mt-auto space-y-3 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-6">
+          <div className="mt-auto space-y-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-4">
             <div className="flex flex-col gap-2 rounded-2xl border border-[#373a40] bg-[#1a1b1e] p-2 shadow-[0px_1px_1px_rgba(0,0,0,0.05)] sm:flex-row sm:items-center sm:gap-2">
               <textarea
                 value={chatQuestion}
@@ -818,10 +818,10 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
         </section>
 
         {/* Studio column + preview */}
-        <div className="flex min-h-0 w-full min-w-0 shrink-0 flex-col gap-4 lg:flex-[1_1_100%] xl:gap-[19px] min-[1420px]:w-[355px] min-[1420px]:flex-none">
-          <div className="flex min-h-[320px] flex-col rounded-[25px] bg-[#091c5a] min-[1420px]:h-[400px] min-[1420px]:min-h-0">
-            <div className="flex items-start justify-between px-5 pb-0 pt-5 sm:px-8 sm:pt-[23px]">
-              <h2 className="text-[23px] font-medium">Studio</h2>
+        <div className="flex min-h-0 w-full min-w-0 shrink-0 flex-col gap-3 lg:flex-[1_1_100%] xl:gap-3 min-[1420px]:w-[320px] min-[1420px]:flex-none">
+          <div className="flex min-h-[260px] flex-col rounded-[20px] bg-[#091c5a] min-[1420px]:h-[340px] min-[1420px]:min-h-0">
+            <div className="flex items-start justify-between px-4 pb-0 pt-4 sm:px-5 sm:pt-4">
+              <h2 className="text-[17px] font-medium">Studio</h2>
               <div className="flex items-center gap-2">
                 {busy ? <Loader2 className="size-5 animate-spin text-[#909296]" /> : null}
                 <button type="button" className="rounded-lg p-1 hover:bg-white/10" aria-label="Studio shortcuts">
@@ -829,24 +829,24 @@ export function WorkspaceNotebookFigma(props: WorkspaceNotebookFigmaProps) {
                 </button>
               </div>
             </div>
-            <div className="mx-5 mt-4 h-px bg-white/10 sm:mx-8" />
-            <div className="studio-scroll grid flex-1 grid-cols-2 content-start justify-items-center gap-3 overflow-y-auto px-5 pb-5 pt-5 sm:grid-cols-3 sm:gap-[18px] sm:px-8 sm:pb-6 sm:pt-6">
+            <div className="mx-4 mt-3 h-px bg-white/10 sm:mx-5" />
+            <div className="studio-scroll grid flex-1 grid-cols-3 content-start justify-items-center gap-2 overflow-y-auto px-4 pb-4 pt-4 sm:gap-3 sm:px-5 sm:pb-5 sm:pt-4">
               {STUDIO_TILES.map(({ type, label, Icon }) => (
                 <button
                   key={type}
                   type="button"
                   disabled={!canEditNotebook || busy}
                   onClick={() => void onGenerateArtifact(type)}
-                  className="flex h-[76px] w-full max-w-[85px] touch-manipulation flex-col items-center justify-start gap-1 rounded-[20px] bg-[#1586ed] px-1 pb-2 pt-3 text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 sm:h-[85px] sm:rounded-[25px] sm:pt-[19px]"
+                  className="flex h-[60px] w-full max-w-[72px] touch-manipulation flex-col items-center justify-start gap-1 rounded-[16px] bg-[#1586ed] px-1 pb-1.5 pt-2.5 text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  <Icon className="size-6 shrink-0 text-white" strokeWidth={1.75} />
+                  <Icon className="size-5 shrink-0 text-white" strokeWidth={1.75} />
                   <span className="px-0.5 text-center text-[10px] font-normal leading-snug">{label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex min-h-[280px] flex-col rounded-t-[25px] bg-[#091c5a] px-4 pb-6 pt-6 max-[1419px]:max-w-full min-[1420px]:max-h-[min(560px,62vh)] min-[1420px]:min-h-[280px] min-[1420px]:flex-1 min-[1420px]:overflow-hidden min-[1420px]:pb-6">
+          <div className="flex min-h-[220px] flex-col rounded-t-[20px] bg-[#091c5a] px-4 pb-4 pt-4 max-[1419px]:max-w-full min-[1420px]:max-h-[min(500px,58vh)] min-[1420px]:min-h-[220px] min-[1420px]:flex-1 min-[1420px]:overflow-hidden">
             <div className="mb-4 space-y-2 border-b border-white/10 pb-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#909296]">Quick note</p>
               <input
