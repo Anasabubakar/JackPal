@@ -7,6 +7,9 @@ interface SidebarProps {
   t: JpTheme;
   accent: string;
   radius: number;
+  layout?: 'inline' | 'drawer';
+  open?: boolean;
+  onClose?: () => void;
 }
 
 interface NavItem {
@@ -16,103 +19,106 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'library',  label: 'Library',         icon: '◫' },
-  { id: 'player',   label: 'Now Playing',     icon: '◐' },
-  { id: 'reader',   label: 'Reader',          icon: '◧' },
-  { id: 'preview',  label: 'Audio Preview',   icon: '◑' },
+  { id: 'library', label: 'Library', icon: '◫' },
+  { id: 'player', label: 'Now Playing', icon: '◐' },
+  { id: 'reader', label: 'Reader', icon: '◧' },
+  { id: 'preview', label: 'Audio Preview', icon: '◑' },
   { id: 'artifact', label: 'Artifact Studio', icon: '◈' },
-  { id: 'notes',    label: 'Highlights',      icon: '◇' },
-  { id: 'voices',   label: 'Voices',          icon: '◍' },
-  { id: 'account',  label: 'Account',         icon: '◯' },
+  { id: 'notes', label: 'Highlights', icon: '◇' },
+  { id: 'voices', label: 'Voices', icon: '◍' },
+  { id: 'account', label: 'Account', icon: '◯' },
 ];
 
-export function Sidebar({ t, accent, radius }: SidebarProps) {
+export function Sidebar({
+  t,
+  accent,
+  radius,
+  layout = 'inline',
+  open = false,
+  onClose,
+}: SidebarProps) {
   const { route, setRoute, isPlaying, startUpload, user } = useJp();
   const [hoveredNav, setHoveredNav] = React.useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initials = user?.full_name
-    ? user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    ? user.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'U';
   const displayName = user?.full_name || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || '';
+  const isDrawer = layout === 'drawer';
+
+  const goTo = (id: DesktopRoute) => {
+    setRoute({ desktop: id });
+    onClose?.();
+  };
 
   return (
-    <div
+    <aside
+      className={
+        isDrawer
+          ? `jp-dashboard-sidebar-drawer${open ? ' jp-dashboard-sidebar-drawer--open' : ''}`
+          : undefined
+      }
       style={{
         width: 248,
         flexShrink: 0,
         background: t.sidebar,
         borderRight: `1px solid ${t.border}`,
-        display: 'flex',
+        display: isDrawer && !open ? 'none' : 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
       }}
     >
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".pdf,.doc,.docx"
         style={{ display: 'none' }}
-        onChange={e => {
+        onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) startUpload(file, 'desktop');
           e.target.value = '';
         }}
       />
 
-      {/* Logo */}
-      <div style={{ padding: '24px 20px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
+      <div style={{ padding: '24px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 800,
+            color: t.ink,
+            fontFamily: "'Fraunces', Georgia, serif",
+          }}
+        >
+          JackPals
+        </div>
+        {isDrawer && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: `linear-gradient(135deg, ${accent}, #F5A623)`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: `1px solid ${t.border}`,
+              background: t.inset,
+              color: t.muted,
+              cursor: 'pointer',
               fontSize: 18,
-              fontWeight: 900,
-              color: '#fff',
-              fontFamily: "'Fraunces', Georgia, serif",
-              flexShrink: 0,
+              lineHeight: 1,
             }}
           >
-            J
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: t.ink,
-                fontFamily: "'Fraunces', Georgia, serif",
-                lineHeight: 1.1,
-              }}
-            >
-              JackPals
-            </div>
-            <div
-              style={{
-                fontSize: 9,
-                color: t.muted,
-                fontFamily: "'JetBrains Mono', monospace",
-                letterSpacing: '0.1em',
-              }}
-            >
-              AUDIO STUDY
-            </div>
-          </div>
-        </div>
+            ×
+          </button>
+        )}
       </div>
 
-      {/* Upload button */}
       <div style={{ padding: '0 16px 20px' }}>
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           style={{
             width: '100%',
@@ -136,16 +142,16 @@ export function Sidebar({ t, accent, radius }: SidebarProps) {
         </button>
       </div>
 
-      {/* Nav */}
-      <nav style={{ padding: '0 10px', flex: 1, overflow: 'auto' }}>
-        {NAV_ITEMS.map(item => {
+      <nav style={{ padding: '0 10px', flex: 1, overflow: 'auto' }} className="jp-scroll">
+        {NAV_ITEMS.map((item) => {
           const isActive = route.desktop === item.id;
           return (
             <button
               key={item.id}
+              type="button"
               onMouseEnter={() => setHoveredNav(item.id)}
               onMouseLeave={() => setHoveredNav(null)}
-              onClick={() => setRoute({ desktop: item.id })}
+              onClick={() => goTo(item.id)}
               style={{
                 width: '100%',
                 height: 40,
@@ -153,8 +159,10 @@ export function Sidebar({ t, accent, radius }: SidebarProps) {
                 background: isActive
                   ? `${accent}20`
                   : hoveredNav === item.id
-                  ? t.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-                  : 'transparent',
+                    ? t.isDark
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'rgba(0,0,0,0.04)'
+                    : 'transparent',
                 border: 'none',
                 color: isActive ? accent : t.muted,
                 fontSize: 14,
@@ -190,7 +198,6 @@ export function Sidebar({ t, accent, radius }: SidebarProps) {
         })}
       </nav>
 
-      {/* User pill */}
       <div style={{ padding: 16, borderTop: `1px solid ${t.border}` }}>
         <div
           style={{
@@ -250,6 +257,6 @@ export function Sidebar({ t, accent, radius }: SidebarProps) {
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

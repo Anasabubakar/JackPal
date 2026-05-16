@@ -47,27 +47,16 @@ export function PlayerView({ t, accent, radius }: PlayerViewProps) {
   );
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: 'grid',
-        gridTemplateColumns: '1fr 340px',
-        height: '100%',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Hero */}
+    <div className="jp-player-layout">
       <div
+        className="jp-player-hero jp-scroll"
         style={{
           background: `linear-gradient(160deg, ${subj.ink}55 0%, ${t.bg} 70%)`,
-          padding: 40,
           display: 'flex',
           flexDirection: 'column',
           gap: 24,
-          overflow: 'auto',
           borderRight: `1px solid ${t.border}`,
         }}
-        className="jp-scroll"
       >
         <JpSubjectChip subject={doc.subject} theme={t} />
 
@@ -83,6 +72,7 @@ export function PlayerView({ t, accent, radius }: PlayerViewProps) {
         </div>
 
         <div
+          className="jp-player-title"
           style={{
             fontSize: 44,
             fontWeight: 900,
@@ -271,14 +261,13 @@ export function PlayerView({ t, accent, radius }: PlayerViewProps) {
 
       {/* Section list */}
       <div
+        className="jp-player-sidebar-panel jp-scroll"
         style={{
-          overflow: 'auto',
           padding: 24,
           display: 'flex',
           flexDirection: 'column',
           gap: 4,
         }}
-        className="jp-scroll"
       >
         <div
           style={{

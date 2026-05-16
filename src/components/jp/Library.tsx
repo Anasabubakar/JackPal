@@ -36,17 +36,7 @@ export function Library({ t, accent, radius }: LibraryProps) {
   });
 
   return (
-    <div
-      style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: 28,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 28,
-      }}
-      className="jp-scroll"
-    >
+    <div className="jp-library-scroll jp-scroll">
       {/* Loading state */}
       {loading && (
         <div style={{ textAlign: 'center', padding: 48, color: t.muted, fontSize: 13 }}>Loading your library…</div>
@@ -69,11 +59,11 @@ export function Library({ t, accent, radius }: LibraryProps) {
       {/* Library header + grid */}
       {!loading && docs.length > 0 && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="jp-library-header">
             <div style={{ fontSize: 20, fontWeight: 800, color: t.ink, fontFamily: "'Fraunces', Georgia, serif" }}>
               Your library
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="jp-library-filters">
               {FILTERS.map(f => (
                 <button
                   key={f}
@@ -97,7 +87,7 @@ export function Library({ t, accent, radius }: LibraryProps) {
           </div>
 
           {/* Card grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="jp-library-grid">
             {filtered.map(doc => (
               <DesktopDocCard key={doc.id} doc={doc} t={t} accent={accent} radius={radius} />
             ))}
@@ -129,14 +119,12 @@ function ContinueHero({
 
   return (
     <div
+      className="jp-continue-hero"
       style={{
         background: t.card,
         border: `1px solid ${t.border}`,
         borderRadius: radius,
         overflow: 'hidden',
-        display: 'grid',
-        gridTemplateColumns: '1fr 340px',
-        minHeight: 220,
         position: 'relative',
       }}
     >
@@ -228,7 +216,7 @@ function ContinueHero({
         </div>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+        <div className="jp-continue-hero-actions" style={{ marginTop: 4 }}>
           <button
             onClick={() => (isPlaying ? togglePlay() : playDoc(doc.id, 'desktop'))}
             style={{
@@ -283,6 +271,7 @@ function ContinueHero({
 
       {/* Right: Visual */}
       <div
+        className="jp-continue-hero-visual"
         style={{
           background: `linear-gradient(135deg, ${subj.ink}44, ${subj.ink}22)`,
           display: 'flex',

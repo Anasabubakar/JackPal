@@ -9,7 +9,9 @@ import {
   jpTheme,
   type DesktopRoute,
 } from '@/store/jpStore';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { Sidebar } from '@/components/jp/Sidebar';
+import { DashboardBottomNav } from '@/components/jp/DashboardBottomNav';
 import { Library } from '@/components/jp/Library';
 import { PlayerView } from '@/components/jp/PlayerView';
 import { MiniPlayer } from '@/components/jp/MiniPlayer';
@@ -25,8 +27,6 @@ import { NotesPage } from '@/components/jp/NotesPage';
 const ACCENT = '#1B6EF3';
 const RADIUS = 18;
 
-// ── Inner layout (needs store context) ───────────────────────────────────────
-
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -35,13 +35,17 @@ function getGreeting(): string {
 }
 
 function DashboardInner() {
-  const { route, setRoute, upload, docs, currentDocId, isPlaying, user } = useJp();
+  const { route, setRoute, upload, user } = useJp();
   const [isDark, setIsDark] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
+  const breakpoint = useBreakpoint();
   const t = jpTheme(isDark);
 
-  const firstName = user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || '';
+  const isMobile = breakpoint === 'mobile';
+  const isCompactNav = breakpoint !== 'desktop';
+  const frame = isMobile ? 'mobile' : 'desktop';
 
-  const currentDoc = docs.find(d => d.id === currentDocId) || docs[0];
+  const firstName = user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || '';
 
   const routeLabel: Record<DesktopRoute, string> = {
     library: '',
@@ -56,67 +60,91 @@ function DashboardInner() {
 
   const isLibrary = route.desktop === 'library';
 
+  useEffect(() => {
+    if (!isCompactNav) setNavOpen(false);
+  }, [isCompactNav]);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [route.desktop]);
+
   return (
     <div
+      className="jp-dashboard-root"
       style={{
-        display: 'flex',
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
         background: t.bg,
-        position: 'relative',
         fontFamily: "'Syne', sans-serif",
       }}
     >
-      {/* Sidebar */}
-      <Sidebar t={t} accent={ACCENT} radius={RADIUS} />
+      {isCompactNav && navOpen && (
+        <button
+          type="button"
+          className="jp-dashboard-sidebar-backdrop"
+          aria-label="Close menu"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
 
-      {/* Main area */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}
-      >
-        {/* TopBar */}
-        <div
+      {isCompactNav ? (
+        <Sidebar
+          t={t}
+          accent={ACCENT}
+          radius={RADIUS}
+          layout="drawer"
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+        />
+      ) : (
+        <Sidebar t={t} accent={ACCENT} radius={RADIUS} layout="inline" />
+      )}
+
+      <div className="jp-dashboard-main">
+        <header
+          className="jp-dashboard-topbar"
           style={{
-            height: 58,
             borderBottom: `1px solid ${t.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 24px',
-            gap: 12,
-            flexShrink: 0,
             background: t.sidebar,
           }}
         >
+          {isCompactNav && (
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open menu"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: t.inset,
+                border: `1px solid ${t.border}`,
+                color: t.ink,
+                fontSize: 18,
+                cursor: 'pointer',
+                flexShrink: 0,
+                lineHeight: 1,
+              }}
+            >
+              ☰
+            </button>
+          )}
+
           {isLibrary ? (
             <>
               <div
+                className="jp-dashboard-topbar-greeting"
                 style={{
-                  flex: 1,
-                  fontSize: 17,
-                  fontWeight: 800,
                   color: t.ink,
                   fontFamily: "'Fraunces', Georgia, serif",
                 }}
               >
-                {getGreeting()}{firstName ? `, ${firstName}` : ''} 👋
+                {getGreeting()}
+                {firstName ? `, ${firstName}` : ''} 👋
               </div>
               <div
+                className="jp-dashboard-topbar-search"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 14px',
-                  borderRadius: 10,
                   background: t.inset,
                   border: `1px solid ${t.border}`,
-                  cursor: 'pointer',
                 }}
               >
                 <span style={{ fontSize: 14, color: t.muted }}>⌕</span>
@@ -124,151 +152,126 @@ function DashboardInner() {
                   Search library…
                 </span>
               </div>
-              <button
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '50%',
-                  background: t.inset,
-                  border: `1px solid ${t.border}`,
-                  color: t.muted,
-                  fontSize: 16,
-                  cursor: 'pointer',
-                }}
-              >
-                🔔
-              </button>
-              <button
-                onClick={() => setIsDark(!isDark)}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '50%',
-                  background: t.inset,
-                  border: `1px solid ${t.border}`,
-                  color: t.muted,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-                title="Toggle theme"
-              >
-                {isDark ? '☀' : '🌙'}
-              </button>
+              {!isMobile && (
+                <button
+                  type="button"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    background: t.inset,
+                    border: `1px solid ${t.border}`,
+                    color: t.muted,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  🔔
+                </button>
+              )}
             </>
           ) : (
             <>
               <button
+                type="button"
                 onClick={() => setRoute({ desktop: 'library' })}
                 style={{
                   background: 'transparent',
                   border: 'none',
                   color: t.muted,
-                  fontSize: 13,
+                  fontSize: isMobile ? 12 : 13,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '6px 12px',
+                  padding: '6px 10px',
                   borderRadius: 8,
+                  flexShrink: 0,
                 }}
               >
-                ← Back to library
+                ← {isMobile ? 'Back' : 'Back to library'}
               </button>
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: isMobile ? 13 : 14,
                   fontWeight: 600,
                   color: t.ink,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
                 }}
               >
                 {routeLabel[route.desktop]}
               </div>
               <div style={{ flex: 1 }} />
-              <button
-                onClick={() => setIsDark(!isDark)}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '50%',
-                  background: t.inset,
-                  border: `1px solid ${t.border}`,
-                  color: t.muted,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-                title="Toggle theme"
-              >
-                {isDark ? '☀' : '🌙'}
-              </button>
             </>
           )}
-        </div>
 
-        {/* Content area */}
+          <button
+            type="button"
+            onClick={() => setIsDark(!isDark)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: t.inset,
+              border: `1px solid ${t.border}`,
+              color: t.muted,
+              fontSize: 14,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title="Toggle theme"
+          >
+            {isDark ? '☀' : '🌙'}
+          </button>
+        </header>
+
         <div
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          className={`jp-dashboard-content${isMobile ? ' jp-dashboard-content--mobile-nav' : ''}`}
         >
-          {route.desktop === 'library' && (
-            <Library t={t} accent={ACCENT} radius={RADIUS} />
-          )}
-          {route.desktop === 'player' && (
-            <PlayerView t={t} accent={ACCENT} radius={RADIUS} />
-          )}
-          {route.desktop === 'preview' && (
-            <PreviewPage theme={t} accent={ACCENT} />
-          )}
+          {route.desktop === 'library' && <Library t={t} accent={ACCENT} radius={RADIUS} />}
+          {route.desktop === 'player' && <PlayerView t={t} accent={ACCENT} radius={RADIUS} />}
+          {route.desktop === 'preview' && <PreviewPage theme={t} accent={ACCENT} />}
           {route.desktop === 'artifact' && (
-            <ArtifactStudio theme={t} accent={ACCENT} frame="desktop" />
+            <ArtifactStudio theme={t} accent={ACCENT} frame={frame} />
           )}
-          {route.desktop === 'voices' && (
-            <VoicesPage theme={t} accent={ACCENT} frame="desktop" />
-          )}
-          {route.desktop === 'account' && (
-            <AccountPage theme={t} accent={ACCENT} frame="desktop" />
-          )}
-          {route.desktop === 'reader' && (
-            <ReaderPage theme={t} accent={ACCENT} frame="desktop" />
-          )}
-          {route.desktop === 'notes' && (
-            <NotesPage theme={t} accent={ACCENT} frame="desktop" />
-          )}
+          {route.desktop === 'voices' && <VoicesPage theme={t} accent={ACCENT} frame={frame} />}
+          {route.desktop === 'account' && <AccountPage theme={t} accent={ACCENT} frame={frame} />}
+          {route.desktop === 'reader' && <ReaderPage theme={t} accent={ACCENT} frame={frame} />}
+          {route.desktop === 'notes' && <NotesPage theme={t} accent={ACCENT} frame={frame} />}
         </div>
 
-        {/* Mini player */}
         <MiniPlayer t={t} accent={ACCENT} radius={RADIUS} />
       </div>
 
-      {/* Upload flow overlay */}
+      {isMobile && <DashboardBottomNav t={t} accent={ACCENT} />}
+
       {upload && upload.originFrame === 'desktop' && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isMobile ? 'flex-end' : 'center',
             justifyContent: 'center',
             background: 'rgba(0,0,0,0.65)',
             backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(6px)',
             zIndex: 100,
+            padding: isMobile ? 0 : 16,
           }}
         >
-          <UploadFlow frame="desktop" theme={t} accent={ACCENT} />
+          <UploadFlow frame={frame} theme={t} accent={ACCENT} />
         </div>
       )}
 
-      {/* Toast */}
       <Toast theme={t} />
     </div>
   );
 }
-
-// ── Auth wrapper ──────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -292,15 +295,17 @@ export default function DashboardPage() {
       }
     };
     check();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   if (checking) {
     return (
       <div
         style={{
-          width: '100vw',
-          height: '100vh',
+          width: '100%',
+          height: '100dvh',
           background: '#060C22',
           display: 'flex',
           alignItems: 'center',

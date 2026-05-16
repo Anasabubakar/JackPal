@@ -118,6 +118,7 @@ export function MiniPlayer({ t, accent, radius }: MiniPlayerProps) {
         }}
       >
         <button
+          className="jp-mini-player-skip jp-mini-player-skip--back"
           onClick={() => seek(-15)}
           style={{
             width: 32,
@@ -167,6 +168,7 @@ export function MiniPlayer({ t, accent, radius }: MiniPlayerProps) {
           »
         </button>
         <span
+          className="jp-mini-player-time"
           style={{
             fontSize: 11,
             color: t.muted,
@@ -180,15 +182,7 @@ export function MiniPlayer({ t, accent, radius }: MiniPlayerProps) {
       </div>
 
       {/* Right controls */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '0 20px',
-          flexShrink: 0,
-        }}
-      >
+      <div className="jp-mini-player-extra">
         <button
           style={{
             fontSize: 11,

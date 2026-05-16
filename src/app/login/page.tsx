@@ -3,11 +3,10 @@
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   Lock,
   Mail,
   Mic2,
-  ShieldCheck
+  ShieldCheck,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -82,9 +81,9 @@ function LoginForm() {
         <div className="relative z-10">
           <Link href="/" className="inline-block mb-10 group">
             <JackpalsLogo
-              variant="wordmark"
+              variant="footer"
               priority
-              className="h-9 w-auto drop-shadow-sm group-hover:opacity-95 transition-opacity"
+              className="h-11 w-auto max-w-[220px] drop-shadow-sm group-hover:opacity-95 transition-opacity"
             />
           </Link>
 
@@ -124,7 +123,7 @@ function LoginForm() {
         <div className="w-full max-w-md space-y-8 py-10">
           <div className="text-center lg:text-left space-y-2">
             <div className="lg:hidden flex justify-center mb-6">
-              <JackpalsLogo variant="wordmark" priority className="h-10 w-auto" />
+              <JackpalsLogo variant="footer" priority className="h-11 w-auto max-w-[200px]" />
             </div>
             <h2 className="text-3xl font-black tracking-tighter uppercase leading-none">Account Login</h2>
             <p className="text-[10px] md:text-xs text-[#02013D]/50 font-bold uppercase tracking-[0.2em]">Enter your credentials to proceed</p>
