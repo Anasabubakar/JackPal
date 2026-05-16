@@ -18,6 +18,8 @@ import {
 type Props = {
   notebookId: string;
   onRefresh: () => Promise<void>;
+  /** Flat dark surface for embedding in modals (no studio glass shell). */
+  embedSurface?: boolean;
 };
 
 function formatExpiry(expiresAt: number | undefined): string {
@@ -49,7 +51,7 @@ function inviteLinkFromToken(token: string): string {
   return `${origin}/dashboard/invite?invite=${encodeURIComponent(token)}`;
 }
 
-export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
+export function NotebookCollaborationPanel({ notebookId, onRefresh, embedSurface }: Props) {
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [collaborators, setCollaborators] = useState<WorkspaceCollaborator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +166,12 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
 
   return (
     <section
-      className={cn("studio studio-glass studio-glass-interactive rounded-2xl p-4 sm:p-5 space-y-5")}
+      className={cn(
+        "min-w-0 space-y-5 rounded-2xl p-4 sm:p-5",
+        embedSurface
+          ? "border border-[#373a40] bg-[#1a1b1e] text-white"
+          : "studio studio-glass studio-glass-interactive",
+      )}
       aria-labelledby="notebook-share-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -256,7 +263,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
             type="button"
             onClick={() => void handleCreateInvite()}
             disabled={!!busy}
-            className="inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-2)]"
+            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-2)]"
             style={{ background: "var(--blue)" }}
           >
             {busy === "Creating invite…" ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
@@ -332,7 +339,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
               return (
                 <li
                   key={inv.id}
-                  className="rounded-xl p-3 grid gap-2 sm:grid-cols-[1fr_auto] studio-glass-inset"
+                  className="studio-glass-inset grid min-w-0 gap-2 rounded-xl p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -354,7 +361,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
                         {st}
                       </span>
                       {inv.invitee_email && (
-                        <span className="text-[11px] truncate flex items-center gap-1" style={{ color: "var(--text-2)" }}>
+                        <span className="flex min-w-0 items-center gap-1 truncate text-[11px]" style={{ color: "var(--text-2)" }}>
                           <Mail size={11} aria-hidden />
                           {inv.invitee_email}
                         </span>
@@ -364,13 +371,13 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
                       Expires {formatExpiry(inv.expires_at)}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
+                  <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
                     {showCopy && (
                       <>
                         <button
                           type="button"
                           onClick={() => void copyText("link", link)}
-                          className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                          className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] sm:flex-none"
                           style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                         >
                           <Link2 size={12} />
@@ -379,7 +386,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
                         <button
                           type="button"
                           onClick={() => inv.token && void copyText("token", inv.token)}
-                          className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                          className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] sm:flex-none"
                           style={{ border: "1px solid var(--border)", color: "var(--text-2)" }}
                         >
                           <Copy size={12} />
@@ -392,7 +399,7 @@ export function NotebookCollaborationPanel({ notebookId, onRefresh }: Props) {
                         type="button"
                         onClick={() => void handleRevoke(inv.id)}
                         disabled={!!busy}
-                        className="inline-flex items-center gap-1 min-h-[36px] px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                        className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg px-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)] sm:flex-none"
                         style={{ border: "1px solid rgba(248,113,113,0.45)", color: "#fecaca" }}
                       >
                         <Trash2 size={12} />

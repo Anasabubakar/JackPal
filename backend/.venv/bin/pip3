@@ -1,4 +1,4 @@
-#!/home/gamp/Desktop/Projects/JackPal/backend/.venv/bin/python3.12
+#!/home/anasmasama/Desktop/Projects/JackPal/backend/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
