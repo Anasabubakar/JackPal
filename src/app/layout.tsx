@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter, Syne } from "next/font/google";
+import { Fraunces, Inter, Syne, JetBrains_Mono } from "next/font/google";
 import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
 import "./globals.css";
 
@@ -21,6 +21,13 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
@@ -60,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${syne.variable} ${inter.variable}`}>
+    <html lang="en" className={`${display.variable} ${syne.variable} ${inter.variable} ${mono.variable}`}>
       <head>
         {/* Anti-flash: apply saved theme before paint */}
         <script

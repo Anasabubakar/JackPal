@@ -124,6 +124,37 @@ h1, h2, h3, h4 {
   0%, 100% { transform: scaleY(0.8); }
   50%       { transform: scaleY(1.25); }
 }
+@keyframes jp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+@keyframes jp-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes jp-zoom-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes jp-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes jp-orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-40px, 30px) scale(1.1); }
+}
+@keyframes jp-orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(50px, -20px) scale(1.15); }
+}
+@keyframes jp-thumb-pulse {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 0.7; transform: translate(-50%, -50%) scale(1.3); }
+}
+@keyframes jp-spin { to { transform: rotate(360deg); } }
+.jp-spin { display: inline-block; animation: jp-spin 1s linear infinite; }
+.jp-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.jp-scroll::-webkit-scrollbar-track { background: transparent; }
+.jp-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.jp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 
 .animate-shimmer    { animation: shimmer 2s infinite linear; }
 .animate-fade-up    { animation: fade-up 0.3s ease both; }
