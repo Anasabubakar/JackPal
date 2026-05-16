@@ -30,6 +30,9 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function signInWithGoogle() {
+  if (process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED !== "true") {
+    throw new Error("Google sign-in is invite-only during beta.");
+  }
   const redirectTo =
     typeof window !== "undefined"
       ? `${window.location.origin}/auth/callback`

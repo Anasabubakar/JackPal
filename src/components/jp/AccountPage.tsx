@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useJp } from '@/store/jpStore';
 import type { JpTheme } from '@/store/jpStore';
+import { getSubscription, type Subscription } from '@/lib/api';
+import { UpgradeProButton } from '@/components/jp/UpgradeProButton';
 
 interface AccountPageProps {
   theme: JpTheme;
@@ -20,6 +22,13 @@ const STORAGE_PERCENT = 42;
 
 export function AccountPage({ theme: t, accent, frame = 'desktop' }: AccountPageProps) {
   const { user, docs } = useJp();
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+
+  useEffect(() => {
+    getSubscription()
+      .then(setSubscription)
+      .catch(() => setSubscription(null));
+  }, []);
 
   return (
     <div
@@ -36,7 +45,7 @@ export function AccountPage({ theme: t, accent, frame = 'desktop' }: AccountPage
     >
       {/* Left column */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <PlanCard t={t} accent={accent} user={user} />
+        <PlanCard t={t} accent={accent} user={user} subscription={subscription} />
         <DevicesSection t={t} accent={accent} />
         <DrmPanel t={t} accent={accent} />
       </div>
@@ -45,7 +54,7 @@ export function AccountPage({ theme: t, accent, frame = 'desktop' }: AccountPage
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <StoragePanel t={t} accent={accent} docCount={docs.length} />
         <DownloadsPanel t={t} accent={accent} docs={docs} />
-        <PlanCompare t={t} accent={accent} />
+        <PlanCompare t={t} accent={accent} subscription={subscription} />
       </div>
     </div>
   );
@@ -53,10 +62,35 @@ export function AccountPage({ theme: t, accent, frame = 'desktop' }: AccountPage
 
 // ── Plan card ─────────────────────────────────────────────────────────────────
 
-function PlanCard({ t, accent, user }: { t: JpTheme; accent: string; user: import('@/store/jpStore').AppUser | null }) {
+function formatRenewalDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-NG', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function PlanCard({
+  t,
+  accent,
+  user,
+  subscription,
+}: {
+  t: JpTheme;
+  accent: string;
+  user: import('@/store/jpStore').AppUser | null;
+  subscription: Subscription | null;
+}) {
   const initials = user?.full_name
     ? user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     : 'U';
+  const isPro = subscription?.plan === 'pro' && subscription?.status === 'active';
+  const amount = subscription?.amount_ngn ?? 1000;
 
   return (
     <div style={{ borderRadius: 18, overflow: 'hidden', background: `linear-gradient(135deg, #1B6EF3, #F5A623)`, padding: 24, color: '#fff' }}>
@@ -79,16 +113,22 @@ function PlanCard({ t, accent, user }: { t: JpTheme; accent: string; user: impor
           </div>
         </div>
         <div style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 100, padding: '4px 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0 }}>
-          PRO
+          {isPro ? 'PRO' : 'FREE'}
         </div>
       </div>
       <div style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.1em', opacity: 0.7, marginBottom: 4 }}>
-        STUDENT PLAN
+        {isPro ? 'STUDENT PRO' : 'FREE PLAN'}
       </div>
       <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>
-        ₦1,000<span style={{ fontSize: 14, opacity: 0.7 }}>/month</span>
+        {isPro ? `₦${amount.toLocaleString()}` : '₦0'}
+        <span style={{ fontSize: 14, opacity: 0.7 }}>{isPro ? '/month' : ''}</span>
       </div>
-      <div style={{ fontSize: 12, opacity: 0.8 }}>Renews June 16, 2026</div>
+      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: isPro ? 0 : 14 }}>
+        {isPro
+          ? `Renews ${formatRenewalDate(subscription?.expires_at ?? null)}`
+          : 'Upgrade for unlimited uploads & offline audio'}
+      </div>
+      {!isPro && <UpgradeProButton theme={t} accent={accent} fullWidth compact />}
     </div>
   );
 }
@@ -338,7 +378,16 @@ function DownloadsPanel({ t, accent, docs }: { t: JpTheme; accent: string; docs:
 
 // ── Plan compare ──────────────────────────────────────────────────────────────
 
-function PlanCompare({ t, accent }: { t: JpTheme; accent: string }) {
+function PlanCompare({
+  t,
+  accent,
+  subscription,
+}: {
+  t: JpTheme;
+  accent: string;
+  subscription: Subscription | null;
+}) {
+  const isPro = subscription?.plan === 'pro' && subscription?.status === 'active';
   const features = [
     { feature: 'Monthly uploads', free: '5', pro: 'Unlimited' },
     { feature: 'Devices', free: '1', pro: '3' },
@@ -374,6 +423,11 @@ function PlanCompare({ t, accent }: { t: JpTheme; accent: string }) {
           <div style={{ padding: '10px 16px', fontSize: 12, color: row.pro === '✓' ? '#10B981' : t.ink, textAlign: 'center', fontWeight: 600 }}>{row.pro}</div>
         </div>
       ))}
+      {!isPro && (
+        <div style={{ padding: 16, borderTop: `1px solid ${t.border}` }}>
+          <UpgradeProButton theme={t} accent={accent} fullWidth />
+        </div>
+      )}
     </div>
   );
 }

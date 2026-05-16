@@ -5,8 +5,22 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+load_dotenv(".env.local", override=True)
 
-from routers import auth, documents, audio, ai, user, workspace, voice
+from routers import auth, documents, audio, ai, user, workspace, voice, payments
+
+
+def _log_paystack_mode() -> None:
+    key = os.environ.get("PAYSTACK_SECRET_KEY", "").strip()
+    if not key:
+        print("[Startup] Paystack: not configured (PAYSTACK_SECRET_KEY missing).")
+        return
+    if key.startswith("sk_test_"):
+        print("[Startup] Paystack: TEST mode (sk_test_…). Use test cards only.")
+    elif key.startswith("sk_live_"):
+        print("[Startup] Paystack: LIVE mode (sk_live_…). Real charges apply.")
+    else:
+        print("[Startup] Paystack: secret key format unrecognized.")
 
 
 def _build_allowed_origins() -> list[str]:
@@ -37,6 +51,7 @@ async def lifespan(app: FastAPI):
     import threading
     _seed_dev_user()
     _reset_stale_generating()
+    _log_paystack_mode()
     _log_tts_engines()
     threading.Thread(target=_prewarm_rag, daemon=True).start()
     yield
@@ -107,6 +122,7 @@ app.include_router(ai.router)
 app.include_router(user.router)
 app.include_router(workspace.router)
 app.include_router(voice.router)
+app.include_router(payments.router)
 
 
 @app.get("/")

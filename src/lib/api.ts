@@ -934,3 +934,42 @@ export async function synthesizeVoiceClone(params: {
   }
   return res.blob();
 }
+
+// ── Payments (Paystack) ──────────────────────────────────────────────────────
+
+export type Subscription = {
+  plan: "free" | "pro";
+  status: "active" | "expired" | "none";
+  expires_at: string | null;
+  amount_ngn: number;
+  amount_kobo: number;
+  billing_period_days: number;
+};
+
+export type PaymentInitializeResponse = {
+  authorization_url: string;
+  access_code?: string;
+  reference: string;
+  amount_ngn: number;
+};
+
+export type PaymentVerifyResponse = {
+  status: string;
+  already_processed: boolean;
+  subscription: Subscription;
+};
+
+export async function getSubscription(): Promise<Subscription> {
+  return request<Subscription>("/payments/subscription");
+}
+
+export async function initializeProPayment(): Promise<PaymentInitializeResponse> {
+  return request<PaymentInitializeResponse>("/payments/initialize", {
+    method: "POST",
+    body: JSON.stringify({ plan: "pro" }),
+  });
+}
+
+export async function verifyPayment(reference: string): Promise<PaymentVerifyResponse> {
+  return request<PaymentVerifyResponse>(`/payments/verify/${encodeURIComponent(reference)}`);
+}
